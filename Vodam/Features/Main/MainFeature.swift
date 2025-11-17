@@ -13,15 +13,26 @@ struct MainFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var profileFlow: ProfileFlowFeature.State?
+        
+        var isLoginProvidersActive = false
+        var loginProviders = LoginProvidersFeature.State()
     }
     
     enum Action: Equatable {
         case profileButtonTapped
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
+        
+        case loginProvidersActiveChanged(Bool)
+        case loginProviders(LoginProvidersFeature.Action)
+        
         case dismissProfileSheet
     }
     
     var body: some Reducer<State, Action> {
+        Scope(state: \.loginProviders, action: \.loginProviders) {
+            LoginProvidersFeature()
+        }
+        
         Reduce { state, action in
             switch action {
                 
@@ -32,18 +43,27 @@ struct MainFeature {
             case .profileFlow(.presented(.loginButtonTapped)):
                 // 1) 로그인 안내 시트 닫기
                 state.profileFlow = nil
+                state.isLoginProvidersActive = true
                 // 2) 나중에 여기서 "로그인 화면 push"트리거 만들기
-                return .none
-                
-            case .dismissProfileSheet:
-                state.profileFlow = nil
                 return .none
                 
             case .profileFlow(.presented(.cancelButtonTapped)):
                 state.profileFlow = nil
                 return .none
                 
+            case .dismissProfileSheet:
+                state.profileFlow = nil
+                return .none
+                
             case .profileFlow:
+                return .none
+                
+            case let .loginProvidersActiveChanged(isActive):
+                state.isLoginProvidersActive = isActive
+                return .none
+                
+            case .loginProviders:
+                // 나중에 실제 로그인 성공/실패 처리 추가 예정
                 return .none
             }
         }
