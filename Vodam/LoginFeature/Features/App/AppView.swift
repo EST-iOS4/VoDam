@@ -13,11 +13,9 @@ struct AppView: View {
 
     var body: some View {
         NavigationStack{
-            WithViewStore(store, observe: { $0 }) { _ in
                 MainView(
-                    store: store.scope(state: \.main, action: \.main)
+                   store: store.scope(state: \.main, action: \.main)
                 )
             }
-        }
     }
 }
