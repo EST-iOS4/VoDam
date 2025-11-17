@@ -28,6 +28,12 @@ struct MainFeature {
                 state.profileFlow = ProfileFlowFeature.State()
                 return .none
                 
+            case .profileFlow(.presented(.loginButtonTapped)):
+                // 1) 로그인 안내 시트 닫기
+                state.profileFlow = nil
+                // 2) 나중에 여기서 "로그인 화면 push"트리거 만들기
+                return .none
+                
             case .profileFlow:
                 return .none
             }
