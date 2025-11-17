@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		70C11C512ECF0B0F00D7BB2A /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 70C11C502ECF0B0F00D7BB2A /* ComposableArchitecture */; };
+		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,7 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				70C11C512ECF0B0F00D7BB2A /* ComposableArchitecture in Frameworks */,
+				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,7 +70,7 @@
 			);
 			name = Vodam;
 			packageProductDependencies = (
-				70C11C502ECF0B0F00D7BB2A /* ComposableArchitecture */,
+				7D5C88932ECAAC3400977C6E /* ComposableArchitecture */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -101,7 +101,7 @@
 			mainGroup = 8B4C67BA2EBC8481003C67F9;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				70C11C4F2ECF0B0F00D7BB2A /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+				7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B4C67C42EBC8481003C67F9 /* Products */;
@@ -347,7 +347,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		70C11C4F2ECF0B0F00D7BB2A /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+		7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
 			requirement = {
@@ -358,9 +358,9 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		70C11C502ECF0B0F00D7BB2A /* ComposableArchitecture */ = {
+		7D5C88932ECAAC3400977C6E /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 70C11C4F2ECF0B0F00D7BB2A /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			package = 7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
 			productName = ComposableArchitecture;
 		};
 /* End XCSwiftPackageProductDependency section */
