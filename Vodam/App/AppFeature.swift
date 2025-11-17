@@ -11,11 +11,11 @@ import ComposableArchitecture
 struct AppFeature {
     
     @ObservableState
-    struct State: Equatable {
+    struct State {
         var main = MainFeature.State()
     }
     
-    enum Action: Equatable {
+    enum Action {
         case main(MainFeature.Action)
     }
     

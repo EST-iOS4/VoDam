@@ -4,71 +4,55 @@
 //
 //  Created by 송영민 on 11/17/25.
 //
-
 import ComposableArchitecture
 
+
+// MARK: Object
 @Reducer
 struct MainFeature {
-    
+    // MARK: state
     @ObservableState
-    struct State: Equatable {
-        @Presents var profileFlow: ProfileFlowFeature.State?
-        
-        var isLoginProvidersActive = false
-        var loginProviders = LoginProvidersFeature.State()
+    struct State {
+        @Presents var destination: Destination.State?
     }
     
-    enum Action: Equatable {
-        case profileButtonTapped
-        case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
-        
-        case loginProvidersActiveChanged(Bool)
-        case loginProviders(LoginProvidersFeature.Action)
+    @Reducer
+    enum Destination {
+        case profile(ProfileFlowFeature)
+        case loginProvider(LoginProvidersFeature)
+    }
+    
+    
+    // MARK: action
+    enum Action {
+        case destionation(PresentationAction<Destination.Action>)
+        case goToProfile
+        case goToLoginProviders
         
         case dismissProfileSheet
     }
     
     var body: some Reducer<State, Action> {
-        Scope(state: \.loginProviders, action: \.loginProviders) {
-            LoginProvidersFeature()
-        }
         
         Reduce { state, action in
             switch action {
-                
-            case .profileButtonTapped:
-                state.profileFlow = ProfileFlowFeature.State()
+            case .goToProfile:
+                state.destination = .profile(.init())
                 return .none
                 
-            case .profileFlow(.presented(.loginButtonTapped)):
-                // 1) 로그인 안내 시트 닫기
-                state.profileFlow = nil
-                state.isLoginProvidersActive = true
-                // 2) 나중에 여기서 "로그인 화면 push"트리거 만들기
+            case .goToLoginProviders:
+                state.destination = .loginProvider(.init())
                 return .none
                 
-            case .profileFlow(.presented(.cancelButtonTapped)):
-                state.profileFlow = nil
+            case .destionation(.presented(.profile(.loginButtonTapped))):
+                state.destination = nil
+                state.destination = .loginProvider(.init())
                 return .none
-                
-            case .dismissProfileSheet:
-                state.profileFlow = nil
-                return .none
-                
-            case .profileFlow:
-                return .none
-                
-            case let .loginProvidersActiveChanged(isActive):
-                state.isLoginProvidersActive = isActive
-                return .none
-                
-            case .loginProviders:
-                // 나중에 실제 로그인 성공/실패 처리 추가 예정
+            default:
+                print("Action이 호출되었습니다.")
                 return .none
             }
         }
-        .ifLet(\.$profileFlow, action: \.profileFlow) {
-            ProfileFlowFeature()
-        }
+        .ifLet(\.$destination, action: \.destionation)
     }
 }
