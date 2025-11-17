@@ -39,7 +39,7 @@ struct MainView: View {
         ) {
             loginProvidersStore in
             LoginProvidersView(store: loginProvidersStore)
-        }
+        } // 오늘은 여기까지
         // 로그인 유도 sheet
         .sheet(
             store: store.scope(
