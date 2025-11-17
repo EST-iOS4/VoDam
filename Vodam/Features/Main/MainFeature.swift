@@ -11,13 +11,29 @@ import ComposableArchitecture
 struct MainFeature {
     
     @ObservableState
-    struct State: Equatable {}
+    struct State: Equatable {
+        @Presents var profileFlow: ProfileFlowFeature.State?
+    }
     
-    enum Action: Equatable {}
+    enum Action: Equatable {
+        case profileButtonTapped
+        case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
+    }
     
     var body: some Reducer<State, Action> {
         Reduce { state, action in
-                .none
+            switch action {
+                
+            case .profileButtonTapped:
+                state.profileFlow = ProfileFlowFeature.State()
+                return .none
+                
+            case .profileFlow:
+                return .none
+            }
+        }
+        .ifLet(\.$profileFlow, action: \.profileFlow) {
+            ProfileFlowFeature()
         }
     }
 }
