@@ -4,10 +4,11 @@
 //
 //  Created by 송영민 on 11/17/25.
 //
-
 import ComposableArchitecture
 import SwiftUI
 
+
+// MARK: View
 struct AppView: View {
     let store: StoreOf<AppFeature>
 
