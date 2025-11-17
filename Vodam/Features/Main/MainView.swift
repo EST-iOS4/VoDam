@@ -38,7 +38,8 @@ struct MainView: View {
         }
         
         .navigationDestination(
-            item: $store.scope(state: \.destination?.loginProvider, action: \.destionation.loginProvider), destination: { store in
+            item: $store.scope(state: \.destination?.loginProvider, action: \.destionation.loginProvider),
+            destination: { store in
                 LoginProvidersView(store: store)
             })
         
