@@ -12,6 +12,10 @@ struct MainView: View {
     let store: StoreOf<MainFeature>
     
     var body: some View {
-        Text("MainView")
+        WithViewStore(store, observe: { $0 }) { _ in
+            Text("MainView")
+                .font(.title)
+        }
+        
     }
 }
