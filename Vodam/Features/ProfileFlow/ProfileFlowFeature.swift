@@ -16,19 +16,19 @@ struct ProfileFlowFeature {
     }
     
     enum Action: Equatable {
-       case loginButtonTapped
-        case cancelButtonTapped
+        case loginButtonTapped // 로그인 하러 가기
+        case cancelButtonTapped // x버튼
     }
     
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
             case .loginButtonTapped:
-                //지금 여기서 아무 것도 안 함
                 //실제 동작은 MainFeature에서 -> .profileFlow 액션으로 받음
                 return .none
                 
             case .cancelButtonTapped:
+                //실제 동작은 MainFeature에서 -> .profileFlow 액션으로 받음
                 return .none
             }
         }
