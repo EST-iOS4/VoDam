@@ -11,13 +11,26 @@ import ComposableArchitecture
 struct AppFeature {
     
     @ObservableState
-    struct State: Equatable {}
+    struct State: Equatable {
+        var main = MainFeature.State()
+    }
     
-    enum Action: Equatable {}
+    enum Action: Equatable {
+        case main(MainFeature.Action)
+    }
     
     var body: some Reducer<State, Action> {
+        Scope(state: \.main, action: \.main) {
+            MainFeature()
+        }
+        
         Reduce { state, action in
-                .none
+            switch action {
+            case .main:
+                return .none
+            @unknown default:
+                return .none
+            }
         }
     }
 }
