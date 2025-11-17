@@ -12,8 +12,7 @@ struct MainView: View {
     let store: StoreOf<MainFeature>
     
     var body: some View {
-        WithViewStore(store, observe: { $0 }) { _ in
-            NavigationStack {
+        WithViewStore(store, observe: { $0 }) { viewStore in
                 VStack {
                     Spacer()
                     
@@ -27,14 +26,22 @@ struct MainView: View {
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button{
-                            // TODO: 나중에 프로필 플로우 열기
-                            print("프로필 버튼 탭")
+                            viewStore.send(.profileButtonTapped)
                         } label: {
                             Image(systemName: "person.circle")
                                 .imageScale(.large)
                         }
                     }
                 }
+                .sheet(
+                    store: store.scope(
+                        state: \.$profileFlow,
+                        action: \.profileFlow
+                    )
+                ) { profileStore in
+                    ProfileFlowView(store: profileStore)
+                        .presentationDetents([.fraction(0.4)])
+                        .presentationDragIndicator(.visible)
             }
         }
     }
