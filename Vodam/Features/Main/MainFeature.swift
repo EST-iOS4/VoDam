@@ -18,6 +18,7 @@ struct MainFeature {
     enum Action: Equatable {
         case profileButtonTapped
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
+        case dismissProfileSheet
     }
     
     var body: some Reducer<State, Action> {
@@ -32,6 +33,14 @@ struct MainFeature {
                 // 1) 로그인 안내 시트 닫기
                 state.profileFlow = nil
                 // 2) 나중에 여기서 "로그인 화면 push"트리거 만들기
+                return .none
+                
+            case .dismissProfileSheet:
+                state.profileFlow = nil
+                return .none
+                
+            case .profileFlow(.presented(.cancelButtonTapped)):
+                state.profileFlow = nil
                 return .none
                 
             case .profileFlow:
