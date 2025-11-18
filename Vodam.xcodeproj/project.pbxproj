@@ -14,9 +14,22 @@
 		8B4C67C32EBC8481003C67F9 /* Vodam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vodam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A0F02C662ECC3796009AE3ED /* Exceptions for "Vodam" folder in "Vodam" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8B4C67C52EBC8481003C67F9 /* Vodam */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A0F02C662ECC3796009AE3ED /* Exceptions for "Vodam" folder in "Vodam" target */,
+			);
 			path = Vodam;
 			sourceTree = "<group>";
 		};
@@ -265,6 +278,7 @@
 				DEVELOPMENT_TEAM = WU5AU2G459;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Vodam/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "마이크 권한이 필요합니다.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "음성 인식 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -299,6 +313,7 @@
 				DEVELOPMENT_TEAM = WU5AU2G459;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Vodam/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "마이크 권한이 필요합니다.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "음성 인식 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
