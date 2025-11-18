@@ -14,7 +14,7 @@ struct AppView: View {
     var body: some View {
         NavigationStack{
             WithViewStore(store, observe: { $0 }) { _ in
-                MainView(
+                ProjectListView(
                     store: store.scope(state: \.main, action: \.main)
                 )
             }
