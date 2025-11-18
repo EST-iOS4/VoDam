@@ -10,14 +10,19 @@ import ComposableArchitecture
 @Reducer
 struct MainFeature {
     
-    @ObservableState
-    struct State: Equatable {
-        @Presents var profileFlow: ProfileFlowFeature.State?
+    @ObservableState // @Presents : Sheet나 NavigationDestination을 띄우는 상태
+    struct State: Equatable { //MainFeature의 State
+        @Presents var profileFlow: ProfileFlowFeature.State? // ProfileFlowFeature.State에 따른 profileFlow의 State
     
-        @Presents var loginProviders: LoginProvidersFeature.State?
+        @Presents var loginProviders: LoginProvidersFeature.State? // LoginProvidersFeature.State에 따른 loginProviders의 State
+        
+        var recording = RecordingFeature.State()
     }
     
-    enum Action: Equatable {
+    enum Action: Equatable { //MainFeature의 Action
+        
+        case recording(RecordingFeature.Action)
+        
         case profileButtonTapped
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
         
@@ -31,17 +36,17 @@ struct MainFeature {
             switch action {
                 
             case .profileButtonTapped:
-                state.profileFlow = ProfileFlowFeature.State()
+                state.profileFlow = ProfileFlowFeature.State() //profileFlow state에 ProfileFlowFeature State를 전달
                 return .none
                 
-            case .profileFlow(.presented(.loginButtonTapped)):
+            case .profileFlow(.presented(.loginButtonTapped)): //profileFlow의 내부에서 State가 loginButtonTapped 인 경우
                 // 1) 로그인 안내 시트 닫기
                 state.profileFlow = nil
                 state.loginProviders = LoginProvidersFeature.State()
                 // 2) 나중에 여기서 "로그인 화면 push"트리거 만들기
                 return .none
                 
-            case .profileFlow(.presented(.cancelButtonTapped)):
+            case .profileFlow(.presented(.cancelButtonTapped)): //cancelButtonTapped인 경우
                 state.profileFlow = nil
                 return .none
                 
@@ -55,14 +60,20 @@ struct MainFeature {
             case .loginProviders:
                 // 나중에 실제 로그인 성공/실패 처리 추가 예정
                 return .none
+                
+            case .recording:
+                return .none
             }
+
+        }
+        Scope(state: \.recording, action: \.recording) {
+            RecordingFeature()
         }
         .ifLet(\.$profileFlow, action: \.profileFlow) {
-            ProfileFlowFeature()
+            ProfileFlowFeature() //Reducer
         }
-        
         .ifLet(\.$loginProviders, action: \.loginProviders) {
-            LoginProvidersFeature()
+            LoginProvidersFeature() //Reducer
         }
     }
 }
