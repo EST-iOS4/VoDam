@@ -14,11 +14,15 @@ enum AuthProvider: Equatable {
 }
 
 struct User: Equatable {
-//    var name: String
-//    var email: String
-//    var provider: AuthProvider
-    
-    var name = "테스트"
-    var email = "test@test.com"
-    var provider = AuthProvider.kakao
+    var name: String
+    var email: String?
+    var provider: AuthProvider
+    var ProfileImageURL: URL?
+
+    static let placeholder = User(
+        name: "게스트",
+        email: nil,
+        provider: .kakao,
+        ProfileImageURL: nil
+    )
 }
