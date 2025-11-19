@@ -16,11 +16,11 @@ struct ProjectListView: View {
             VStack {
                 // MARK: - Category Segmented Control
                 Picker(
-                    "카테고리 선택",
+                    "",
                     selection: $store.selectedCategory.animation()
                 ) {
                     ForEach(store.allCategories, id: \.self) { category in
-                        Text(category.title).tag(category)
+                        Text(category.title)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -62,6 +62,7 @@ struct ProjectListView: View {
                 }
             }
             .navigationTitle("저장된 프로젝트")
+            .searchable(text: $store.searchText, prompt: "프로젝트를 검색하세요.")
             .toolbar {
                 // MARK: - Sort Filter Menu
                 ToolbarItem(placement: .navigationBarTrailing) {

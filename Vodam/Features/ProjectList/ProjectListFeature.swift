@@ -11,6 +11,7 @@ struct ProjectListFeature {
         var allCategories: [Category] =  Category.allCases
         var selectedCategory: Category = .all
         var currentSort: SortFilter = .sortedDate
+        var searchText: String = ""
 
         // 2. 화면 이동 상태 (상세 화면)
         // 자식뷰의 상태를 관리하는 변수로, nil 인 경우, 상세화면이 보이지 않고, nil이 아니라면 상세화면
@@ -21,6 +22,10 @@ struct ProjectListFeature {
             // 카테고리 필터링
             if selectedCategory != .all {
                 filtered = filtered.filter { $0.category == selectedCategory }
+            }
+            
+            if !searchText.isEmpty {
+                filtered = filtered.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
             }
             // 정렬
             switch currentSort {
@@ -46,7 +51,7 @@ struct ProjectListFeature {
         case destination(PresentationAction<Destination.Action>)
     }
     
-    @Dependency(\.continuousClock) var clock
+//    @Dependency(\.continuousClock) var clock
     
     // MARK: - Reducer Body
     
@@ -59,9 +64,10 @@ struct ProjectListFeature {
                 state.isLoading = true
                 // TODO: 실제 파이어베이스에 저장된 데이터를 불러오는 로직으로 교체해야함.
                 return .run { send in
-                    try await self.clock.sleep(for: .seconds(1))
+//                    try await self.clock.sleep(for: .seconds(1))
                     await send(._projectsResponse(
-                        Result { try await clock.sleep(for: .seconds(1))
+                        Result { try await Task.sleep(for: .seconds(1))
+//                            clock.sleep(for: .seconds(1))
                             return Project.mock
                         }
                     ))
