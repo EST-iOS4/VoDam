@@ -14,7 +14,11 @@ enum AuthProvider: Equatable {
 }
 
 struct User: Equatable {
-    var name: String
-    var email: String
-    var provider: AuthProvider
+//    var name: String
+//    var email: String
+//    var provider: AuthProvider
+    
+    var name = "테스트"
+    var email = "test@test.com"
+    var provider = AuthProvider.kakao
 }

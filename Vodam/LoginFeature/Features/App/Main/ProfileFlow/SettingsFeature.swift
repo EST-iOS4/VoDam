@@ -15,6 +15,7 @@ struct SettingsFeature {
     }
     
     enum Action: Equatable {
+        case profileImageChage
         case logoutTapped
         case deleteAccountTapped
     }
@@ -22,6 +23,10 @@ struct SettingsFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
+                
+            case .profileImageChage:
+                return .none
+                
             case .logoutTapped:
                 //나중에 로그아웃 처리
                 return .none
