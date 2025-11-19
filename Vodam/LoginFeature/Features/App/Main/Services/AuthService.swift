@@ -38,7 +38,7 @@ enum AuthService {
             name: name,
             email: email,
             provider: .kakao,
-            ProfileImageURL: profileURL
+            profileImageURL: profileURL
         )
     }
 

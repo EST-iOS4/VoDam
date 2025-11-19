@@ -25,7 +25,7 @@ struct SettingView: View {
                         store.send(.profileImageChage)
                     }) {
                         ZStack(alignment: .bottomTrailing) {
-                            if let url = user.ProfileImageURL {
+                            if let url = user.profileImageURL {
                                 AsyncImage(url: url) { phase in
                                     switch phase {
                                     case .empty:

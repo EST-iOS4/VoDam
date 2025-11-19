@@ -17,12 +17,12 @@ struct User: Equatable {
     var name: String
     var email: String?
     var provider: AuthProvider
-    var ProfileImageURL: URL?
+    var profileImageURL: URL?
 
     static let placeholder = User(
         name: "게스트",
         email: nil,
         provider: .kakao,
-        ProfileImageURL: nil
+        profileImageURL: nil
     )
 }
