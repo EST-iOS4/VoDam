@@ -4,7 +4,9 @@
 //
 //  Created by 송영민 on 11/17/25.
 //
-
+import KakaoSDKAuth
+import KakaoSDKAuth
+import KakaoSDKCommon
 import ComposableArchitecture
 
 @Reducer
@@ -23,10 +25,13 @@ struct LoginProvidersFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .appleTapped,
-                    .googleTapped,
-                    .kakaoTapped:
+            case .appleTapped:
+                return .none
                 
+            case .googleTapped:
+                return .none
+                
+            case  .kakaoTapped:
                 return .none
             }
         }
