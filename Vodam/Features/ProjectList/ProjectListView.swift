@@ -30,35 +30,45 @@ struct ProjectListView: View {
                 if store.isLoading {
                     ProgressView()
                         .frame(maxHeight: .infinity)
-                } else if store.filteredAndSortedProjects.isEmpty {
+                } else if store.projectState.isEmpty {
                     Text("저장된 프로젝트가 없습니다.")
                         .foregroundColor(.secondary)
                         .frame(maxHeight: .infinity)
                 } else {
                     // MARK: - Projects List
-                    List(store.filteredAndSortedProjects) { project in
+                    List(store.projectState) { project in
                         Button(action: { store.send(.projectTapped(id: project.id)) }) {
-                            switch project.category {
-                            case .recording:
-                                Image(systemName: "record.circle")
-                            case .file:
-                                Image(systemName: "folder")
-                            case .pdf:
-                                Image(systemName: "text.rectangle.page")
-                            @unknown default:
-                                EmptyView()
-                            }
-                            VStack(alignment: .leading) {
-                                Text(project.name)
-                                    .font(.headline)
-                                Text(project.creationDate, style: .date)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
+                            HStack {
+                                switch project.category {
+                                case .recording:
+                                    Image(systemName: "record.circle")
+                                case .file:
+                                    Image(systemName: "folder")
+                                case .pdf:
+                                    Image(systemName: "text.rectangle.page")
+                                @unknown default:
+                                    EmptyView()
+                                }
+                                VStack(alignment: .leading) {
+                                    Text(project.name)
+                                        .font(.headline)
+                                    Text(project.creationDate, style: .date)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                Button(action: {
+                                    store.send(.favoriteButtonTapped(id: project.id))
+                                }) {
+                                    Image(systemName: project.isFavorite ? "star.fill" : "star")
+                                        .foregroundColor(.yellow)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        .buttonStyle(.plain)
                     }
                     .listStyle(.plain)
+                    .animation(.default, value: store.projectState)
                 }
             }
             .navigationTitle("저장된 프로젝트")
@@ -72,7 +82,7 @@ struct ProjectListView: View {
                             selection: $store.currentSort.animation()
                         ) {
                             ForEach(SortFilter.allCases, id: \.self) { sort in
-                                Text(sort.title).tag(sort)
+                                Text(sort.title)
                             }
                         }
                     } label: {
