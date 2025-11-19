@@ -9,6 +9,7 @@ import ComposableArchitecture
 
 @Reducer
 struct SettingsFeature {
+    
     @ObservableState
     struct State: Equatable {
         var user: User
