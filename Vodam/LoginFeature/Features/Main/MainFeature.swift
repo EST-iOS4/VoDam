@@ -13,30 +13,26 @@ struct MainFeature {
     @ObservableState // @Presents : Sheet나 NavigationDestination을 띄우는 상태
     struct State: Equatable { //MainFeature의 State
         @Presents var profileFlow: ProfileFlowFeature.State? // ProfileFlowFeature.State에 따른 profileFlow의 State
-    
+        
         @Presents var loginProviders: LoginProvidersFeature.State? // LoginProvidersFeature.State에 따른 loginProviders의 State
         
         var recording = RecordingFeature.State()
         var fileButton = FileButtonFeature.State()
         var pdfButton = PDFButtonFeature.State()
-
+        
     }
     
     enum Action: Equatable { //MainFeature의 Action
-        
-        case recording(RecordingFeature.Action)
-        
-        case fileButton(FileButtonFeature.Action)
-        
-        case pdfButton(PDFButtonFeature.Action)
-
-        
         case profileButtonTapped
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
         
         case loginProviders(PresentationAction<LoginProvidersFeature.Action>)
         
         case dismissProfileSheet
+        
+        case recording(RecordingFeature.Action)
+        case fileButton(FileButtonFeature.Action)
+        case pdfButton(PDFButtonFeature.Action)
     }
     
     var body: some Reducer<State, Action> {
@@ -70,20 +66,21 @@ struct MainFeature {
                 return .none
                 
             case .recording, .fileButton, .pdfButton:
-                            return .none
+                return .none
             }
-
+            
         }
         Scope(state: \.recording, action: \.recording) {
             RecordingFeature()
         }
         Scope(state: \.fileButton, action: \.fileButton) {
-                    FileButtonFeature()
-                }
-
+            FileButtonFeature()
+        }
+        
         Scope(state: \.pdfButton, action: \.pdfButton) {
-                    PDFButtonFeature()
-                }
+            PDFButtonFeature()
+        }
+        
         .ifLet(\.$profileFlow, action: \.profileFlow) {
             ProfileFlowFeature() //Reducer
         }
