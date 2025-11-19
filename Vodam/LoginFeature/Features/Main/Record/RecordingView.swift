@@ -12,7 +12,7 @@ struct RecordingView: View {
     let store: StoreOf<RecordingFeature>
 
     var body: some View {
-        WithViewStore(self.store, observe: \.status) { viewStore in
+        WithViewStore(self.store, observe: { $0 }) { viewStore in
             ZStack {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color.white)
@@ -20,15 +20,21 @@ struct RecordingView: View {
 
                 VStack(spacing: 24) {
                     // 상태 텍스트
-                    Text(viewStore.state.localizedText)
+                    Text(viewStore.status.localizedText)
+                        .font(.headline)
 
                     // 상태별 버튼
                     controls(
-                        status: viewStore.state,
+                        status: viewStore.status,
                         onStart: { viewStore.send(.startTapped) },
                         onPause: { viewStore.send(.pauseTapped) },
                         onStop: { viewStore.send(.stopTapped) }
                     )
+                    
+                    // 녹음 시간 표시
+                    Text(formatTime(viewStore.elapsedSeconds))
+                        .font(.system(size: 32, weight: .medium))
+                        .monospacedDigit()
                 }
                 .padding(.vertical, 40)
             }
@@ -48,7 +54,7 @@ struct RecordingView: View {
         switch status {
         case .ready:
             Button(action: onStart) {
-                Image(systemName: "play.fill")
+                Image(systemName: "mic.fill")
                     .foregroundColor(.white)
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(Color.black))
@@ -86,5 +92,12 @@ struct RecordingView: View {
                 }
             }
         }
+    }
+
+    // MARK: - 시간 포맷 (초 → 00:00)
+    private func formatTime(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        return String(format: "%02d:%02d", m, s)
     }
 }

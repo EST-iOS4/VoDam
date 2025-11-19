@@ -14,8 +14,8 @@ struct PDFButtonFeature {
     @ObservableState
     struct State: Equatable {
         var title: String = "PDF 가져오기"
-        var selectedPDFURL: URL? = nil
-        var isImporterPresented: Bool = false
+        var selectedPDFURL: URL? = nil //선택한 PDF파일의 주소를 가짐
+        var isImporterPresented: Bool = false //파일 선택하는 창(UI)를 불러오는 Bool
     }
 
     // PDF 선택 에러
