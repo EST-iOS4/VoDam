@@ -117,8 +117,8 @@ struct SettingView: View {
 
 private func providerText(_ provider: AuthProvider) -> String {
     switch provider {
-    case .apple: return "Apple 로그인"
-    case .google: return "google 로그인"
-    case .kakao: return "kakao 로그인"
+    case .apple: return "Apple"
+    case .google: return "google"
+    case .kakao: return "Kakao"
     }
 }
