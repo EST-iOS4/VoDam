@@ -6,12 +6,12 @@
 //
 
 import ComposableArchitecture
+import PhotosUI
 import SwiftUI
 
 struct SettingView: View {
     let store: StoreOf<SettingsFeature>
 
-    
     var body: some View {
         let user = store.user
 
@@ -20,20 +20,38 @@ struct SettingView: View {
             Section {
                 HStack {
                     Spacer()
-                    
+
                     Button(action: {
                         store.send(.profileImageChage)
                     }) {
                         ZStack(alignment: .bottomTrailing) {
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
-                                .frame(width: 80, height: 80)
-                                .overlay(
-                                    Image(systemName: "person")
-                                        .font(.system(size: 40))
-                                        .foregroundColor(.white)
-                                )
-                            
+                            if let url = user.ProfileImageURL {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView()
+                                            .frame(width: 80, height: 80)
+                                        
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 80, height: 80)
+                                            .clipShape(
+                                                RoundedRectangle(cornerRadius: 24)
+                                            )
+                                        
+                                    case .failure:
+                                        defaultProfileRect()
+                                        
+                                    @unknown default:
+                                        defaultProfileRect()
+                                    }
+                                    
+                                }
+                            } else {
+                                defaultProfileRect()
+                            }
                             Circle()
                                 .fill(Color.black)
                                 .frame(width: 30, height: 30)
@@ -47,6 +65,7 @@ struct SettingView: View {
                     .buttonStyle(PlainButtonStyle())
                     Spacer()
                 }
+                
             }
             .listRowBackground(Color.clear)
 
@@ -68,7 +87,7 @@ struct SettingView: View {
                     if let email = user.email {
                         Text(email)
                             .foregroundColor(.secondary)
-                    }else {
+                    } else {
                         Text("이메일 미연동")
                             .foregroundColor(.secondary)
                     }
@@ -103,7 +122,7 @@ struct SettingView: View {
                     }
                 }
                 .foregroundStyle(.primary)
-                
+
                 Button {
                     store.send(.deleteAccountTapped)
                 } label: {
@@ -119,6 +138,18 @@ struct SettingView: View {
         .navigationTitle("설정")
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    private func defaultProfileRect() -> some View {
+        RoundedRectangle(cornerRadius: 24)
+            .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
+            .frame(width: 80, height: 80)
+            .overlay(
+                Image(systemName: "person")
+                    .font(.system(size: 40))
+                    .foregroundColor(.white)
+            )
+    }
+
 }
 
 private func providerText(_ provider: AuthProvider) -> String {
