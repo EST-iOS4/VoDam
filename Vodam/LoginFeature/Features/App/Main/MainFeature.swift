@@ -13,9 +13,8 @@ struct MainFeature {
     @ObservableState
     struct State: Equatable {
         @Presents var profileFlow: ProfileFlowFeature.State?
-        
-    
         @Presents var loginProviders: LoginProvidersFeature.State?
+        @Presents var settings: SettingsFeature.State?
     }
     
     enum Action: Equatable {
@@ -23,6 +22,8 @@ struct MainFeature {
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
         
         case loginProviders(PresentationAction<LoginProvidersFeature.Action>)
+        
+        case settings(PresentationAction<SettingsFeature.Action>)
         
         case dismissProfileSheet
     }
@@ -51,8 +52,17 @@ struct MainFeature {
             case .profileFlow:
                 return .none
                 
-            case .loginProviders:
+            case .loginProviders(.presented(.kakaoTapped)):
                 // 나중에 실제 로그인 성공/실패 처리 추가 예정
+                state.loginProviders = nil
+                state.settings = SettingsFeature.State(user: User())
+                return .none
+                
+            case .loginProviders:
+                
+                return .none
+            
+            case .settings:
                 return .none
             }
         }
@@ -62,6 +72,10 @@ struct MainFeature {
         
         .ifLet(\.$loginProviders, action: \.loginProviders) {
             LoginProvidersFeature()
+        }
+        
+        .ifLet(\.$settings, action: \.settings) {
+            SettingsFeature()
         }
     }
 }

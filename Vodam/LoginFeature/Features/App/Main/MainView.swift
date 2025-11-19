@@ -51,5 +51,15 @@ struct MainView: View {
                 .presentationDetents([.fraction(0.4)])
                 .presentationDragIndicator(.visible)
         }
+        
+        .navigationDestination(
+            store: store.scope(
+                state: \.$settings,
+                action: \.settings
+            )
+        ) {
+            settingStore in
+            SettingView(store: settingStore)
+        }
     }
 }

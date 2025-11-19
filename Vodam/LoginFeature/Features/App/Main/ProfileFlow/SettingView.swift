@@ -14,68 +14,111 @@ struct SettingView: View {
     var body: some View {
         let user = store.user
 
-        VStack(spacing: 24) {
-            //상단 프로필
-            VStack(spacing: 8) {
-                Circle()
-                    .fill(Color.purple.opacity(0.2))
-                    .frame(width: 72, height: 72)
-                    .overlay(
-                        Text(String(user.name.prefix(1)))
-                            .font(.title)
-                            .foregroundStyle(.purple)
-                    )
-
-                Text(user.name)
-                    .font(.headline)
-
-                Text(user.email)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Text(providerText(user.provider))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+        List {
+            //프로필
+            Section {
+                HStack {
+                    Spacer()
+                    
+                    Button(action: {
+                        store.send(.profileImageChage)
+                    }) {
+                        ZStack(alignment: .bottomTrailing) {
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
+                                .frame(width: 80, height: 80)
+                                .overlay(
+                                    Image(systemName: "person")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.white)
+                                )
+                            
+                            Circle()
+                                .fill(Color.black)
+                                .frame(width: 30, height: 30)
+                                .overlay(
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 25))
+                                        .foregroundColor(.white)
+                                )
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    Spacer()
+                }
             }
-            .padding(.top, 40)
+            .listRowBackground(Color.clear)
 
-            Divider()
-                .padding(.horizontal)
+            //메뉴1
+            Section {
+                HStack {
+                    Image(systemName: "person.circle")
+                    Text("이름")
+                    Spacer()
+                    Text(user.name)
+                        .foregroundColor(.secondary)
+                }
+                .foregroundColor(.primary)
 
-            //버튼 섹션
-            VStack(spacing: 12) {
+                HStack {
+                    Image(systemName: "envelope.circle")
+                    Text("이메일")
+                    Spacer()
+                    Text(user.email)
+                        .foregroundColor(.secondary)
+                }
+                .foregroundColor(.primary)
+
+                HStack {
+                    Image(systemName: "exclamationmark.circle")
+                    Text("개인정보처리방침")
+                }
+                .foregroundColor(.primary)
+
+                HStack {
+                    Image(systemName: "questionmark.circle")
+                    Text("문의하기")
+                }
+                .foregroundColor(.primary)
+            }
+
+            //메뉴2
+            Section {
                 Button {
                     store.send(.logoutTapped)
                 } label: {
-                    Text("로그아웃")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                    HStack {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Text("로그아웃")
+                        Spacer()
+                        Text(providerText(user.provider))
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                    }
                 }
+                .foregroundStyle(.primary)
+                
                 Button {
                     store.send(.deleteAccountTapped)
                 } label: {
-                    Text("계정 삭제")
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(12)
+                    HStack {
+                        Image(systemName: "trash.circle")
+                        Text("계정 삭제")
+                            .foregroundColor(.red)
+                    }
                 }
+                .foregroundStyle(.primary)
             }
-            .padding(.horizontal, 24)
-
-            Spacer()
         }
         .navigationTitle("설정")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
+
 private func providerText(_ provider: AuthProvider) -> String {
     switch provider {
-    case .apple: return "Apple로 로그인"
-    case .google: return "google로 로그인"
-    case .kakao: return "kakao로 로그인"
+    case .apple: return "Apple 로그인"
+    case .google: return "google 로그인"
+    case .kakao: return "kakao 로그인"
     }
 }
