@@ -45,6 +45,7 @@ struct ProfileFlowView: View {
 
                 Button {
                     store.send(.loginButtonTapped)
+                    
                 } label: {
                     Text("로그인 하러 가기")
                         .foregroundStyle(.white)

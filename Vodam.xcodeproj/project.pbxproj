@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */; };
+		7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */; };
+		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
 /* End PBXBuildFile section */
 
@@ -14,9 +17,22 @@
 		8B4C67C32EBC8481003C67F9 /* Vodam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vodam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7D1B6D2E2ECD89D4005A08A6 /* Exceptions for "Vodam" folder in "Vodam" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8B4C67C52EBC8481003C67F9 /* Vodam */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7D1B6D2E2ECD89D4005A08A6 /* Exceptions for "Vodam" folder in "Vodam" target */,
+			);
 			path = Vodam;
 			sourceTree = "<group>";
 		};
@@ -27,7 +43,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
+				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
+				7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +90,9 @@
 			name = Vodam;
 			packageProductDependencies = (
 				7D5C88932ECAAC3400977C6E /* ComposableArchitecture */,
+				7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */,
+				7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */,
+				7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -102,6 +124,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+				7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B4C67C42EBC8481003C67F9 /* Products */;
@@ -265,6 +288,7 @@
 				DEVELOPMENT_TEAM = WU5AU2G459;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Vodam/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "마이크 권한이 필요합니다.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "음성 인식 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -299,6 +323,7 @@
 				DEVELOPMENT_TEAM = WU5AU2G459;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Vodam/Info.plist;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "마이크 권한이 필요합니다.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "음성 인식 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -347,6 +372,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kakao/kakao-ios-sdk";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
@@ -358,6 +391,21 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
+			productName = KakaoSDKAuth;
+		};
+		7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
+			productName = KakaoSDKCommon;
+		};
+		7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
+			productName = KakaoSDKUser;
+		};
 		7D5C88932ECAAC3400977C6E /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
