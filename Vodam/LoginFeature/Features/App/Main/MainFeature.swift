@@ -15,6 +15,9 @@ struct MainFeature {
         @Presents var profileFlow: ProfileFlowFeature.State?
         @Presents var loginProviders: LoginProvidersFeature.State?
         @Presents var settings: SettingsFeature.State?
+        
+        //(선택) 현재 로그인한 사용자 캐싱하고 싶으면 여기에
+        var currentUser: User?
     }
     
     enum Action: Equatable {
@@ -49,19 +52,23 @@ struct MainFeature {
                 state.profileFlow = nil
                 return .none
                 
-            case .profileFlow:
-                return .none
-                
-            case .loginProviders(.presented(.kakaoTapped)):
+            case let .loginProviders(.presented(.delegate(.kakaoLoginFinished(user)))):
                 // 나중에 실제 로그인 성공/실패 처리 추가 예정
                 state.loginProviders = nil
-                state.settings = SettingsFeature.State(user: User())
+                state.currentUser = user
+                state.settings = SettingsFeature.State(user: user)
+                return .none
+                
+            case let .loginProviders(.presented(.delegate(.kakaoLoginFailed(message)))):
+                print("Kakao login failed in MainFeautre: \(message)")
                 return .none
                 
             case .loginProviders:
-                
                 return .none
             
+            case .profileFlow:
+                return .none
+                
             case .settings:
                 return .none
             }

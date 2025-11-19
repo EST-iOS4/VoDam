@@ -9,8 +9,8 @@ import ComposableArchitecture
 import SwiftUI
 
 struct LoginProvidersView: View {
-    let store: StoreOf<LoginProvidersFeature>
-
+   let store: StoreOf<LoginProvidersFeature>
+    
     var body: some View {
         VStack(spacing: 24) {
             Text("Vodam")

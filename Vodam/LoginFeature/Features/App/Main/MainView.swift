@@ -9,7 +9,11 @@ import ComposableArchitecture
 import SwiftUI
 
 struct MainView: View {
-    let store: StoreOf<MainFeature>
+    @Bindable var store: StoreOf<MainFeature>
+    
+    init(store: StoreOf<MainFeature>) {
+        self.store = store
+    }
 
     var body: some View {
         VStack {

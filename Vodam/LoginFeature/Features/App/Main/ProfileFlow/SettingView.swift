@@ -11,6 +11,7 @@ import SwiftUI
 struct SettingView: View {
     let store: StoreOf<SettingsFeature>
 
+    
     var body: some View {
         let user = store.user
 
@@ -64,8 +65,13 @@ struct SettingView: View {
                     Image(systemName: "envelope.circle")
                     Text("이메일")
                     Spacer()
-                    Text(user.email)
-                        .foregroundColor(.secondary)
+                    if let email = user.email {
+                        Text(email)
+                            .foregroundColor(.secondary)
+                    }else {
+                        Text("이메일 미연동")
+                            .foregroundColor(.secondary)
+                    }
                 }
                 .foregroundColor(.primary)
 
