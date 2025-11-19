@@ -7,8 +7,6 @@
 
 import ComposableArchitecture
 
-struct RecordingCancelID: Hashable {}
-
 @Reducer
 struct RecordingFeature {
 
@@ -37,7 +35,7 @@ struct RecordingFeature {
         case stopTapped
     }
 
-    var body: some Reducer<State, Action> { // action을 받아 state를 변경
+    var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
 

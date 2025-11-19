@@ -17,11 +17,19 @@ struct MainFeature {
         @Presents var loginProviders: LoginProvidersFeature.State? // LoginProvidersFeature.State에 따른 loginProviders의 State
         
         var recording = RecordingFeature.State()
+        var fileButton = FileButtonFeature.State()
+        var pdfButton = PDFButtonFeature.State()
+
     }
     
     enum Action: Equatable { //MainFeature의 Action
         
         case recording(RecordingFeature.Action)
+        
+        case fileButton(FileButtonFeature.Action)
+        
+        case pdfButton(PDFButtonFeature.Action)
+
         
         case profileButtonTapped
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
@@ -61,14 +69,21 @@ struct MainFeature {
                 // 나중에 실제 로그인 성공/실패 처리 추가 예정
                 return .none
                 
-            case .recording:
-                return .none
+            case .recording, .fileButton, .pdfButton:
+                            return .none
             }
 
         }
         Scope(state: \.recording, action: \.recording) {
             RecordingFeature()
         }
+        Scope(state: \.fileButton, action: \.fileButton) {
+                    FileButtonFeature()
+                }
+
+        Scope(state: \.pdfButton, action: \.pdfButton) {
+                    PDFButtonFeature()
+                }
         .ifLet(\.$profileFlow, action: \.profileFlow) {
             ProfileFlowFeature() //Reducer
         }

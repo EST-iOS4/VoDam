@@ -15,12 +15,28 @@ struct MainView: View { //MainView에서 사용하는 store 객체는 MainFeatur
         VStack { // 화면 세로 배치, 항상 가운데 정렬
                 // 녹음 버튼, 파일 가져오기 버튼, PDF 가져오기 버튼
             
-            RecordingCardView( // RecordingCardView stae, action을 store
+            RecordingView( // RecordingView stae, action을 store
                             store: store.scope(
                                 state: \.recording,
                                 action: \.recording
                             )
                         )
+            // MARK: - 파일 가져오기
+                       FileButtonView(
+                           store: store.scope(
+                               state: \.fileButton,
+                               action: \.fileButton
+                           )
+                       )
+
+                       // MARK: - PDF 가져오기
+                       PDFButtonView(
+                           store: store.scope(
+                               state: \.pdfButton,
+                               action: \.pdfButton
+                           )
+                       )
+
             Spacer()
             
 //            Text("여기에 메인 UI 들어갈 예정")

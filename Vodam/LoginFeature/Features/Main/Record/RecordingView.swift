@@ -8,7 +8,7 @@
 import SwiftUI
 import ComposableArchitecture
 
-struct RecordingCardView: View {
+struct RecordingView: View {
     let store: StoreOf<RecordingFeature>
 
     var body: some View {
