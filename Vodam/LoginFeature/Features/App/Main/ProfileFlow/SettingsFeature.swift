@@ -68,6 +68,9 @@ struct SettingsFeature {
             case .deleteAccountConfirmed:
                 // MainFeature에서 실제 탈퇴 처리
                 return .none
+                
+            case .alert(.presented(.deleteAccountConfirmed)):
+                return .send(.deleteAccountConfirmed)
 
             case .alert(.presented(.confirmLogoutSuccess)):
                 return .none
