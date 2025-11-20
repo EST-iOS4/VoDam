@@ -7,7 +7,8 @@ import ComposableArchitecture
 struct VodamApp: App {
     
     init() {
-        KakaoSDK.initSDK(appKey: "30d61918bb608e9d6159398187eaf421")
+        let KAKAO_APP_KEY: String = Bundle.main.infoDictionary?["KAKAO_APP_KEY"] as? String ?? "KAKAO_APP_KEY is nil"
+        KakaoSDK.initSDK(appKey: KAKAO_APP_KEY, loggingEnable: true)
     }
     
     var body: some Scene {
