@@ -7,8 +7,10 @@
 
 import SwiftUI
 import ComposableArchitecture
+import SwiftData
 
 struct RecordingView: View {
+    @Environment(\.modelContext) var context      // SwiftData ModelContext
     let store: StoreOf<RecordingFeature>
 
     var body: some View {
@@ -30,7 +32,7 @@ struct RecordingView: View {
                         onPause: { viewStore.send(.pauseTapped) },
                         onStop: { viewStore.send(.stopTapped) }
                     )
-                    
+
                     // 녹음 시간 표시
                     Text(formatTime(viewStore.elapsedSeconds))
                         .font(.system(size: 32, weight: .medium))
@@ -40,6 +42,31 @@ struct RecordingView: View {
             }
             .frame(height: 240)
             .padding(.horizontal, 20)
+
+            // MARK: - 🔥 fileURL 변경 감지 → SwiftData 저장
+            .onChange(of: viewStore.fileURL) { newValue in
+                guard let url = newValue else { return }
+                saveToSwiftData(url: url, length: viewStore.lastRecordedLength)
+            }
+        }
+    }
+
+    // MARK: - SwiftData 저장
+    private func saveToSwiftData(url: URL, length: Int) {
+        let model = RecordingModel(
+            filename: url.lastPathComponent,
+            filePath: url.path,
+            length: length,
+            createdAt: .now
+        )
+
+        context.insert(model)
+
+        do {
+            try context.save()
+            print("💾 SwiftData 저장 성공 → \(url.lastPathComponent)")
+        } catch {
+            print("❌ SwiftData 저장 실패: \(error)")
         }
     }
 
