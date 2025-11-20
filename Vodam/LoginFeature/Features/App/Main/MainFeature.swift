@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import Foundation
 
 @Reducer
 struct MainFeature {
@@ -22,12 +23,17 @@ struct MainFeature {
     
     enum Action: Equatable {
         case profileButtonTapped
-        
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
         case loginProviders(PresentationAction<LoginProvidersFeature.Action>)
         case settings(PresentationAction<SettingsFeature.Action>)
-        
         case dismissProfileSheet
+        
+        case logoutSucceeded
+        case logoutFailed(String)
+        case deleteAccountSucceeded
+        case deleteAccountFailed(String)
+        
+        
     }
     
     var body: some Reducer<State, Action> {
@@ -83,8 +89,6 @@ struct MainFeature {
                 
                 //로그아웃
             case .settings(.presented(.logoutTapped)):
-                state.currentUser = nil
-                state.settings = SettingsFeature.State(user: nil)
                 return .run { send in
                     do {
                         try await AuthService.logout()
@@ -94,6 +98,85 @@ struct MainFeature {
                     }
                 }
                 
+            case .logoutSucceeded:
+                state.currentUser = nil
+                state.settings?.alert = AlertState {
+                    TextState("로그아웃 성공.")
+                } actions: {
+                    ButtonState(action: .confirmLogoutSuccess) {
+                        TextState("확인")
+                    }
+                } message: {
+                    TextState("로그아웃 되었습니다.")
+                }
+                return .none
+            
+            case let .logoutFailed(message):
+                state.settings?.alert = AlertState {
+                    TextState("로그아웃 실패.")
+                } actions: {
+                    ButtonState(action: .confirmLogoutSuccess) {
+                        TextState("확인")
+                    }
+                } message: {
+                    TextState("로그아웃에 실패했습니다. \n\(message)")
+                }
+                return .none
+                
+                
+                
+            case .settings(.presented(.alert(.presented(.confirmLogoutSuccess)))):
+                state.settings = SettingsFeature.State(user: nil)
+                return .none
+                
+            case .settings(.presented(.alert(.presented(.confirmLogoutFailure)))):
+                return .none
+
+            // 회원탈퇴( 로그아웃 + 정보 삭제)
+            case .settings(.presented(.deleteAccountConfirmed)):
+                return .run { send in
+                    do {
+                        try await AuthService.deleteAccount()
+                        // firebase 사용자 데이터 삭제 넣기
+                        await send(.deleteAccountSucceeded)
+                    } catch {
+                        await send(.deleteAccountFailed(error.localizedDescription))
+                    }
+                }
+                
+            case .deleteAccountSucceeded:
+                state.currentUser = nil
+                state.settings?.alert = AlertState {
+                    TextState("회원 탈퇴 완료")
+                } actions: {
+                    ButtonState(action: .send(.confirmDeleteSuccess)) {
+                        TextState("확인")
+                    }
+                }message: {
+                    TextState("회원 탈퇴가 완료되었습니다.")
+                }
+                return .none
+                
+            case let .deleteAccountFailed(message):
+                state.settings?.alert = AlertState {
+                    TextState("탈퇴 실패")
+                } actions: {
+                    ButtonState(action: .send(.confirmDeleteFailure)) {
+                        TextState("확인")
+                    }
+                } message: {
+                    TextState("회원 탈퇴에 실패했습니다. \n\(message))")
+                }
+                return .none
+                
+            case .settings(.presented(.alert(.presented(.confirmDeleteSuccess)))):
+                state.settings = SettingsFeature.State(user: nil)
+                return .none
+                
+            case .settings(.presented(.alert(.presented(.confirmDeleteFailure)))):
+                return .none
+                
+                
             case .loginProviders:
                 return .none
             
@@ -102,6 +185,7 @@ struct MainFeature {
                 
             case .settings:
                 return .none
+                
             }
         }
         .ifLet(\.$profileFlow, action: \.profileFlow) {
