@@ -20,7 +20,7 @@ struct User: Equatable {
     var profileImageURL: URL?
 
     static let placeholder = User(
-        name: "게스트",
+        name: "Vodam",
         email: nil,
         provider: .kakao,
         profileImageURL: nil
