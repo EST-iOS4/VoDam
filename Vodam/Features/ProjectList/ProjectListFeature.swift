@@ -136,7 +136,6 @@ extension ProjectListFeature {
             case pdfDetail(PdfDetailFeature.State)
         }
         
-        @CasePathable
         enum Action {
             case audioDetail(AudioDetailFeature.Action)
             case pdfDetail(PdfDetailFeature.Action)
