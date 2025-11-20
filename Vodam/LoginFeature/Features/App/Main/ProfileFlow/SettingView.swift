@@ -22,10 +22,13 @@ struct SettingView: View {
                     Spacer()
 
                     Button(action: {
-                        store.send(.profileImageChage)
+                        //(일단) 로그인 상태만 프로필 이미지 변경 가능하게
+                        if user != nil{
+                            store.send(.profileImageChage)
+                        }
                     }) {
                         ZStack(alignment: .bottomTrailing) {
-                            if let url = user.profileImageURL {
+                            if let url = user?.profileImageURL {
                                 AsyncImage(url: url) { phase in
                                     switch phase {
                                     case .empty:
@@ -54,17 +57,22 @@ struct SettingView: View {
                             } else {
                                 defaultProfileRect()
                             }
-                            Circle()
-                                .fill(Color.black)
-                                .frame(width: 30, height: 30)
-                                .overlay(
-                                    Image(systemName: "pencil")
-                                        .font(.system(size: 25))
-                                        .foregroundColor(.white)
-                                )
+                            //로그인 일때만 편집 버튼 보여주기
+                            if user != nil {
+                                Circle()
+                                    .fill(Color.black)
+                                    .frame(width: 30, height: 30)
+                                    .overlay(
+                                        Image(systemName: "pencil")
+                                            .font(.system(size: 25))
+                                            .foregroundColor(.white)
+                                    )
+                            }
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .disabled(user == nil)
+                    
                     Spacer()
                 }
 
@@ -77,7 +85,7 @@ struct SettingView: View {
                     Image(systemName: "person.circle")
                     Text("이름")
                     Spacer()
-                    Text(user.name)
+                    Text(user?.name ?? "게스트")
                         .foregroundColor(.secondary)
                 }
                 .foregroundColor(.primary)
@@ -86,11 +94,11 @@ struct SettingView: View {
                     Image(systemName: "envelope.circle")
                     Text("이메일")
                     Spacer()
-                    if let email = user.email {
+                    if let email = user?.email {
                         Text(email)
                             .foregroundColor(.secondary)
                     } else {
-                        Text("Vodam@example.com")
+                        Text(user != nil ? "이메일 없음" : "비로그인")
                             .foregroundColor(.secondary)
                     }
 
@@ -112,30 +120,47 @@ struct SettingView: View {
 
             //메뉴2
             Section {
-                Button {
-                    store.send(.logoutTapped)
-                } label: {
-                    HStack {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
-                        Text("로그아웃")
-                        Spacer()
-                        Text(providerText(user.provider))
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                if let user = user {
+                    Button {
+                        store.send(.logoutTapped)
+                    } label: {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("로그아웃")
+                            Spacer()
+                            Text(providerText(user.provider))
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
                     }
-                }
-                .foregroundStyle(.primary)
-
-                Button {
-                    store.send(.deleteAccountTapped)
-                } label: {
-                    HStack {
-                        Image(systemName: "trash.circle")
-                        Text("계정 삭제")
-                            .foregroundColor(.red)
+                    .foregroundStyle(.primary)
+                    
+                    Button {
+                        store.send(.deleteAccountTapped)
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash.circle")
+                            Text("계정 삭제")
+                                .foregroundColor(.red)
+                        }
                     }
+                    .foregroundStyle(.primary)
+                } else {
+                    //비로그인
+                    Button {
+                        store.send(.loginButtonTapped)
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.badge.plus")
+                            Text("로그인")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .foregroundStyle(.primary)
                 }
-                .foregroundStyle(.primary)
             }
         }
         .navigationTitle("설정")
