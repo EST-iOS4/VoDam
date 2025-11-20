@@ -8,9 +8,9 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct ProjectDetailView: View {
-    @Bindable var store: StoreOf<ProjectDetailFeature>
+struct AudioDetailView: View {
+    @Bindable var store: StoreOf<AudioDetailFeature>
     var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+        Text("AudioDetailView")
     }
 }

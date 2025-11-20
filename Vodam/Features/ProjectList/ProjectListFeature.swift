@@ -84,9 +84,15 @@ struct ProjectListFeature {
                 }
                 
             case let .projectTapped(id: projectId):
-                // 탭한 프로젝트의 상세 정보를 Destination으로 설정하여 화면 전환
                 if let project = state.projects[id: projectId] {
-                    state.destination = .detail(ProjectDetailFeature.State(project: project))
+                    switch project.category {
+                    case .pdf:
+                        state.destination = .pdfDetail(PdfDetailFeature.State(project: project))
+                    case .file, .recording:
+                        state.destination = .audioDetail(AudioDetailFeature.State(project: project))
+                    @unknown default:
+                        return .none
+                    }
                 }
                 return .none
                 
@@ -126,16 +132,22 @@ extension ProjectListFeature {
         @ObservableState
         enum State: Equatable {
             // TODO: 실제 프로젝트 상세 화면의 Feature로 교체
-            case detail(ProjectDetailFeature.State)
+            case audioDetail(AudioDetailFeature.State)
+            case pdfDetail(PdfDetailFeature.State)
         }
         
+        @CasePathable
         enum Action {
-            case detail(ProjectDetailFeature.Action)
+            case audioDetail(AudioDetailFeature.Action)
+            case pdfDetail(PdfDetailFeature.Action)
         }
         
         var body: some Reducer<State, Action> {
-            Scope(state: \.detail, action: \.detail) {
-                ProjectDetailFeature()
+            Scope(state: \.audioDetail, action: \.audioDetail) {
+                AudioDetailFeature()
+            }
+            Scope(state: \.pdfDetail, action: \.pdfDetail) {
+                PdfDetailFeature()
             }
         }
     }

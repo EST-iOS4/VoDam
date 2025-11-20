@@ -16,7 +16,7 @@ struct ProjectListView: View {
             VStack {
                 // MARK: - Category Segmented Control
                 Picker(
-                    "",
+                    "카테고리를 선택하세요.",
                     selection: $store.selectedCategory.animation()
                 ) {
                     ForEach(store.allCategories, id: \.self) { category in
@@ -25,8 +25,7 @@ struct ProjectListView: View {
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
-
-                // MARK: - Content View
+                
                 if store.isLoading {
                     ProgressView()
                         .frame(maxHeight: .infinity)
@@ -37,7 +36,9 @@ struct ProjectListView: View {
                 } else {
                     // MARK: - Projects List
                     List(store.projectState) { project in
-                        Button(action: { store.send(.projectTapped(id: project.id)) }) {
+                        Button(action: {
+                            store.send(.projectTapped(id: project.id))
+                        }) {
                             HStack {
                                 switch project.category {
                                 case .recording:
@@ -56,7 +57,9 @@ struct ProjectListView: View {
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                 }
+                                
                                 Spacer()
+                                
                                 Button(action: {
                                     store.send(.favoriteButtonTapped(id: project.id))
                                 }) {
@@ -74,11 +77,10 @@ struct ProjectListView: View {
             .navigationTitle("저장된 프로젝트")
             .searchable(text: $store.searchText, prompt: "프로젝트를 검색하세요.")
             .toolbar {
-                // MARK: - Sort Filter Menu
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Picker(
-                            "정렬 방식",
+                            "정렬 방식을 선택하세요. ",
                             selection: $store.currentSort.animation()
                         ) {
                             ForEach(SortFilter.allCases, id: \.self) { sort in
@@ -93,13 +95,21 @@ struct ProjectListView: View {
             .onAppear {
                 store.send(.onAppear)
             }
-            // MARK: - Navigation to Detail View
             .navigationDestination(
-                store: store.scope(state: \.$destination, action: \.destination),
-                state: /ProjectListFeature.Destination.State.detail,
-                action: ProjectListFeature.Destination.Action.detail
+                store: self.store.scope(state: \.$destination, action: \.destination)
             ) { store in
-                ProjectDetailView(store: store)
+                switch store.state {
+                case .audioDetail:
+                    if let store = store.scope(state: \.audioDetail, action: \.audioDetail) {
+                        AudioDetailView(store: store)
+                    }
+                case .pdfDetail:
+                    if let store = store.scope(state: \.pdfDetail, action: \.pdfDetail) {
+                        PdfDetailView(store: store)
+                    }
+                default:
+                    EmptyView()
+                }
             }
         }
     }
