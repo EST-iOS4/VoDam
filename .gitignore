@@ -26,6 +26,13 @@ DerivedData/
 *.perspectivev3
 !default.perspectivev3
 
+### Xcode Patch ###
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcworkspace/contents.xcworkspacedata
+/*.gcno
+
 ## Obj-C/Swift specific
 *.hmap
 
@@ -49,6 +56,9 @@ playground.xcworkspace
 # .swiftpm
 
 .build/
+
+### Package.resolved ###
+*.resolved
 
 # CocoaPods
 # We recommend against adding the Pods directory to your .gitignore. However
