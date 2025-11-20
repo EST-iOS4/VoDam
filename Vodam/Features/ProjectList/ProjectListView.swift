@@ -41,7 +41,7 @@ struct ProjectListView: View {
                         }) {
                             HStack {
                                 switch project.category {
-                                case .recording:
+                                case .audio:
                                     Image(systemName: "record.circle")
                                 case .file:
                                     Image(systemName: "folder")
