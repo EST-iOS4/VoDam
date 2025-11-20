@@ -16,16 +16,15 @@ struct MainFeature {
         @Presents var loginProviders: LoginProvidersFeature.State?
         @Presents var settings: SettingsFeature.State?
         
-        //(선택) 현재 로그인한 사용자 캐싱하고 싶으면 여기에
+        // 현재 로그인한 사용자 (nil 비로그인)
         var currentUser: User?
     }
     
     enum Action: Equatable {
         case profileButtonTapped
+        
         case profileFlow(PresentationAction<ProfileFlowFeature.Action>)
-        
         case loginProviders(PresentationAction<LoginProvidersFeature.Action>)
-        
         case settings(PresentationAction<SettingsFeature.Action>)
         
         case dismissProfileSheet
@@ -35,9 +34,22 @@ struct MainFeature {
         Reduce { state, action in
             switch action {
             case .profileButtonTapped:
-                state.profileFlow = ProfileFlowFeature.State()
+                //로그인 상태면 설정 화면, 비로그인 상태면 profileFlow띄우기
+                if let user = state.currentUser{
+                    // 로그인 상태 -> 설정 화면
+                    state.settings = SettingsFeature.State(user: user)
+                } else {
+                    // 비로그인 상태 -> profileflow 시트 띄우기
+                    state.profileFlow = ProfileFlowFeature.State()
+                }
                 return .none
             
+                //비로그인 사용
+            case .profileFlow(.presented(.guestButtonTapped)):
+                state.profileFlow = nil
+                state.settings = SettingsFeature.State(user: nil)
+                return .none
+                
             case .profileFlow(.presented(.loginButtonTapped)):
                 state.profileFlow = nil
                 state.loginProviders = LoginProvidersFeature.State()
@@ -61,6 +73,12 @@ struct MainFeature {
                 
             case let .loginProviders(.presented(.delegate(.kakaoLoginFailed(message)))):
                 print("Kakao login failed in MainFeautre: \(message)")
+                return .none
+                
+                // 비회원으로 설정화면 접근시 로그인 버튼
+            case .settings(.presented(.loginButtonTapped)):
+                state.settings = nil
+                state.loginProviders = LoginProvidersFeature.State()
                 return .none
                 
             case .loginProviders:

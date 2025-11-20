@@ -12,11 +12,12 @@ struct SettingsFeature {
     
     @ObservableState
     struct State: Equatable {
-        var user: User
+        var user: User?
     }
     
     enum Action: Equatable {
         case profileImageChage
+        case loginButtonTapped
         case logoutTapped
         case deleteAccountTapped
     }
@@ -25,6 +26,9 @@ struct SettingsFeature {
         Reduce { state, action in
             switch action {
             case .profileImageChage:
+                return .none
+                
+            case .loginButtonTapped:
                 return .none
                 
             case .logoutTapped:

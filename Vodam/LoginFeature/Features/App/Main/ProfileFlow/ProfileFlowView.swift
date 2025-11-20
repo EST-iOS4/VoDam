@@ -47,11 +47,24 @@ struct ProfileFlowView: View {
                     store.send(.loginButtonTapped)
                     
                 } label: {
-                    Text("로그인 하러 가기")
+                    Text("로그인")
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.purple)
+                        .cornerRadius(14)
+                }
+                .padding(.horizontal, 24)
+                
+                Button {
+                    store.send(.guestButtonTapped)
+                    
+                } label: {
+                    Text("비회원으로 사용")
+                        .foregroundStyle(.gray)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.systemGray6))
                         .cornerRadius(14)
                 }
                 .padding(.horizontal, 24)
