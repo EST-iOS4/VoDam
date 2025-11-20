@@ -159,6 +159,8 @@
 /* Begin XCBuildConfiguration section */
 		8B4C67CC2EBC8482003C67F9 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 8B4C67C52EBC8481003C67F9 /* Vodam */;
+			baseConfigurationReferenceRelativePath = Secrets.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -223,6 +225,8 @@
 		};
 		8B4C67CD2EBC8482003C67F9 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 8B4C67C52EBC8481003C67F9 /* Vodam */;
+			baseConfigurationReferenceRelativePath = Secrets.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

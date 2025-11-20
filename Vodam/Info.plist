@@ -9,18 +9,18 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>kakao30d61918bb608e9d6159398187eaf421</string>
+				<string>kakao$(KAKAO_NATIVE_APP_KEY)</string>
 			</array>
 		</dict>
 	</array>
+	<key>KAKAO_APP_KEY</key>
+	<string>$(KAKAO_NATIVE_APP_KEY)</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-		<string>KaKaoKompassauth</string>
+		<string>kakaokompassauth</string>
 		<string>kakaolink</string>
 		<string>kakaoplus</string>
 		<string>kakaotalk</string>
 	</array>
-	<key>KAKAO_APP_KEY</key>
-	<string>8e7a47bc526fd41eac8a65b4abd5895e</string>
 </dict>
 </plist>

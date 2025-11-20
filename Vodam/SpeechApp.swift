@@ -7,8 +7,11 @@ import ComposableArchitecture
 struct VodamApp: App {
     
     init() {
-        let KAKAO_APP_KEY: String = Bundle.main.infoDictionary?["KAKAO_APP_KEY"] as? String ?? "KAKAO_APP_KEY is nil"
-        KakaoSDK.initSDK(appKey: KAKAO_APP_KEY, loggingEnable: true)
+        guard let token = Bundle.main.object(forInfoDictionaryKey: "KAKAO_APP_KEY") as? String,
+                      !token.isEmpty else {
+                    fatalError("KAKAO_APP_KEY이 Info.plist에 설정되지 않았습니다. Secrets.xcconfig의 TOKEN 값을 Info.plist에 추가해주세요.")
+                }
+                KakaoSDK.initSDK(appKey: token)
     }
     
     var body: some Scene {
