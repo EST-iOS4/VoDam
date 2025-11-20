@@ -10,7 +10,7 @@ import PhotosUI
 import SwiftUI
 
 struct SettingView: View {
-    let store: StoreOf<SettingsFeature>
+    @Bindable var store: StoreOf<SettingsFeature>
 
     var body: some View {
         let user = store.user
@@ -165,6 +165,7 @@ struct SettingView: View {
         }
         .navigationTitle("설정")
         .navigationBarTitleDisplayMode(.inline)
+        .alert($store.scope(state: \.alert, action: \.alert))
     }
 
     private func defaultProfileRect() -> some View {

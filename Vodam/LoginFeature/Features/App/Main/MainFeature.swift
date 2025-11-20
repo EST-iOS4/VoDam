@@ -93,33 +93,35 @@ struct MainFeature {
                     do {
                         try await AuthService.logout()
                         print("로그아웃 성공")
+                        await send(.logoutSucceeded)
                     } catch {
                         print("로그아웃 실패:\(error)")
+                        await send(.logoutFailed(error.localizedDescription))
                     }
                 }
                 
             case .logoutSucceeded:
                 state.currentUser = nil
                 state.settings?.alert = AlertState {
-                    TextState("로그아웃 성공.")
+                    TextState("로그아웃 성공")
                 } actions: {
                     ButtonState(action: .confirmLogoutSuccess) {
                         TextState("확인")
                     }
                 } message: {
-                    TextState("로그아웃 되었습니다.")
+                    TextState("로그아웃 되었습니다")
                 }
                 return .none
             
             case let .logoutFailed(message):
                 state.settings?.alert = AlertState {
-                    TextState("로그아웃 실패.")
+                    TextState("로그아웃 실패")
                 } actions: {
                     ButtonState(action: .confirmLogoutSuccess) {
                         TextState("확인")
                     }
                 } message: {
-                    TextState("로그아웃에 실패했습니다. \n\(message)")
+                    TextState("로그아웃에 실패했습니다 \n\(message)")
                 }
                 return .none
                 
@@ -153,7 +155,7 @@ struct MainFeature {
                         TextState("확인")
                     }
                 }message: {
-                    TextState("회원 탈퇴가 완료되었습니다.")
+                    TextState("회원 탈퇴가 완료되었습니다")
                 }
                 return .none
                 
@@ -165,7 +167,7 @@ struct MainFeature {
                         TextState("확인")
                     }
                 } message: {
-                    TextState("회원 탈퇴에 실패했습니다. \n\(message))")
+                    TextState("회원 탈퇴에 실패했습니다 \n\(message))")
                 }
                 return .none
                 
