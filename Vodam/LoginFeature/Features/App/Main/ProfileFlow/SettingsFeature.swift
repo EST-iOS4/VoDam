@@ -24,7 +24,6 @@ struct SettingsFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-                
             case .profileImageChage:
                 return .none
                 

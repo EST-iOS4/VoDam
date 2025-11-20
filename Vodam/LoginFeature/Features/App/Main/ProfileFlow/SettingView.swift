@@ -31,23 +31,25 @@ struct SettingView: View {
                                     case .empty:
                                         ProgressView()
                                             .frame(width: 80, height: 80)
-                                        
+
                                     case .success(let image):
                                         image
                                             .resizable()
                                             .scaledToFit()
                                             .frame(width: 80, height: 80)
                                             .clipShape(
-                                                RoundedRectangle(cornerRadius: 24)
+                                                RoundedRectangle(
+                                                    cornerRadius: 24
+                                                )
                                             )
-                                        
+
                                     case .failure:
                                         defaultProfileRect()
-                                        
+
                                     @unknown default:
                                         defaultProfileRect()
                                     }
-                                    
+
                                 }
                             } else {
                                 defaultProfileRect()
@@ -65,7 +67,7 @@ struct SettingView: View {
                     .buttonStyle(PlainButtonStyle())
                     Spacer()
                 }
-                
+
             }
             .listRowBackground(Color.clear)
 
@@ -88,9 +90,10 @@ struct SettingView: View {
                         Text(email)
                             .foregroundColor(.secondary)
                     } else {
-                        Text("이메일 미연동")
+                        Text("Vodam@example.com")
                             .foregroundColor(.secondary)
                     }
+
                 }
                 .foregroundColor(.primary)
 

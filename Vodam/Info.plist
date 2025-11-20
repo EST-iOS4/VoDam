@@ -20,5 +20,7 @@
 		<string>kakaoplus</string>
 		<string>kakaotalk</string>
 	</array>
+	<key>KAKAO_APP_KEY</key>
+	<string>8e7a47bc526fd41eac8a65b4abd5895e</string>
 </dict>
 </plist>
