@@ -81,6 +81,19 @@ struct MainFeature {
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
                 
+                //로그아웃
+            case .settings(.presented(.logoutTapped)):
+                state.currentUser = nil
+                state.settings = SettingsFeature.State(user: nil)
+                return .run { send in
+                    do {
+                        try await AuthService.logout()
+                        print("로그아웃 성공")
+                    } catch {
+                        print("로그아웃 실패:\(error)")
+                    }
+                }
+                
             case .loginProviders:
                 return .none
             
