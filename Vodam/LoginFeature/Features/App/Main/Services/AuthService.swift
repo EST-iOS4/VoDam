@@ -134,11 +134,12 @@ enum AuthService {
         
         var scopes: [String] = []
         
-        if account.profileNeedsAgreement == true {
-            scopes.append("profile")
+        if account.profileNeedsAgreement ?? false {
+            scopes.append("profile_nickname")
+            scopes.append("profile_image")
         }
         
-        if account.emailNeedsAgreement == true {
+        if account.emailNeedsAgreement ?? false {
             scopes.append("account_email")
         }
         
