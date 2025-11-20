@@ -151,7 +151,7 @@ struct MainFeature {
                 state.settings?.alert = AlertState {
                     TextState("회원 탈퇴 완료")
                 } actions: {
-                    ButtonState(action: .send(.confirmDeleteSuccess)) {
+                    ButtonState(action: .confirmDeleteSuccess) {
                         TextState("확인")
                     }
                 }message: {
@@ -163,7 +163,7 @@ struct MainFeature {
                 state.settings?.alert = AlertState {
                     TextState("탈퇴 실패")
                 } actions: {
-                    ButtonState(action: .send(.confirmDeleteFailure)) {
+                    ButtonState(action: .confirmDeleteFailure) {
                         TextState("확인")
                     }
                 } message: {
