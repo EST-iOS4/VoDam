@@ -29,9 +29,6 @@ struct AppFeature {
                 
             case .main:
                 return .none
-
-            @unknown default:
-                return .none
             }
         }
     }
