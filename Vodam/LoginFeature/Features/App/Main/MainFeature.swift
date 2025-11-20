@@ -125,8 +125,6 @@ struct MainFeature {
                 }
                 return .none
                 
-                
-                
             case .settings(.presented(.alert(.presented(.confirmLogoutSuccess)))):
                 state.settings = SettingsFeature.State(user: nil)
                 return .none
