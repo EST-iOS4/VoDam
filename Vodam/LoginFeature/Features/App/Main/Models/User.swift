@@ -7,13 +7,13 @@
 
 import Foundation
 
-enum AuthProvider: Equatable {
+enum AuthProvider: Equatable, Codable {
     case apple
     case google
     case kakao
 }
 
-struct User: Equatable {
+struct User: Equatable, Codable {
     var name: String
     var email: String?
     var provider: AuthProvider
