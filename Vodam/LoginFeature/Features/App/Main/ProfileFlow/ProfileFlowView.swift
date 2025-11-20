@@ -36,11 +36,13 @@ struct ProfileFlowView: View {
 
                        - 녹음 시간 / 횟수 제한 해제 (3회 -> 무제한)
                        - PDF / 파일 / YouTube
-                       - 스크립트 및 요약 결과 Blur 제거 
+                         스크립트 및 요약 결과 Blur 제거 
                     """
                 )
                 .font(.subheadline)
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 24)
 
                 Button {
