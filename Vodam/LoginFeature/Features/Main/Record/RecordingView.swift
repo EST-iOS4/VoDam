@@ -21,9 +21,6 @@ struct RecordingView: View {
                     .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
 
                 VStack(spacing: 24) {
-                    // 상태 텍스트
-                    Text(viewStore.status.localizedText)
-                        .font(.headline)
 
                     // 상태별 버튼
                     controls(
@@ -32,7 +29,11 @@ struct RecordingView: View {
                         onPause: { viewStore.send(.pauseTapped) },
                         onStop: { viewStore.send(.stopTapped) }
                     )
-
+                    
+                    // 상태 텍스트
+                    Text(viewStore.status.localizedText)
+                        .font(.headline)
+                    
                     // 녹음 시간 표시
                     Text(formatTime(viewStore.elapsedSeconds))
                         .font(.system(size: 32, weight: .medium))
@@ -93,7 +94,7 @@ struct RecordingView: View {
                     Image(systemName: "pause.fill")
                         .foregroundColor(.white)
                         .frame(width: 56, height: 56)
-                        .background(Circle().fill(Color.blue))
+                        .background(Circle().fill(Color.black))
                 }
                 Button(action: onStop) {
                     Image(systemName: "stop.fill")
@@ -109,7 +110,7 @@ struct RecordingView: View {
                     Image(systemName: "play.fill")
                         .foregroundColor(.white)
                         .frame(width: 56, height: 56)
-                        .background(Circle().fill(Color.blue))
+                        .background(Circle().fill(Color.black))
                 }
                 Button(action: onStop) {
                     Image(systemName: "stop.fill")
@@ -121,10 +122,12 @@ struct RecordingView: View {
         }
     }
 
-    // MARK: - 시간 포맷 (초 → 00:00)
+    // MARK: - 시간 포맷
     private func formatTime(_ seconds: Int) -> String {
-        let m = seconds / 60
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
         let s = seconds % 60
-        return String(format: "%02d:%02d", m, s)
+        return String(format: "%02d:%02d:%02d", h, m, s)
     }
+
 }

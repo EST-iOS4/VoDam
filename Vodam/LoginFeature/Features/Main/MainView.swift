@@ -8,14 +8,13 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct MainView: View { //MainView에서 사용하는 store 객체는 MainFeature
-    let store: StoreOf<MainFeature>  // MainFeature.Action
+struct MainView: View {
+    let store: StoreOf<MainFeature>
     
     var body: some View {
-        VStack { // 화면 세로 배치, 항상 가운데 정렬
-            // 녹음 버튼, 파일 가져오기 버튼, PDF 가져오기 버튼
+        VStack {
             
-            RecordingView( // RecordingView stae, action을 store
+            RecordingView(
                 store: store.scope(
                     state: \.recording,
                     action: \.recording
@@ -42,11 +41,11 @@ struct MainView: View { //MainView에서 사용하는 store 객체는 MainFeatur
             //                .foregroundStyle(.secondary)
             
         }
-        .navigationTitle("새 프로젝트 생성") //네비게이션 상단 제목
+        .navigationTitle("새 프로젝트 생성")
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) { //toolbar/toolbaritem
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    store.send(.profileButtonTapped) //Button 탭을 store 전달
+                    store.send(.profileButtonTapped)
                 } label: {
                     Image(systemName: "person.circle")
                         .imageScale(.large)
@@ -54,8 +53,8 @@ struct MainView: View { //MainView에서 사용하는 store 객체는 MainFeatur
             }
         }
         
-        .navigationDestination( // 특정 상태가 존재할 때 다음 화면으로 이동하게 하는 TCA 문법
-            store: store.scope( // MainFeature
+        .navigationDestination(
+            store: store.scope(
                 state: \.$loginProviders,
                 action: \.loginProviders
                               )
@@ -69,10 +68,10 @@ struct MainView: View { //MainView에서 사용하는 store 객체는 MainFeatur
                 state: \.$profileFlow,
                 action: \.profileFlow
             )
-        ) { profileStore in //profileFlow에 전달되는 store
+        ) { profileStore in
             ProfileFlowView(store: profileStore)
-                .presentationDetents([.fraction(0.4)]) // sheet 높이를 화면 40%로 지정
-                .presentationDragIndicator(.visible) // sheet 상단 드래그 표시 보이기
+                .presentationDetents([.fraction(0.4)]) 
+                .presentationDragIndicator(.visible)
         }
     }
 }

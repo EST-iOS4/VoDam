@@ -18,8 +18,8 @@ struct RecordingFeature {
         var localizedText: String {
             switch self {
             case .ready: "준비됨"
-            case .recording: "녹음 중"
-            case .paused: "일시정지"
+            case .recording: "녹음 중입니다"
+            case .paused: "일시정지됨"
             }
         }
     }
