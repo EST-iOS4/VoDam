@@ -14,39 +14,42 @@ struct PDFButtonView: View {
 
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
-            Button {
-                viewStore.send(.tapped)
-            } label: {
-                HStack(spacing: 16) {
+            ZStack {
+                // 카드 배경
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.white)
+                    .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
 
+                // 내부 UI
+                HStack(spacing: 20) {
+
+                    // 아이콘 (FileButtonView와 동일한 구조로 수정)
                     Image(systemName: "doc.richtext.fill")
+                        .foregroundColor(.white)
                         .font(.system(size: 24))
-                        .foregroundColor(.red)
-                        .frame(width: 48, height: 48)
+                        .frame(width: 56, height: 56)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.red.opacity(0.15))
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(Color.red)
                         )
+                        .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
 
-                    Text(viewStore.title)
-                        .foregroundColor(.black)
-                        .font(.headline)
+                    // 텍스트
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(viewStore.title)
+                            .font(.headline)
+                            .foregroundColor(.black)
+                    }
 
                     Spacer()
                 }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white)
-                        .shadow(
-                            color: Color.black.opacity(0.08),
-                            radius: 6,
-                            x: 0,
-                            y: 3
-                        )
-                )
+                .padding(.horizontal, 24)
             }
-            .buttonStyle(.plain)
+            .frame(height: 80)
+            .padding(.horizontal, 20)
+            .onTapGesture {
+                viewStore.send(.tapped)
+            }
             .fileImporter(
                 isPresented: viewStore.binding(
                     get: \.isImporterPresented,
