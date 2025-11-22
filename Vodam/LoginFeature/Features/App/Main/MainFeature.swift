@@ -133,55 +133,59 @@ struct MainFeature {
                     }
                 }
 
-            case .authOperationResponse(let operation, let result):
-                switch (operation, result) {
-                case (.logout, .success):
+            case let .authOperationResponse(operation, result):
+                switch result {
+                case .success:
                     state.currentUser = nil
-                    state.settings?.alert = AlertState {
-                        TextState("로그아웃 성공")
-                    } actions: {
-                        ButtonState(action: .confirmDeleteSuccess) {
-                            TextState("확인")
+
+                    switch operation {
+                    case .logout:
+                        state.settings?.alert = AlertState {
+                            TextState("로그아웃 성공")
+                        } actions: {
+                            ButtonState(action: .confirmLogoutSuccess) {
+                                TextState("확인")
+                            }
+                        } message: {
+                            TextState("로그아웃 되었습니다")
                         }
-                    } message: {
-                        TextState("로그아웃 되었습니다")
+
+                    case .deleteAccount:
+                        state.settings?.alert = AlertState {
+                            TextState("회원 탈퇴 완료")
+                        } actions: {
+                            ButtonState(action: .confirmDeleteSuccess) {
+                                TextState("확인")
+                            }
+                        } message: {
+                            TextState("회원 탈퇴가 완료되었습니다")
+                        }
                     }
                     return .none
 
-                case (.logout, .failure(let message)):
-                    state.settings?.alert = AlertState {
-                        TextState("로그아웃 실패")
-                    } actions: {
-                        ButtonState(action: .confirmLogoutFailure) {
-                            TextState("확인")
+                case let .failure(message):
+                    switch operation {
+                    case .logout:
+                        state.settings?.alert = AlertState {
+                            TextState("로그아웃 실패")
+                        } actions: {
+                            ButtonState(action: .confirmLogoutFailure) {
+                                TextState("확인")
+                            }
+                        } message: {
+                            TextState("로그아웃에 실패했습니다 \n\(message)")
                         }
-                    } message: {
-                        TextState("로그아웃에 실패했습니다 \n\(message)")
-                    }
-                    return .none
 
-                case (.deleteAccount, .success):
-                    state.currentUser = nil
-                    state.settings?.alert = AlertState {
-                        TextState("회원 탈퇴 완료")
-                    } actions: {
-                        ButtonState(action: .confirmDeleteSuccess) {
-                            TextState("확인")
+                    case .deleteAccount:
+                        state.settings?.alert = AlertState {
+                            TextState("탈퇴 실패")
+                        } actions: {
+                            ButtonState(action: .confirmDeleteFailure) {
+                                TextState("확인")
+                            }
+                        } message: {
+                            TextState("회원 탈퇴에 실패했습니다 \n\(message)")
                         }
-                    } message: {
-                        TextState("회원 탈퇴가 완료되었습니다")
-                    }
-                    return .none
-
-                case (.deleteAccount, .failure(let message)):
-                    state.settings?.alert = AlertState {
-                        TextState("탈퇴 실패")
-                    } actions: {
-                        ButtonState(action: .confirmDeleteFailure) {
-                            TextState("확인")
-                        }
-                    } message: {
-                        TextState("회원 탈퇴에 실패했습니다 \n\(message)")
                     }
                     return .none
                 }
