@@ -16,21 +16,16 @@ struct LoginProvidersFeature {
     struct State: Equatable {
     }
     
-    enum KakaoLoginResult: Equatable {
-        case success(User)
-        case failure(String)
-    }
-
     enum Action: Equatable {
         case appleTapped
         case googleTapped
         case kakaoTapped
 
-        case kakaoLoginResponse(KakaoLoginResult)
+        case loginResponese(TaskResult<User>)
 
         enum Delegate: Equatable {
-            case kakaoLoginFinished(User)
-            case kakaoLoginFailed(String)
+            case loginFinished(User)
+            case loginFailed(String)
         }
         case delegate(Delegate)
     }
@@ -46,24 +41,19 @@ struct LoginProvidersFeature {
 
             case .kakaoTapped:
                 return .run { send in
-                    do {
-                        let user = try await AuthService.loginWithKaKao()
-                        await send(.kakaoLoginResponse(.success(user)))
-                    } catch {
-                        await send(.kakaoLoginResponse(.failure(error.localizedDescription)))
-                    }
+                    await send(.loginResponese(
+                        TaskResult {
+                            try await AuthService.loginWithKaKao()
+                        }
+                    ))
                 }
                 
-            case let .kakaoLoginResponse(result):
-                switch result {
-                case let .success(user):
-                    return .send(.delegate(.kakaoLoginFinished(user)))
-                    
-                case let .failure(message):
-                    print("Kakao 로그인 실패: \(message)")
-                    return .send(.delegate(.kakaoLoginFailed(message)))
-                }
-              
+            case let .loginResponese(.success(user)):
+                return .send(.delegate(.loginFinished(user)))
+                
+            case let .loginResponese(.failure(error)):
+                print("로그인 실패: \(error)")
+                return .send(.delegate(.loginFailed(error.localizedDescription)))
 
             case .delegate:
                 return .none

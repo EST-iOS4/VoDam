@@ -22,13 +22,9 @@ struct MainFeature {
     }
 
     enum AuthOperation: Equatable {
-        case logout
-        case deleteAccount
-    }
-
-    enum AuthResult: Equatable {
-        case success
-        case failure(String)
+        case login(Bool)
+        case logout(Bool)
+        case deleteAccount(Bool)
     }
 
     enum Action: Equatable {
@@ -38,24 +34,20 @@ struct MainFeature {
         case settings(PresentationAction<SettingsFeature.Action>)
         case dismissProfileSheet
 
-        case authOperationResponse(AuthOperation, AuthResult)
+        case authOperationResponse(AuthOperation)
     }
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
             case .profileButtonTapped:
-                //로그인 상태면 설정 화면, 비로그인 상태면 profileFlow띄우기
                 if let user = state.currentUser {
-                    // 로그인 상태 -> 설정 화면
                     state.settings = SettingsFeature.State(user: user)
                 } else {
-                    // 비로그인 상태 -> profileflow 시트 띄우기
                     state.profileFlow = ProfileFlowFeature.State()
                 }
                 return .none
 
-            //비로그인 사용
             case .profileFlow(.presented(.guestButtonTapped)):
                 state.profileFlow = nil
                 state.settings = SettingsFeature.State(user: nil)
@@ -64,7 +56,6 @@ struct MainFeature {
             case .profileFlow(.presented(.loginButtonTapped)):
                 state.profileFlow = nil
                 state.loginProviders = LoginProvidersFeature.State()
-                // 2) 나중에 여기서 "로그인 화면 push"트리거 만들기
                 return .none
 
             case .profileFlow(.presented(.cancelButtonTapped)):
@@ -76,21 +67,19 @@ struct MainFeature {
                 return .none
 
             case .loginProviders(
-                .presented(.delegate(.kakaoLoginFinished(let user)))
+                .presented(.delegate(.loginFinished(let user)))
             ):
-                // 나중에 실제 로그인 성공/실패 처리 추가 예정
                 state.loginProviders = nil
                 state.currentUser = user
                 state.settings = SettingsFeature.State(user: user)
-                return .none
+                return .send(.authOperationResponse(.login(true)))
 
             case .loginProviders(
-                .presented(.delegate(.kakaoLoginFailed(let message)))
+                .presented(.delegate(.loginFailed(let message)))
             ):
                 print("Kakao login failed in MainFeautre: \(message)")
-                return .none
+                return .send(.authOperationResponse(.login(false)))
 
-            // 비회원으로 설정화면 접근시 로그인 버튼
             case .settings(.presented(.loginButtonTapped)):
                 state.settings = nil
                 state.loginProviders = LoginProvidersFeature.State()
@@ -102,14 +91,11 @@ struct MainFeature {
                     do {
                         try await AuthService.logout()
                         print("로그아웃 성공")
-                        await send(.authOperationResponse(.logout, .success))
+                        await send(.authOperationResponse(.logout(true)))
                     } catch {
                         print("로그아웃 실패:\(error)")
                         await send(
-                            .authOperationResponse(
-                                .logout,
-                                .failure(error.localizedDescription)
-                            )
+                            .authOperationResponse(.logout(false))
                         )
                     }
                 }
@@ -121,71 +107,56 @@ struct MainFeature {
                         try await AuthService.deleteAccount()
                         // firebase 사용자 데이터 삭제 넣기
                         await send(
-                            .authOperationResponse(.deleteAccount, .success)
+                            .authOperationResponse(.deleteAccount(true))
                         )
                     } catch {
                         await send(
-                            .authOperationResponse(
-                                .deleteAccount,
-                                .failure(error.localizedDescription)
-                            )
+                            .authOperationResponse(.deleteAccount(false))
                         )
+
                     }
                 }
 
-            case let .authOperationResponse(operation, result):
-                switch result {
-                case .success:
-                    state.currentUser = nil
+            case .authOperationResponse(let operation):
+                switch operation {
+                case .login:
+                    return .none
 
-                    switch operation {
-                    case .logout:
-                        state.settings?.alert = AlertState {
-                            TextState("로그아웃 성공")
-                        } actions: {
-                            ButtonState(action: .confirmLogoutSuccess) {
-                                TextState("확인")
-                            }
-                        } message: {
-                            TextState("로그아웃 되었습니다")
+                case .logout(let isSuccess):
+                    if isSuccess {
+                        state.currentUser = nil
+                    }
+                    state.settings?.alert = AlertState {
+                        TextState(isSuccess ? "로그아웃 성공" : "로그아웃 실패")
+                    } actions: {
+                        ButtonState(
+                            action: isSuccess
+                                ? .confirmLogoutSuccess : .confirmLogoutFailure
+                        ) {
+                            TextState("확인")
                         }
-
-                    case .deleteAccount:
-                        state.settings?.alert = AlertState {
-                            TextState("회원 탈퇴 완료")
-                        } actions: {
-                            ButtonState(action: .confirmDeleteSuccess) {
-                                TextState("확인")
-                            }
-                        } message: {
-                            TextState("회원 탈퇴가 완료되었습니다")
-                        }
+                    } message: {
+                        TextState(isSuccess ? "로그아웃 되었습니다." : "로그아웃에 실패했습니다")
                     }
                     return .none
 
-                case let .failure(message):
-                    switch operation {
-                    case .logout:
-                        state.settings?.alert = AlertState {
-                            TextState("로그아웃 실패")
-                        } actions: {
-                            ButtonState(action: .confirmLogoutFailure) {
-                                TextState("확인")
-                            }
-                        } message: {
-                            TextState("로그아웃에 실패했습니다 \n\(message)")
+                case .deleteAccount(let isSuccess):
+                    if isSuccess {
+                        state.currentUser = nil
+                    }
+                    state.settings?.alert = AlertState {
+                        TextState(isSuccess ? "회원 탈퇴 완료" : "탈퇴 실패")
+                    } actions: {
+                        ButtonState(
+                            action: isSuccess
+                                ? .confirmDeleteSuccess : .confirmDeleteFailure
+                        ) {
+                            TextState("확인")
                         }
-
-                    case .deleteAccount:
-                        state.settings?.alert = AlertState {
-                            TextState("탈퇴 실패")
-                        } actions: {
-                            ButtonState(action: .confirmDeleteFailure) {
-                                TextState("확인")
-                            }
-                        } message: {
-                            TextState("회원 탈퇴에 실패했습니다 \n\(message)")
-                        }
+                    } message: {
+                        TextState(
+                            isSuccess ? "회원 탈퇴가 완료되었습니다" : "회원 탈퇴에 실패했습니다."
+                        )
                     }
                     return .none
                 }
