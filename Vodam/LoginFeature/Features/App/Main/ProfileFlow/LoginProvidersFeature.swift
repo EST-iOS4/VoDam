@@ -15,14 +15,18 @@ struct LoginProvidersFeature {
     @ObservableState
     struct State: Equatable {
     }
+    
+    enum KakaoLoginResult: Equatable {
+        case success(User)
+        case failure(String)
+    }
 
     enum Action: Equatable {
         case appleTapped
         case googleTapped
         case kakaoTapped
 
-        case kakaoLoginSucceeded(User)
-        case kakaoLoginFailed(String)
+        case kakaoLoginResponse(KakaoLoginResult)
 
         enum Delegate: Equatable {
             case kakaoLoginFinished(User)
@@ -44,17 +48,22 @@ struct LoginProvidersFeature {
                 return .run { send in
                     do {
                         let user = try await AuthService.loginWithKaKao()
-                        await send(.kakaoLoginSucceeded(user))
+                        await send(.kakaoLoginResponse(.success(user)))
                     } catch {
-                        await send(.kakaoLoginFailed(error.localizedDescription))
+                        await send(.kakaoLoginResponse(.failure(error.localizedDescription)))
                     }
                 }
-            case .kakaoLoginSucceeded(let user):
-                return .send(.delegate(.kakaoLoginFinished(user)))
-
-            case .kakaoLoginFailed(let message):
-                print("Kakao login failed: \(message)")
-                return .send(.delegate(.kakaoLoginFailed(message)))
+                
+            case let .kakaoLoginResponse(result):
+                switch result {
+                case let .success(user):
+                    return .send(.delegate(.kakaoLoginFinished(user)))
+                    
+                case let .failure(message):
+                    print("Kakao 로그인 실패: \(message)")
+                    return .send(.delegate(.kakaoLoginFailed(message)))
+                }
+              
 
             case .delegate:
                 return .none
