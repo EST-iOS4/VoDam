@@ -16,16 +16,21 @@ struct LoginProvidersFeature {
     struct State: Equatable {
     }
     
+    enum Provider: Equatable {
+        case apple
+        case google
+        case kakao
+    }
+    
+    enum LoginError: Error {
+        case notImplemented(String)
+    }
+    
     enum Action: Equatable {
-        case appleTapped
-        case googleTapped
-        case kakaoTapped
-
-        case loginResponese(TaskResult<User>)
-
+        case providerTapped(Provider)
+        
         enum Delegate: Equatable {
-            case loginFinished(User)
-            case loginFailed(String)
+           case login(Bool, User?)
         }
         case delegate(Delegate)
     }
@@ -33,28 +38,31 @@ struct LoginProvidersFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .appleTapped:
-                return .none
-
-            case .googleTapped:
-                return .none
-
-            case .kakaoTapped:
+                
+            case let .providerTapped(provider):
                 return .run { send in
-                    await send(.loginResponese(
-                        TaskResult {
-                            try await AuthService.loginWithKaKao()
+                    do {
+                        let user: User
+                        
+                        switch provider {
+                        case .kakao:
+                            user = try await AuthService.loginWithKaKao()
+                            
+                        case .apple:
+                            throw LoginError.notImplemented("Apple 로그인 미구현")
+                            
+                        case .google:
+                            throw LoginError.notImplemented("Google 로그인 미구현")
+                            
                         }
-                    ))
+                        
+                        await send(.delegate(.login(true, user)))
+                    } catch {
+                        print("로그인 실패: \(error)")
+                        await send(.delegate(.login(false, nil)))
+                    }
+                    
                 }
-                
-            case let .loginResponese(.success(user)):
-                return .send(.delegate(.loginFinished(user)))
-                
-            case let .loginResponese(.failure(error)):
-                print("로그인 실패: \(error)")
-                return .send(.delegate(.loginFailed(error.localizedDescription)))
-
             case .delegate:
                 return .none
             }

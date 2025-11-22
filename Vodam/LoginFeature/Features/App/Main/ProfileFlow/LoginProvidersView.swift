@@ -22,7 +22,7 @@ struct LoginProvidersView: View {
 
             VStack(spacing: 16) {
                 Button {
-                    store.send(.appleTapped)
+                    store.send(.providerTapped(.apple))
                 } label: {
                     Text("Sign in with Apple")
                         .fontWeight(.semibold)
@@ -34,7 +34,7 @@ struct LoginProvidersView: View {
                 }
 
                 Button {
-                    store.send(.googleTapped)
+                    store.send(.providerTapped(.google))
                 } label: {
                     Text("Sign in with Google")
                         .frame(maxWidth: .infinity)
@@ -46,7 +46,7 @@ struct LoginProvidersView: View {
                 }
                 // kakao를 누르면 -> 카카오 로그인이 뜨고 성공하면 -> loginproviers를 닫고 -> settingView
                 Button {
-                    store.send(.kakaoTapped)
+                    store.send(.providerTapped(.kakao))
                 } label: {
                     Text("Sign in with KaKao")
                         .frame(maxWidth: .infinity)

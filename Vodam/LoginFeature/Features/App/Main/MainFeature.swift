@@ -22,7 +22,6 @@ struct MainFeature {
     }
 
     enum AuthOperation: Equatable {
-        case login(Bool)
         case logout(Bool)
         case deleteAccount(Bool)
     }
@@ -40,6 +39,7 @@ struct MainFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
+                
             case .profileButtonTapped:
                 if let user = state.currentUser {
                     state.settings = SettingsFeature.State(user: user)
@@ -66,19 +66,17 @@ struct MainFeature {
                 state.profileFlow = nil
                 return .none
 
-            case .loginProviders(
-                .presented(.delegate(.loginFinished(let user)))
-            ):
-                state.loginProviders = nil
-                state.currentUser = user
-                state.settings = SettingsFeature.State(user: user)
-                return .send(.authOperationResponse(.login(true)))
-
-            case .loginProviders(
-                .presented(.delegate(.loginFailed(let message)))
-            ):
-                print("Kakao login failed in MainFeautre: \(message)")
-                return .send(.authOperationResponse(.login(false)))
+            //MARK: 통합 로그인 (카카오/애플/구글 통합)
+            case let .loginProviders(
+                .presented(.delegate(.login(isSuccess, user)))):
+                if isSuccess, let user {
+                    state.currentUser = user
+                    state.settings = SettingsFeature.State(user: user)
+                    state.loginProviders = nil
+                } else {
+                    print("로그인 실패")
+                }
+                return .none
 
             case .settings(.presented(.loginButtonTapped)):
                 state.settings = nil
@@ -117,12 +115,9 @@ struct MainFeature {
                     }
                 }
 
-            case .authOperationResponse(let operation):
+            case let .authOperationResponse(operation):
                 switch operation {
-                case .login:
-                    return .none
-
-                case .logout(let isSuccess):
+                case let .logout(isSuccess):
                     if isSuccess {
                         state.currentUser = nil
                     }
