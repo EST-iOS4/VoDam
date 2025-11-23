@@ -91,7 +91,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 8B4C67BE2EBC8481003C67F9 /* Build configuration list for PBXProject "Vodam" */;
+			buildConfigurationList = 8B4C67BE2EBC8481003C67F9 /* Build configuration list for PBXProject "VoDam" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -326,7 +326,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		8B4C67BE2EBC8481003C67F9 /* Build configuration list for PBXProject "Vodam" */ = {
+		8B4C67BE2EBC8481003C67F9 /* Build configuration list for PBXProject "VoDam" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8B4C67CC2EBC8482003C67F9 /* Debug */,
