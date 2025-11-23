@@ -18,7 +18,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7D1B6D2E2ECD89D4005A08A6 /* Exceptions for "Vodam" folder in "Vodam" target */ = {
+		70C11F7B2ED309D600D7BB2A /* Exceptions for "Vodam" folder in "Vodam" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -31,7 +31,7 @@
 		8B4C67C52EBC8481003C67F9 /* Vodam */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				7D1B6D2E2ECD89D4005A08A6 /* Exceptions for "Vodam" folder in "Vodam" target */,
+				70C11F7B2ED309D600D7BB2A /* Exceptions for "Vodam" folder in "Vodam" target */,
 			);
 			path = Vodam;
 			sourceTree = "<group>";
