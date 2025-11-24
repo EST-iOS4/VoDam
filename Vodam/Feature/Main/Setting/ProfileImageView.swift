@@ -38,36 +38,50 @@ struct ProfileImageView: View {
     
     @ViewBuilder
     private var imageContent: some View {
-        if let data = user?.localProfileImageData,
-           let uiImage = UIImage(data: data) {
-            Image(uiImage: uiImage)
+        Group {
+            if let data = user?.localProfileImageData,
+               let uiImage = UIImage(data: data) {
+                localImage(uiImage)
+            } else if let url = user?.profileImageURL {
+                remoteImage(url)
+            } else {
+                defaultProfileImage
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func localImage(_ uiImage: UIImage) -> some View {
+        Image(uiImage: uiImage)
+            .resizable()
+            .scaledToFill()
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+    }
+
+    @ViewBuilder
+    private func remoteImage(_ url: URL) -> some View {
+        AsyncImage(url: url) { phase in
+            asyncImageContent(phase)
+        }
+    }
+
+    @ViewBuilder
+    private func asyncImageContent(_ phase: AsyncImagePhase) -> some View {
+        switch phase {
+        case .empty:
+            ProgressView()
+                .frame(width: size, height: size)
+        case .success(let image):
+            image
                 .resizable()
                 .scaledToFill()
                 .frame(width: size, height: size)
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            
-        } else if let url = user?.profileImageURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    ProgressView()
-                        .frame(width: size, height: size)
-                    
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: size, height: size)
-                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                    
-                case .failure:
-                    defaultProfileImage
-    
-                @unknown default:
-                    defaultProfileImage
-                }
-            }
-        } else {
+        case .failure:
+            defaultProfileImage
+        
+        @unknown default:
             defaultProfileImage
         }
     }

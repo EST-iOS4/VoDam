@@ -19,7 +19,6 @@ struct SettingsFeature {
     }
 
     enum Action: Equatable {
-//        case profileImageChange
         case loginButtonTapped
         case logoutTapped
         case deleteAccountTapped
@@ -45,9 +44,6 @@ struct SettingsFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-                
-//            case .profileImageChange:
-//                return .none
 
             case .loginButtonTapped:
                 return .none
@@ -84,6 +80,7 @@ struct SettingsFeature {
                 state.user = user
                 
                 return .send(.delegate(.userUpdated(user)))
+                
                 
             case .delegate:
                 return .none

@@ -19,24 +19,30 @@ struct SettingView: View {
     }
 
     var body: some View {
+        WithPerceptionTracking {
+            List {
+                profileSection
+                userInfoSection
+                accountSection
+            }
+            .navigationTitle("설정")
+            .navigationBarTitleDisplayMode(.inline)
+            .alert($store.scope(state: \.alert, action: \.alert))
+            .onChange(of: selectedItem) { newItem in
+                guard let newItem else { return }
+                guard store.user != nil else { return }
 
-        List {
-            profileSection
-            userInfoSection
-            accountSection
-        }
-        .navigationTitle("설정")
-        .navigationBarTitleDisplayMode(.inline)
-        .alert($store.scope(state: \.alert, action: \.alert))
-        .onChange(of: selectedItem) { newItem in
-            guard let newItem else { return }
-            guard store.user != nil else { return }
-
-            Task {
-                if let data = try? await newItem.loadTransferable(
-                    type: Data.self
-                ) {
-                    store.send(.profileImagePicked(data))
+                Task {
+                    if let data = try? await newItem.loadTransferable(
+                        type: Data.self
+                    ),
+                       let uiImage = UIImage(data: data),
+                       let resizedImage = uiImage.resized(toWidth: 300),
+                       let compressedData = resizedImage.jpegData(compressionQuality: 0.5){
+                        await MainActor.run {
+                            store.send(.profileImagePicked(data))
+                        }
+                    }
                 }
             }
         }
