@@ -1,5 +1,5 @@
 //
-//  AppFeature.swift
+//  SettingsFeature.swift
 //  Vodam
 //
 //  Created by 송영민 on 11/17/25.
@@ -8,28 +8,26 @@
 import ComposableArchitecture
 
 @Reducer
-struct AppFeature {
-    
+struct SettingsFeature {
     @ObservableState
     struct State: Equatable {
-        var main = ProjectListFeature.State()/*MainFeature.State()*/
+        var user: User
     }
     
-    enum Action {
-        case main(ProjectListFeature.Action)
-        
+    enum Action: Equatable {
+        case logoutTapped
+        case deleteAccountTapped
     }
     
     var body: some Reducer<State, Action> {
-        Scope(state: \.main, action: \.main) {
-            ProjectListFeature()
-        }
-        
         Reduce { state, action in
             switch action {
-            case .main:
+            case .logoutTapped:
+                //나중에 로그아웃 처리
                 return .none
-            @unknown default:
+                
+            case .deleteAccountTapped:
+                //나중에 실제 계정 삭제 처리
                 return .none
             }
         }
