@@ -18,7 +18,7 @@
                BlueprintIdentifier = "8B4C67C22EBC8481003C67F9"
                BuildableName = "Vodam.app"
                BlueprintName = "Vodam"
-               ReferencedContainer = "container:VoDam.xcodeproj">
+               ReferencedContainer = "container:Vodam.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -47,7 +47,7 @@
             BlueprintIdentifier = "8B4C67C22EBC8481003C67F9"
             BuildableName = "Vodam.app"
             BlueprintName = "Vodam"
-            ReferencedContainer = "container:VoDam.xcodeproj">
+            ReferencedContainer = "container:Vodam.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -64,7 +64,7 @@
             BlueprintIdentifier = "8B4C67C22EBC8481003C67F9"
             BuildableName = "Vodam.app"
             BlueprintName = "Vodam"
-            ReferencedContainer = "container:VoDam.xcodeproj">
+            ReferencedContainer = "container:Vodam.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
