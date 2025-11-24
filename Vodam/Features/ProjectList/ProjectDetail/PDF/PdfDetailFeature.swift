@@ -1,0 +1,25 @@
+//
+//  PdfDetailFeature.swift
+//  Vodam
+//
+//  Created by 서정원 on 11/19/25.
+//
+
+import ComposableArchitecture
+
+// TODO: 실제 프로젝트 상세 화면 Feature로 교체해야 합니다.
+@Reducer
+struct PdfDetailFeature {
+    @ObservableState
+    struct State: Equatable {
+        let project: Project
+    }
+    
+    enum Action {
+        
+    }
+    
+    var body: some Reducer<State, Action> {
+        EmptyReducer()
+    }
+}
