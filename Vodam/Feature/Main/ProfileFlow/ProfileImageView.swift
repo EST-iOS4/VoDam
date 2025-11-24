@@ -13,7 +13,9 @@ struct ProfileImageView: View {
     let size: CGFloat
     let cornerRadius: CGFloat
     let showEditButton: Bool
-    
+
+    @State private var loadedImage: UIImage?
+
     init(
         user: User?,
         size: CGFloat = 80,
@@ -25,29 +27,49 @@ struct ProfileImageView: View {
         self.cornerRadius = cornerRadius
         self.showEditButton = showEditButton
     }
-    
+
     var body: some View {
-        
+
         ZStack(alignment: .bottomTrailing) {
             imageContent
-            
+
             if showEditButton && user != nil {
                 editButton
             }
         }
     }
-    
+
     @ViewBuilder
     private var imageContent: some View {
         Group {
             if let data = user?.localProfileImageData,
-               let uiImage = UIImage(data: data) {
+                let uiImage = UIImage(data: data) {
                 localImage(uiImage)
-            } else if let url = user?.profileImageURL {
-                remoteImage(url)
+            } else if let loadedImage {
+                localImage(loadedImage)
+            } else if user?.profileImageURL != nil {
+                ProgressView()
+                    .frame(width: size, height: size)
+                    .task(id: user?.profileImageURL) {
+                        await loadRemoteImage()
+                    }
             } else {
                 defaultProfileImage
             }
+        }
+    }
+
+    private func loadRemoteImage() async {
+        guard let url = user?.profileImageURL else { return }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            
+            if let image = UIImage(data: data) {
+                loadedImage = image
+            }
+        } catch {
+            print("이미지 로드 실패: \(error)")
         }
     }
 
@@ -60,35 +82,6 @@ struct ProfileImageView: View {
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 
-    @ViewBuilder
-    private func remoteImage(_ url: URL) -> some View {
-        AsyncImage(url: url) { phase in
-            asyncImageContent(phase)
-        }
-    }
-
-    @ViewBuilder
-    private func asyncImageContent(_ phase: AsyncImagePhase) -> some View {
-        switch phase {
-        case .empty:
-            ProgressView()
-                .frame(width: size, height: size)
-
-        case .success(let image):
-            image
-                .resizable()
-                .scaledToFill()
-                .frame(width: size, height: size)
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            
-        case .failure:
-            defaultProfileImage
-        
-        @unknown default:
-            defaultProfileImage
-        }
-    }
-    
     private var defaultProfileImage: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
             .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
@@ -99,7 +92,7 @@ struct ProfileImageView: View {
                     .foregroundColor(.white)
             )
     }
-    
+
     private var editButton: some View {
         Circle()
             .fill(Color.black)

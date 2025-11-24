@@ -40,7 +40,6 @@ struct MainView: View {
                 )
                 Spacer()
             }
-            .id(mainViewIdentity)
             .navigationTitle("새 프로젝트 생성")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -87,19 +86,6 @@ struct MainView: View {
                 SettingView(store: settingStore)
             }
         }
-    }
-    
-    private var mainViewIdentity: String {
-        if let data = store.currentUser?.localProfileImageData {
-            return "local-\(data.hashValue)"
-        }
-        if let urlString = store.currentUser?.profileImageURL?.absoluteString {
-            return "remote-\(urlString)"
-        }
-        if let email = store.currentUser?.email {
-            return "email-\(email)"
-        }
-        return "guest"
     }
 }
 
