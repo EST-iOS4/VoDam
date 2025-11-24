@@ -11,80 +11,117 @@ import UIKit
 
 struct MainView: View {
     @Bindable var store: StoreOf<MainFeature>
-
+    
     init(store: StoreOf<MainFeature>) {
         self.store = store
     }
-
+    
     var body: some View {
-        VStack {
-            RecordingView(
-                store: store.scope(
-                    state: \.recording,
-                    action: \.recording
+        WithPerceptionTracking {
+            VStack {
+                RecordingView(
+                    store: store.scope(
+                        state: \.recording,
+                        action: \.recording
+                    )
                 )
-            )
-            FileButtonView(
-                store: store.scope(
-                    state: \.fileButton,
-                    action: \.fileButton
+                FileButtonView(
+                    store: store.scope(
+                        state: \.fileButton,
+                        action: \.fileButton
+                    )
                 )
-            )
-
-            PDFButtonView(
-                store: store.scope(
-                    state: \.pdfButton,
-                    action: \.pdfButton
+                
+                PDFButtonView(
+                    store: store.scope(
+                        state: \.pdfButton,
+                        action: \.pdfButton
+                    )
                 )
-            )
-            Spacer()
-        }
-        .navigationTitle("새 프로젝트 생성")
-        .toolbar(id: "main-toolbar") {
-            ToolbarItem(id: "profile", placement: .navigationBarTrailing) {
-                Button {
-                    store.send(.profileButtonTapped)
-                } label: {
-                    WithPerceptionTracking {
+                Spacer()
+            }
+            .id(mainViewIdentity)
+            .navigationTitle("새 프로젝트 생성")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        store.send(.profileButtonTapped)
+                    } label: {
                         ProfileImageView(
                             user: store.currentUser,
                             size: 36,
                             cornerRadius: 18,
                             showEditButton: false
                         )
+//                        .id(profileImageIdentity)
                     }
                 }
             }
-        }
-        .navigationDestination(
-            store: store.scope(
-                state: \.$loginProviders,
-                action: \.loginProviders
-            )
-        ) {
-            loginProvidersStore in
-            LoginProvidersView(store: loginProvidersStore)
-        }
-
-        .sheet(
-            store: store.scope(
-                state: \.$profileFlow,
-                action: \.profileFlow
-            )
-        ) { profileStore in
-            ProfileFlowView(store: profileStore)
-                .presentationDetents([.fraction(0.4)])
-                .presentationDragIndicator(.visible)
-        }
-
-        .navigationDestination(
-            store: store.scope(
-                state: \.$settings,
-                action: \.settings
-            )
-        ) {
-            settingStore in
-            SettingView(store: settingStore)
+            .navigationDestination(
+                store: store.scope(
+                    state: \.$loginProviders,
+                    action: \.loginProviders
+                )
+            ) {
+                loginProvidersStore in
+                LoginProvidersView(store: loginProvidersStore)
+            }
+            
+            .sheet(
+                store: store.scope(
+                    state: \.$profileFlow,
+                    action: \.profileFlow
+                )
+            ) { profileStore in
+                ProfileFlowView(store: profileStore)
+                    .presentationDetents([.fraction(0.4)])
+                    .presentationDragIndicator(.visible)
+            }
+            
+            .navigationDestination(
+                store: store.scope(
+                    state: \.$settings,
+                    action: \.settings
+                )
+            ) {
+                settingStore in
+                SettingView(store: settingStore)
+            }
         }
     }
+    
+    private var mainViewIdentity: String {
+        if let data = store.currentUser?.localProfileImageData {
+            return "local-\(data.hashValue)"
+        }
+        if let urlString = store.currentUser?.profileImageURL?.absoluteString {
+            return "remote-\(urlString)"
+        }
+        if let email = store.currentUser?.email {
+            return "email-\(email)"
+        }
+        return "guest"
+    }
+    
+//    
+//    private var profileImageIdentity: String {
+//        if let data = store.currentUser?.localProfileImageData {
+//            return "local-\(data.hashValue)"
+//        }
+//        
+//        if let data = store.currentUser?.profileImageURL?.absoluteString {
+//            return "remote-\(data.hashValue)"
+//        }
+//        
+//        if let data = store.currentUser?.email {
+//            return "email-\(data.hashValue)"
+//        }
+//        
+//        return "guest"
+//        
+//    }
+
 }
+
+
+

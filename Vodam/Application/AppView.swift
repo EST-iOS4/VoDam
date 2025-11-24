@@ -18,7 +18,7 @@ struct AppView: View {
                     MainView(
                         store: store.scope(state: \.main, action: \.main)
                     )
-                    .id(store.main.currentUser?.email ?? "guest")
+//                    .id(store.main.currentUser?.email ?? "guest")
                 }
                 .tabItem {
                     Label("메인화면", systemImage: "house.fill")
