@@ -11,11 +11,11 @@ import UIKit
 
 struct MainView: View {
     @Bindable var store: StoreOf<MainFeature>
-    
+
     init(store: StoreOf<MainFeature>) {
         self.store = store
     }
-    
+
     var body: some View {
         WithPerceptionTracking {
             VStack {
@@ -31,7 +31,7 @@ struct MainView: View {
                         action: \.fileButton
                     )
                 )
-                
+
                 PDFButtonView(
                     store: store.scope(
                         state: \.pdfButton,
@@ -46,12 +46,19 @@ struct MainView: View {
                     Button {
                         store.send(.profileButtonTapped)
                     } label: {
-                        ProfileImageView(
-                            user: store.currentUser,
-                            size: 36,
-                            cornerRadius: 18,
-                            showEditButton: false
-                        )
+                        if let user = store.currentUser {
+                            ProfileImageView(
+                                user: store.currentUser,
+                                size: 36,
+                                cornerRadius: 18,
+                                showEditButton: false
+                            )
+                        } else {
+                            Image(systemName: "person.circle")
+                                .resizable()
+                                .frame(width: 30, height: 30)
+                                .foregroundColor(.gray)
+                        }
                     }
                 }
             }
@@ -64,7 +71,7 @@ struct MainView: View {
                 loginProvidersStore in
                 LoginProvidersView(store: loginProvidersStore)
             }
-            
+
             .sheet(
                 store: store.scope(
                     state: \.$profileFlow,
@@ -75,7 +82,7 @@ struct MainView: View {
                     .presentationDetents([.fraction(0.4)])
                     .presentationDragIndicator(.visible)
             }
-            
+
             .navigationDestination(
                 store: store.scope(
                     state: \.$settings,
@@ -88,6 +95,3 @@ struct MainView: View {
         }
     }
 }
-
-
-
