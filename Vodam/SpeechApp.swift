@@ -2,6 +2,7 @@ import KakaoSDKCommon
 import KakaoSDKAuth
 import SwiftUI
 import ComposableArchitecture
+import SwiftData
 
 @main
 struct VodamApp: App {
@@ -31,5 +32,6 @@ struct VodamApp: App {
                 }
             }
         }
+        .modelContainer(for: [RecordingModel.self])
     }
 }
