@@ -1,19 +1,20 @@
-//
-//  ChattingRoomView.swift
-//  Vodam
-//
-//  Created by 이건준 on 11/24/25.
-//
+    //
+    //  ChatView.swift
+    //  Vodam
+    //
+    //  Created by EunYoung Wang on 11/24/25.
+    //
 
 import SwiftUI
 import ComposableArchitecture
 
-struct ChattingRoomView: View {
-    @Bindable var store: StoreOf<ChattingRoomFeature>
+struct ChatView: View {
+    @Bindable var store: StoreOf<ChatFeature>
+        // @Environment(\.dismiss) var dismiss
     
     var body: some View {
         VStack(spacing: 0) {
-            // MARK: - 메시지 리스트
+                // MARK: - 메시지 리스트
             ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(store.messages) { message in
@@ -23,7 +24,7 @@ struct ChattingRoomView: View {
                 .padding()
             }
             
-            // MARK: - 입력창
+                // MARK: - 입력창
             HStack(spacing: 12) {
                 TextField(
                     "메시지를 입력하세요",
@@ -34,50 +35,70 @@ struct ChattingRoomView: View {
                 Button {
                     store.send(.sendMessage)
                 } label: {
-                    Image(systemName: "paperplane.fill")
+                    Image(systemName: "arrow.up.circle")
                         .foregroundColor(.blue)
                 }
             }
             .padding()
         }
-        .navigationTitle("채팅")
+        .navigationTitle(store.projectName)
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             store.send(.onAppear)
         }
     }
 }
 
-// MARK: - 메시지 행
+    // MARK: - 메시지 행
 struct MessageRow: View {
     let message: Message
     
     var body: some View {
-        HStack {
+        HStack(alignment: .bottom, spacing: 4) {
             if message.isFromUser {
                 Spacer()
-                Text(message.content)
-                    .padding(12)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(16)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(message.content)
+                        .padding(12)
+                        .background(AppColor.mainColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(16)
+                    Text(format(message.timestamp))
+                        .font(.system(size: 14))
+                        .foregroundColor(.gray)
+                        .padding(.trailing, 6)
+                }
             } else {
-                Text(message.content)
-                    .padding(12)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(16)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(message.content)
+                        .padding(12)
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(16)
+                    Text(format(message.timestamp))
+                        .font(.system(size: 14))
+                        .foregroundColor(.gray)
+                        .padding(.leading, 6)
+                }
                 Spacer()
             }
         }
     }
-}
-
-// MARK: - Preview
-#Preview {
-    NavigationView {
-        ChattingRoomView(
-            store: Store(initialState: ChattingRoomFeature.State()) {
-                ChattingRoomFeature()
-            }
-        )
+    private func format(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
+    
+        // MARK: - Preview
+    #Preview {
+        NavigationStack {
+            ChatView(
+                store: Store(initialState: ChatFeature.State(projectName:"프로젝트 채팅 리스트")) {
+                    ChatFeature()
+                }
+            )
+        }
+    }
+    
