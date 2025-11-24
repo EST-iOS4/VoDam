@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import SwiftUI
+import UIKit
 
 struct MainView: View {
     @Bindable var store: StoreOf<MainFeature>
@@ -17,7 +18,7 @@ struct MainView: View {
 
     var body: some View {
         VStack {
-            RecordingView( // RecordingView stae, action을 store
+            RecordingView(  // RecordingView stae, action을 store
                 store: store.scope(
                     state: \.recording,
                     action: \.recording
@@ -29,7 +30,7 @@ struct MainView: View {
                     action: \.fileButton
                 )
             )
-            
+
             PDFButtonView(
                 store: store.scope(
                     state: \.pdfButton,
@@ -44,8 +45,11 @@ struct MainView: View {
                 Button {
                     store.send(.profileButtonTapped)
                 } label: {
-                    Image(systemName: "person.circle")
-                        .imageScale(.large)
+                    ProfileImageView(user: store.currentUser,
+                                      size: 36,
+                                      cornerRadius: 18,
+                                      showEditButton: false
+                    )
                 }
             }
         }

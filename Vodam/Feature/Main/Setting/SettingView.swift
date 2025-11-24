@@ -13,13 +13,13 @@ import UIKit
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
     @State private var selectedItem: PhotosPickerItem?
-    
+
     private var user: User? {
         store.user
     }
 
     var body: some View {
-        
+
         List {
             profileSection
             userInfoSection
@@ -31,37 +31,44 @@ struct SettingView: View {
         .onChange(of: selectedItem) { newItem in
             guard let newItem else { return }
             guard store.user != nil else { return }
-            
+
             Task {
-                if let data = try? await newItem.loadTransferable(type: Data.self){
+                if let data = try? await newItem.loadTransferable(
+                    type: Data.self
+                ) {
                     store.send(.profileImagePicked(data))
                 }
             }
         }
     }
-    
+
     @ViewBuilder
     private var profileSection: some View {
         Section {
             HStack {
                 Spacer()
-                
+
                 PhotosPicker(
                     selection: $selectedItem,
                     matching: .images,
                     photoLibrary: .shared()
                 ) {
-                    profileImageView(user: user)
+                    ProfileImageView(
+                        user: user,
+                        size: 80,
+                        cornerRadius: 24,
+                        showEditButton: true
+                    )
                 }
                 .buttonStyle(.plain)
                 .disabled(user == nil)
-                
+
                 Spacer()
             }
         }
         .listRowBackground(Color.clear)
     }
-    
+
     @ViewBuilder
     private var userInfoSection: some View {
         Section {
@@ -102,7 +109,7 @@ struct SettingView: View {
             .foregroundColor(.primary)
         }
     }
-    
+
     @ViewBuilder
     private var accountSection: some View {
         Section {
@@ -151,81 +158,6 @@ struct SettingView: View {
             }
         }
     }
-    
-    
-    
-    
-    
-    
-    @ViewBuilder
-        private func profileImageView(user: User?) -> some View {
-            ZStack(alignment: .bottomTrailing) {
-                if let data = user?.localProfileImageData,
-                   let uiImage = UIImage(data: data) {
-
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 80, height: 80)
-                        .clipShape(
-                            RoundedRectangle(cornerRadius: 24)
-                        )
-
-                } else if let url = user?.profileImageURL {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .empty:
-                            ProgressView()
-                                .frame(width: 80, height: 80)
-
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 80, height: 80)
-                                .clipShape(
-                                    RoundedRectangle(
-                                        cornerRadius: 24
-                                    )
-                                )
-
-                        case .failure:
-                            defaultProfileRect()
-
-                        @unknown default:
-                            defaultProfileRect()
-                        }
-                    }
-
-                } else {
-                    defaultProfileRect()
-                }
-
-                // 로그인일 때만 편집(연필) 버튼
-                if user != nil {
-                    Circle()
-                        .fill(Color.black)
-                        .frame(width: 30, height: 30)
-                        .overlay(
-                            Image(systemName: "pencil")
-                                .font(.system(size: 25))
-                                .foregroundColor(.white)
-                        )
-                }
-            }
-        }
-
-    private func defaultProfileRect() -> some View {
-        RoundedRectangle(cornerRadius: 24)
-            .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
-            .frame(width: 80, height: 80)
-            .overlay(
-                Image(systemName: "person")
-                    .font(.system(size: 40))
-                    .foregroundColor(.white)
-            )
-    }
-
 }
 
 private func providerText(_ provider: AuthProvider) -> String {
