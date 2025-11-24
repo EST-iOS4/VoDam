@@ -7,6 +7,8 @@
 
 import ComposableArchitecture
 import Foundation
+import PhotosUI
+import SwiftUI
 
 @Reducer
 struct SettingsFeature {
@@ -24,6 +26,7 @@ struct SettingsFeature {
         case deleteAccountTapped
         case deleteAccountConfirmed
         case profileImagePicked(Data)
+        case photoPickerItemChanged(PhotosPickerItem?)
         
         case alert(PresentationAction<Alert>)
         
@@ -70,6 +73,35 @@ struct SettingsFeature {
             case .deleteAccountConfirmed:
                 // MainFeature에서 실제 탈퇴 처리
                 return .none
+            
+            case let .photoPickerItemChanged(item):
+                guard let item, state.user != nil else {
+                    return .none
+                }
+                
+                return .run { send in
+                    do {
+                        guard let data = try await item.loadTransferable(type: Data.self) else {
+                            return
+                        }
+                        
+                        guard let uiImage = UIImage(data: data) else {
+                            return
+                        }
+                        
+                        guard let resizedImage = uiImage.resized(toWidth: 200) else {
+                            return
+                        }
+                        
+                        guard let compressedData = resizedImage.jpegData(compressionQuality: 0.5) else {
+                            return
+                        }
+                        
+                        await send(.profileImagePicked(compressedData))
+                    } catch {
+                        print("프로필 이미지 변경 실패: \(error)")
+                    }
+                }
                 
             case let .profileImagePicked(Data):
                 guard var user = state.user else {
