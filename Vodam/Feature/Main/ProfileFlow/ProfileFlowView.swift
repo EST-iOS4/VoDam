@@ -13,7 +13,6 @@ struct ProfileFlowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 오른쪽 상단 X 버튼
             HStack {
                 Spacer()
                 Button {
