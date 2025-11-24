@@ -19,13 +19,19 @@ struct SettingsFeature {
     }
 
     enum Action: Equatable {
-        case profileImageChage
+//        case profileImageChange
         case loginButtonTapped
         case logoutTapped
         case deleteAccountTapped
         case deleteAccountConfirmed
-
+        case profileImagePicked(Data)
+        
         case alert(PresentationAction<Alert>)
+        
+        enum Delegate: Equatable {
+            case userUpdated(User)
+        }
+        case delegate(Delegate)
 
         enum Alert: Equatable {
             case confirmLogoutSuccess
@@ -40,8 +46,8 @@ struct SettingsFeature {
         Reduce { state, action in
             switch action {
                 
-            case .profileImageChage:
-                return .none
+//            case .profileImageChange:
+//                return .none
 
             case .loginButtonTapped:
                 return .none
@@ -67,6 +73,19 @@ struct SettingsFeature {
 
             case .deleteAccountConfirmed:
                 // MainFeature에서 실제 탈퇴 처리
+                return .none
+                
+            case let .profileImagePicked(Data):
+                guard var user = state.user else {
+                    return .none
+                }
+                
+                user.localProfileImageData = Data
+                state.user = user
+                
+                return .send(.delegate(.userUpdated(user)))
+                
+            case .delegate:
                 return .none
                 
             case .alert(.presented(.deleteAccountConfirmed)):
