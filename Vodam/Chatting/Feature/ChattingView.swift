@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ChattingInfo: Identifiable {
+struct ChattingInfo: Identifiable, Equatable {
     let id: String
     let title: String
     let content: String
@@ -33,13 +33,4 @@ struct ChattingView: View {
         .frame(height: 77)
         .padding(.init(top: 8, leading: 9, bottom: 8, trailing: 9))
     }
-}
-
-#Preview {
-    ChattingView(chattingInfo: .init(
-        id: "1",
-        title: "프로젝트 제목",
-        content: "프로젝트 대화 내용프로젝트 대화 내용...",
-        recentEditedDate: Date()
-    ))
 }

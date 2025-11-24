@@ -9,21 +9,22 @@ import ComposableArchitecture
 
 @Reducer
 struct ChattingListFeature {
-    enum Action {
+    enum Action: Equatable {
         case chattingTapped(ChattingInfo)
     }
-    
+
     @ObservableState
-    struct State {
+    struct State: Equatable {
         var chattingList: [ChattingInfo]
     }
-    
-    func reduce(into state: inout State, action: Action) -> Effect<Action> {
-        switch action {
-        case .chattingTapped(let chattingInfo):
-            print("선택한 채팅방 정보: \(chattingInfo)")
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+            case .chattingTapped(let chattingInfo):
+                print("선택한 채팅방 정보: \(chattingInfo)")
+                return .none
+            }
         }
-        
-        return .none
     }
 }

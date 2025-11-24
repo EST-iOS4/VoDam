@@ -19,6 +19,10 @@ struct MainFeature {
 
         // 현재 로그인한 사용자 (nil 비로그인)
         var currentUser: User?
+
+        var recording = RecordingFeature.State()
+        var fileButton = FileButtonFeature.State()
+        var pdfButton = PDFButtonFeature.State()
     }
 
     enum AuthOperation: Equatable {
@@ -34,12 +38,28 @@ struct MainFeature {
         case dismissProfileSheet
 
         case authOperationResponse(AuthOperation)
+
+        case recording(RecordingFeature.Action)
+        case fileButton(FileButtonFeature.Action)
+        case pdfButton(PDFButtonFeature.Action)
     }
 
     var body: some Reducer<State, Action> {
+        Scope(state: \.recording, action: \.recording) {
+            RecordingFeature()
+        }
+
+        Scope(state: \.fileButton, action: \.fileButton) {
+            FileButtonFeature()
+        }
+
+        Scope(state: \.pdfButton, action: \.pdfButton) {
+            PDFButtonFeature()
+        }
+
         Reduce { state, action in
             switch action {
-                
+
             case .profileButtonTapped:
                 if let user = state.currentUser {
                     state.settings = SettingsFeature.State(user: user)
@@ -67,8 +87,9 @@ struct MainFeature {
                 return .none
 
             //MARK: 통합 로그인 (카카오/애플/구글 통합)
-            case let .loginProviders(
-                .presented(.delegate(.login(isSuccess, user)))):
+            case .loginProviders(
+                .presented(.delegate(.login(let isSuccess, let user)))
+            ):
                 if isSuccess, let user {
                     state.currentUser = user
                     state.settings = SettingsFeature.State(user: user)
@@ -115,9 +136,9 @@ struct MainFeature {
                     }
                 }
 
-            case let .authOperationResponse(operation):
+            case .authOperationResponse(let operation):
                 switch operation {
-                case let .logout(isSuccess):
+                case .logout(let isSuccess):
                     if isSuccess {
                         state.currentUser = nil
                     }
@@ -187,6 +208,8 @@ struct MainFeature {
             case .settings:
                 return .none
 
+            case .recording, .fileButton, .pdfButton:
+                return .none
             }
         }
         .ifLet(\.$profileFlow, action: \.profileFlow) {
