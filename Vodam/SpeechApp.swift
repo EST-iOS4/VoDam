@@ -21,7 +21,7 @@ struct VodamApp: App {
                 )
             )
             // 전역 text Modifier
-            .font(AppConfig.pretendardRegular(size: 16))
+            .font(AppFont.pretendardRegular(size: 16))
         }
     }
     

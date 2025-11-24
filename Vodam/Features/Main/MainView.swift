@@ -17,7 +17,7 @@ struct MainView: View {
                 Spacer()
 
                 Text("여기에 메인 UI 들어갈 예정")
-                    .font(AppConfig.pretendardExtraBold(size: 30))
+                    .font(AppFont.pretendardExtraBold(size: 30))
                     .foregroundStyle(.secondary)
 
                 Spacer()
