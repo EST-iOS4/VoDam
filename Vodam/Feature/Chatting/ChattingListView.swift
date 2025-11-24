@@ -18,7 +18,7 @@ struct ChattingListView: View {
                 Button {
                     store.send(.chattingTapped(chattingInfo))
                 } label: {
-                    ChattingView(chattingInfo: chattingInfo)
+                    ChattingItemView(chattingInfo: chattingInfo)
                         .listRowSeparator(.hidden)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
