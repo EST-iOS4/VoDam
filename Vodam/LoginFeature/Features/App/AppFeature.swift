@@ -6,17 +6,46 @@
 //
 
 import ComposableArchitecture
+import Foundation
 
 @Reducer
 struct AppFeature {
     
     @ObservableState
     struct State: Equatable {
+        var startTab: State.Tab = .main
+       
         var main = MainFeature.State()
+        var list = ProjectListFeature.State()
+        var chat = ChattingListFeature.State(
+            chattingList:  [
+                ChattingInfo(
+                    id: "1",
+                    title: "프로젝트 1",
+                    content: "프로젝트 대화 내용프로젝트 대화 내용...",
+                    recentEditedDate: Date()
+                    ),
+                ChattingInfo(
+                    id: "2",
+                    title: "프로젝트 2",
+                    content: "TCA 요약에 대한 대화 내용...",
+                    recentEditedDate: Date()
+                    )
+            ]
+        )
+        
+        enum Tab: Equatable {
+            case main
+            case list
+            case chat
+        }
     }
     
     enum Action {
+        case startTab(State.Tab)
         case main(MainFeature.Action)
+        case list(ProjectListFeature.Action)
+        case chat(ChattingListFeature.Action)
         
     }
     
@@ -25,10 +54,29 @@ struct AppFeature {
             MainFeature()
         }
         
+        
+        Scope(state: \.list, action: \.list) {
+            ProjectListFeature()
+        }
+        
+        
+        Scope(state: \.chat, action: \.chat) {
+            ChattingListFeature()
+        }
+        
         Reduce { state, action in
             switch action {
+            case .startTab(let tab):
+                state.startTab = tab
+                return .none
                 
             case .main:
+                return .none
+                
+            case .list:
+                return .none
+                
+            case .chat:
                 return .none
             }
         }
