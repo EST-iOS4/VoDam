@@ -26,9 +26,8 @@ struct AppFeature {
         
         Reduce { state, action in
             switch action {
+                
             case .main:
-                return .none
-            @unknown default:
                 return .none
             }
         }

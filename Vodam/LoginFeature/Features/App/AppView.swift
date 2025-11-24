@@ -13,9 +13,10 @@ struct AppView: View {
 
     var body: some View {
         NavigationStack{
-                MainView(
-                   store: store.scope(state: \.main, action: \.main)
-                )
-            }
+            MainView (
+                store: store.scope(state: \.main, action: \.main)
+            )
+        }
     }
 }
+
