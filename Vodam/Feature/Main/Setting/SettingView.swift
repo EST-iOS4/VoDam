@@ -29,21 +29,7 @@ struct SettingView: View {
             .navigationBarTitleDisplayMode(.inline)
             .alert($store.scope(state: \.alert, action: \.alert))
             .onChange(of: selectedItem) { newItem in
-                guard let newItem else { return }
-                guard store.user != nil else { return }
-
-                Task {
-                    if let data = try? await newItem.loadTransferable(
-                        type: Data.self
-                    ),
-                       let uiImage = UIImage(data: data),
-                       let resizedImage = uiImage.resized(toWidth: 200),
-                       let compressedData = resizedImage.jpegData(compressionQuality: 0.5){
-                        await MainActor.run {
-                            store.send(.profileImagePicked(compressedData))
-                        }
-                    }
-                }
+                store.send(.photoPickerItemChanged(newItem))
             }
         }
     }
