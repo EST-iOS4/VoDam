@@ -12,17 +12,17 @@ struct AppFeature {
     
     @ObservableState
     struct State: Equatable {
-        var main = ProjectListFeature.State()/*MainFeature.State()*/
+        var main = MainFeature.State()
     }
     
     enum Action {
-        case main(ProjectListFeature.Action)
+        case main(MainFeature.Action)
         
     }
     
     var body: some Reducer<State, Action> {
         Scope(state: \.main, action: \.main) {
-            ProjectListFeature()
+            MainFeature()
         }
         
         Reduce { state, action in
