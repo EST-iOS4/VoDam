@@ -5,4 +5,92 @@
 //  Created by 송영민 on 11/24/25.
 //
 
-import Foundation
+import SwiftUI
+import UIKit
+
+struct ProfileImageView: View {
+    let user: User?
+    let size: CGFloat
+    let cornerRadius: CGFloat
+    let showEditButton: Bool
+    
+    init(
+        user: User?,
+        size: CGFloat = 80,
+        cornerRadius: CGFloat = 24,
+        showEditButton: Bool = false
+    ) {
+        self.user = user
+        self.size = size
+        self.cornerRadius = cornerRadius
+        self.showEditButton = showEditButton
+    }
+    
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            imageContent
+            
+            if showEditButton && user != nil {
+                editButton
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var imageContent: some View {
+        if let data = user?.localProfileImageData,
+           let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+                .frame(width: size, height: size)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            
+        } else if let url = user?.profileImageURL {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    ProgressView()
+                        .frame(width: size, height: size)
+                    
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    
+                case .failure:
+                    defaultProfileImage
+    
+                @unknown default:
+                    defaultProfileImage
+                }
+            }
+        } else {
+            defaultProfileImage
+        }
+    }
+    
+    private var defaultProfileImage: some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
+            .frame(width: size, height: size)
+            .overlay(
+                Image(systemName: "person")
+                    .font(.system(size: size * 0.5))
+                    .foregroundColor(.white)
+            )
+    }
+    
+    private var editButton: some View {
+        Circle()
+            .fill(Color.black)
+            .frame(width: size * 0.375, height: size * 0.375)
+            .overlay(
+                Image(systemName: "pencil")
+                    .font(.system(size: size * 0.3125))
+                    .foregroundColor(.white)
+            )
+    }
+}
