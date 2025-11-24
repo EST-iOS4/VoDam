@@ -9,14 +9,46 @@ import ComposableArchitecture
 import SwiftUI
 
 struct AppView: View {
-    let store: StoreOf<AppFeature>
+    @Bindable var store: StoreOf<AppFeature>
 
     var body: some View {
-        NavigationStack{
-            MainView (
-                store: store.scope(state: \.main, action: \.main)
-            )
+        WithPerceptionTracking {
+            TabView(selection: $store.startTab.sending(\.startTab)) {
+                NavigationStack {
+                    MainView(
+                        store: store.scope(state: \.main, action: \.main)
+                    )
+                }
+                .tabItem {
+                    Label("메인화면", systemImage: "house.fill")
+                }
+                .tag(AppFeature.State.Tab.main)
+
+                
+                NavigationStack {
+                    ProjectListView(
+                        store: store.scope(state: \.list, action: \.list)
+                    )
+                }
+                .tabItem {
+                    Label("저장된 프로젝트", systemImage: "house.fill")
+                }
+                .tag(AppFeature.State.Tab.list)
+
+                
+                
+                NavigationStack {
+                    ChattingListView(
+                        store: store.scope(state: \.chat, action: \.chat)
+                    )
+                }
+                .tabItem {
+                    Label("채팅", systemImage: "message.badge.waveform.fill")
+                }
+                .tag(AppFeature.State.Tab.main)
+
+            }
         }
     }
-}
 
+}
