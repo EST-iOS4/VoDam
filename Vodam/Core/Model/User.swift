@@ -18,11 +18,13 @@ struct User: Equatable, Codable {
     var email: String?
     var provider: AuthProvider
     var profileImageURL: URL?
+    var localProfileImageData: Data?
 
     static let placeholder = User(
         name: "Vodam",
         email: nil,
         provider: .kakao,
-        profileImageURL: nil
+        profileImageURL: nil,
+        localProfileImageData: nil
     )
 }

@@ -8,6 +8,7 @@
 import ComposableArchitecture
 import PhotosUI
 import SwiftUI
+import UIKit
 
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
@@ -23,12 +24,26 @@ struct SettingView: View {
 
                     Button(action: {
                         //(일단) 로그인 상태만 프로필 이미지 변경 가능하게
-                        if user != nil{
+                        if user != nil {
                             store.send(.profileImageChage)
                         }
                     }) {
                         ZStack(alignment: .bottomTrailing) {
-                            if let url = user?.profileImageURL {
+                            if let data = user?.localProfileImageData,
+                                let uiImage = UIImage(data: data)
+                            {
+
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height: 80)
+                                    .clipShape(
+                                        RoundedRectangle(
+                                            cornerRadius: 24
+                                        )
+                                    )
+
+                            } else if let url = user?.profileImageURL {
                                 AsyncImage(url: url) { phase in
                                     switch phase {
                                     case .empty:
@@ -54,6 +69,7 @@ struct SettingView: View {
                                     }
 
                                 }
+
                             } else {
                                 defaultProfileRect()
                             }
@@ -72,7 +88,7 @@ struct SettingView: View {
                     }
                     .buttonStyle(PlainButtonStyle())
                     .disabled(user == nil)
-                    
+
                     Spacer()
                 }
 
@@ -125,7 +141,9 @@ struct SettingView: View {
                         store.send(.logoutTapped)
                     } label: {
                         HStack {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Image(
+                                systemName: "rectangle.portrait.and.arrow.right"
+                            )
                             Text("로그아웃")
                             Spacer()
                             Text(providerText(user.provider))
@@ -134,7 +152,7 @@ struct SettingView: View {
                         }
                     }
                     .foregroundStyle(.primary)
-                    
+
                     Button {
                         store.send(.deleteAccountTapped)
                     } label: {
