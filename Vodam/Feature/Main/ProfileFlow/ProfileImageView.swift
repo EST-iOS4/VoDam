@@ -27,6 +27,7 @@ struct ProfileImageView: View {
     }
     
     var body: some View {
+        
         ZStack(alignment: .bottomTrailing) {
             imageContent
             
@@ -72,24 +73,16 @@ struct ProfileImageView: View {
         case .empty:
             ProgressView()
                 .frame(width: size, height: size)
-//                .onAppear {
-//                    print("이미지 로딩")
-//                }
+
         case .success(let image):
             image
                 .resizable()
                 .scaledToFill()
                 .frame(width: size, height: size)
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-//                .onAppear {
-//                    print("이미지 성공")
-//                }
             
         case .failure:
             defaultProfileImage
-//                .onAppear {
-//                    print("이미지 실패")
-//                }
         
         @unknown default:
             defaultProfileImage
