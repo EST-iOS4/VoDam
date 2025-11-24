@@ -52,7 +52,6 @@ struct SettingsFeature {
                 return .none
 
             case .logoutTapped:
-                //MainFeature에서 처리
                 return .none
 
             case .deleteAccountTapped:
@@ -71,7 +70,6 @@ struct SettingsFeature {
                 return .none
 
             case .deleteAccountConfirmed:
-                // MainFeature에서 실제 탈퇴 처리
                 return .none
             
             case let .photoPickerItemChanged(item):

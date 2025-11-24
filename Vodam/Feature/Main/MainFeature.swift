@@ -17,7 +17,6 @@ struct MainFeature {
         @Presents var loginProviders: LoginProvidersFeature.State?
         @Presents var settings: SettingsFeature.State?
 
-        // 현재 로그인한 사용자 (nil 비로그인)
         var currentUser: User?
 
         var recording = RecordingFeature.State()
@@ -108,7 +107,6 @@ struct MainFeature {
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
 
-            //로그아웃
             case .settings(.presented(.logoutTapped)):
                 return .run { send in
                     do {
@@ -123,7 +121,6 @@ struct MainFeature {
                     }
                 }
 
-            // 회원탈퇴( 로그아웃 + 정보 삭제)
             case .settings(.presented(.deleteAccountConfirmed)):
                 return .run { send in
                     do {

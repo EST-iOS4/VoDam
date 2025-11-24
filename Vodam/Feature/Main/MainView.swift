@@ -53,7 +53,6 @@ struct MainView: View {
                             cornerRadius: 18,
                             showEditButton: false
                         )
-//                        .id(profileImageIdentity)
                     }
                 }
             }
@@ -102,25 +101,6 @@ struct MainView: View {
         }
         return "guest"
     }
-    
-//    
-//    private var profileImageIdentity: String {
-//        if let data = store.currentUser?.localProfileImageData {
-//            return "local-\(data.hashValue)"
-//        }
-//        
-//        if let data = store.currentUser?.profileImageURL?.absoluteString {
-//            return "remote-\(data.hashValue)"
-//        }
-//        
-//        if let data = store.currentUser?.email {
-//            return "email-\(data.hashValue)"
-//        }
-//        
-//        return "guest"
-//        
-//    }
-
 }
 
 

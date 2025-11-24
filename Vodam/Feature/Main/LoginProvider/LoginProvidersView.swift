@@ -44,7 +44,7 @@ struct LoginProvidersView: View {
                                 .stroke(Color.gray.opacity(0.4), lineWidth: 1)
                         )
                 }
-                // kakao를 누르면 -> 카카오 로그인이 뜨고 성공하면 -> loginproviers를 닫고 -> settingView
+
                 Button {
                     store.send(.providerTapped(.kakao))
                 } label: {
