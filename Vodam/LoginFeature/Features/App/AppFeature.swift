@@ -15,8 +15,9 @@ struct AppFeature {
         var main = MainFeature.State()
     }
     
-    enum Action: Equatable {
+    enum Action {
         case main(MainFeature.Action)
+        
     }
     
     var body: some Reducer<State, Action> {
