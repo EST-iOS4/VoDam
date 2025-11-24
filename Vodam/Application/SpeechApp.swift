@@ -7,13 +7,13 @@ import SwiftData
 @main
 struct VodamApp: App {
     
-//    init() {
-//        guard let token = Bundle.main.object(forInfoDictionaryKey: "KAKAO_APP_KEY") as? String,
-//                      !token.isEmpty else {
-//                    fatalError("KAKAO_APP_KEY이 Info.plist에 설정되지 않았습니다. Secrets.xcconfig의 TOKEN 값을 Info.plist에 추가해주세요.")
-//                }
-//                KakaoSDK.initSDK(appKey: token)
-//    }
+    init() {
+        guard let token = Bundle.main.object(forInfoDictionaryKey: "KAKAO_APP_KEY") as? String,
+                      !token.isEmpty else {
+                    fatalError("KAKAO_APP_KEY이 Info.plist에 설정되지 않았습니다. Secrets.xcconfig의 TOKEN 값을 Info.plist에 추가해주세요.")
+                }
+                KakaoSDK.initSDK(appKey: token)
+    }
     
     var body: some Scene {
         WindowGroup {

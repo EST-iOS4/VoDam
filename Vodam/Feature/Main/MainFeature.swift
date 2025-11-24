@@ -67,6 +67,10 @@ struct MainFeature {
                     state.profileFlow = ProfileFlowFeature.State()
                 }
                 return .none
+                
+            case let .settings(.presented(.delegate(.userUpdated(user)))):
+                state.currentUser = user
+                return .none
 
             case .profileFlow(.presented(.guestButtonTapped)):
                 state.profileFlow = nil
