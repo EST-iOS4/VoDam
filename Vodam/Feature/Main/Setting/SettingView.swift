@@ -37,10 +37,10 @@ struct SettingView: View {
                         type: Data.self
                     ),
                        let uiImage = UIImage(data: data),
-                       let resizedImage = uiImage.resized(toWidth: 300),
+                       let resizedImage = uiImage.resized(toWidth: 200),
                        let compressedData = resizedImage.jpegData(compressionQuality: 0.5){
                         await MainActor.run {
-                            store.send(.profileImagePicked(data))
+                            store.send(.profileImagePicked(compressedData))
                         }
                     }
                 }
