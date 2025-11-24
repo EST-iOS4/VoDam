@@ -35,7 +35,7 @@ struct RecordingView: View {
                         .font(.headline)
                     
                     // 녹음 시간 표시
-                    Text(formatTime(viewStore.elapsedSeconds))
+                    Text(viewStore.elapsedSeconds.formattedTime)
                         .font(.system(size: 32, weight: .medium))
                         .monospacedDigit()
                 }
@@ -121,13 +121,4 @@ struct RecordingView: View {
             }
         }
     }
-
-    // MARK: - 시간 포맷
-    private func formatTime(_ seconds: Int) -> String {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        return String(format: "%02d:%02d:%02d", h, m, s)
-    }
-
 }

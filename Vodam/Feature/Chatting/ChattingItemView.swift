@@ -1,5 +1,5 @@
 //
-//  ChattingView.swift
+//  ChattingItemView.swift
 //  Vodam
 //
 //  Created by 이건준 on 11/19/25.
@@ -7,14 +7,7 @@
 
 import SwiftUI
 
-struct ChattingInfo: Identifiable, Equatable {
-    let id: String
-    let title: String
-    let content: String
-    let recentEditedDate: Date
-}
-
-struct ChattingView: View {
+struct ChattingItemView: View {
     let chattingInfo: ChattingInfo
     
     var body: some View {

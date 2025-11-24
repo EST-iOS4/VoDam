@@ -31,7 +31,7 @@ struct AppView: View {
                     )
                 }
                 .tabItem {
-                    Label("저장된 프로젝트", systemImage: "house.fill")
+                    Label("저장된 프로젝트", systemImage: "folder.fill")
                 }
                 .tag(AppFeature.State.Tab.list)
 
@@ -45,7 +45,7 @@ struct AppView: View {
                 .tabItem {
                     Label("채팅", systemImage: "message.badge.waveform.fill")
                 }
-                .tag(AppFeature.State.Tab.main)
+                .tag(AppFeature.State.Tab.chat)
 
             }
         }
