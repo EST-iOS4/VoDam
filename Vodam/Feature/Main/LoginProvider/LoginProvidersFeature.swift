@@ -27,8 +27,6 @@ struct LoginProvidersFeature {
     enum Action: Equatable {
         case providerTapped(Provider)
         
-        case appleLoginResponse(Result<User, String>)
-        
         enum Delegate: Equatable {
            case login(Bool, User?)
         }
@@ -37,6 +35,7 @@ struct LoginProvidersFeature {
     
     @Dependency(\.kakaoAuthClient) var kakaoAuthClient
     @Dependency(\.googleAuthClient) var googleAuthClient
+    @Dependency(\.appleAuthClient) var appleAuthClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -52,7 +51,7 @@ struct LoginProvidersFeature {
                             user = try await kakaoAuthClient.login()
                             
                         case .apple:
-                            throw LoginError.notImplemented("Apple 로그인 미구현")
+                            user = try await appleAuthClient.login()
                             
                         case .google:
                             user = try await googleAuthClient.login()

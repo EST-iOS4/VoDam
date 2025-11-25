@@ -29,7 +29,7 @@ extension GoogleAuthClient: DependencyKey {
             }
         )
     }
-
+    
     static var testValue: GoogleAuthClient {
         .init(
             login: {
@@ -46,11 +46,6 @@ extension GoogleAuthClient: DependencyKey {
             disconnect: {}
         )
     }
-
-//    static var previewValue: GoogleAuthClient {
-//        .testValue
-//    }
-
 }
 
 extension DependencyValues {
