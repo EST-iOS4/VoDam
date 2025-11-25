@@ -10,7 +10,7 @@ import Foundation
 import ComposableArchitecture
 
 @Reducer
-struct ChatFeature {
+struct ChattingRoomFeature {
         // MARK: - State
     @ObservableState
     struct State: Equatable {
@@ -19,6 +19,7 @@ struct ChatFeature {
         var isAITyping: Bool = false
         var projectName: String
         
+            // 채팅방 고유ID & API client_id
         init (projectName: String){
             self.projectName = projectName
         }
@@ -101,11 +102,12 @@ struct ChatFeature {
                         await send(.setAITyping(true))
                             // API
                         do {
-                            let reply = try await AlanClient.shared.sendQuestion(
-                                content: userMessage.content,
-                                clientID: projectName
-                            )
-                            await send(.aIResponse(reply))
+                            let question = AlanClient.Question(userMessage.content)
+                            
+                            let answer = try await AlanClient.shared.question(question)
+                            
+                            await send(.aIResponse(answer.content))
+                            
                         } catch {
                             print("Alan API Error: \(error)")
                             await send(.aIResponse("죄송해요, 지금은 대답하기 어려워요."))

@@ -8,8 +8,8 @@
 import SwiftUI
 import ComposableArchitecture
 
-struct ChatView: View {
-    @Bindable var store: StoreOf<ChatFeature>
+struct ChattingRoomView: View {
+    @Bindable var store: StoreOf<ChattingRoomFeature>
         // @Environment(\.dismiss) var dismiss
     
     var body: some View {
@@ -91,14 +91,14 @@ struct MessageRow: View {
     }
 }
     
-        // MARK: - Preview
-    #Preview {
-        NavigationStack {
-            ChatView(
-                store: Store(initialState: ChatFeature.State(projectName:"프로젝트 채팅 리스트")) {
-                    ChatFeature()
-                }
-            )
-        }
-    }
-    
+//        // MARK: - Preview
+//    #Preview {
+//        NavigationStack {
+//            ChattingRoomView(
+//                store: Store(initialState: ChattingRoomFeature.State(projectName:"프로젝트 채팅 리스트")) {
+//                    ChattingRoomFeature()
+//                }
+//            )
+//        }
+//    }
+//    
