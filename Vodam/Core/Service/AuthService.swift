@@ -18,7 +18,6 @@ enum AuthServiceError: Error, Equatable {
 
 enum AuthService {
     
-    
     //MARK: Google 로그인
     static func loginWithGoogle() async throws -> User {
         guard
@@ -50,6 +49,7 @@ enum AuthService {
         let imageURL = googleUser.profile?.imageURL(withDimension: 200)
         
         return User (
+            id: googleUser.userID ?? UUID().uuidString,
             name: name,
             email: email,
             provider: .google,
@@ -75,8 +75,10 @@ enum AuthService {
         let name = profile?.nickname ?? "이름 없음"
         let email = account?.email 
         let profileURL = profile?.profileImageUrl
+        let kakaoIdString = kakaoUser.id.map { String($0) } ?? UUID().uuidString
         
         return User(
+            id: kakaoIdString,
             name: name,
             email: email,
             provider: .kakao,
