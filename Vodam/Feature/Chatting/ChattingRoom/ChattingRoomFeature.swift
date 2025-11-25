@@ -72,7 +72,7 @@ struct ChatFeature {
                             content: "안녕하세요! 오늘 \(state.projectName)에 대해 무엇을 도와드릴까요?",
                             isFromUser: false,
                             timestamp: Date().addingTimeInterval(-300)
-                            )
+                        )
                         state.messages = [dummyMessage]
                     } else{
                         state.messages = loadedMessages
@@ -88,6 +88,7 @@ struct ChatFeature {
                     state.messageText = ""
                     
                     return .run { [projectName = state.projectName] send in
+                            // 유저 메세지 저장
                         do {
                             try await db.collection("chats")
                                 .document(projectName)
@@ -97,13 +98,19 @@ struct ChatFeature {
                             print("Failed to save user message: \(error)")
                         }
                         
-                            // 대기말풍선 on
                         await send(.setAITyping(true))
+                            // API
+                        do {
+                            let reply = try await AlanClient.shared.sendQuestion(
+                                content: userMessage.content,
+                                clientID: projectName
+                            )
+                            await send(.aIResponse(reply))
+                        } catch {
+                            print("Alan API Error: \(error)")
+                            await send(.aIResponse("죄송해요, 지금은 대답하기 어려워요."))
+                        }
                         
-                            // 외부 API 호출
-                        await send(.aIResponse("테스트답장"))
-                        
-                            // 대기말풍선 off
                         await send(.setAITyping(false))
                     }
                     
@@ -113,6 +120,7 @@ struct ChatFeature {
                         isFromUser: false
                     )
                     state.messages.append(aIMessage)
+                        // AI 메세지 저장
                     return .run{ [projectName = state.projectName] _ in
                         try? await db.collection("chats")
                             .document(projectName)
