@@ -10,6 +10,8 @@
 		7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */; };
 		7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */; };
 		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
+		7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F372ED5344700EC191C /* GoogleSignIn */; };
+		7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F392ED5344700EC191C /* GoogleSignInSwift */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
 /* End PBXBuildFile section */
 
@@ -43,8 +45,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */,
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
+				7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
 				7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */,
 			);
@@ -93,6 +97,8 @@
 				7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */,
 				7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */,
 				7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */,
+				7D522F372ED5344700EC191C /* GoogleSignIn */,
+				7D522F392ED5344700EC191C /* GoogleSignInSwift */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -125,6 +131,7 @@
 			packageReferences = (
 				7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
+				7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B4C67C42EBC8481003C67F9 /* Products */;
@@ -392,6 +399,14 @@
 				kind = branch;
 			};
 		};
+		7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
 		7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
@@ -417,6 +432,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
 			productName = KakaoSDKUser;
+		};
+		7D522F372ED5344700EC191C /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		7D522F392ED5344700EC191C /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
 		};
 		7D5C88932ECAAC3400977C6E /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
