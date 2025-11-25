@@ -32,9 +32,17 @@
 		70C11F7B2ED309D600D7BB2A /* Exceptions for "Vodam" folder in "Vodam" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Feature/Main/MainFeatureTests.swift,
 				Resource/Info.plist,
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
+		};
+		70C1293C2ED5C2E600D7BB2A /* Exceptions for "Vodam" folder in "VodamTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Feature/Main/MainFeatureTests.swift,
+			);
+			target = 70C1292E2ED5A2BA00D7BB2A /* VodamTests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
