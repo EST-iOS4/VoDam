@@ -1,9 +1,9 @@
-//
-//  ChattingListView.swift
-//  Vodam
-//
-//  Created by 이건준 on 11/19/25.
-//
+    //
+    //  ChattingListView.swift
+    //  Vodam
+    //
+    //  Created by 이건준 on 11/19/25.
+    //
 
 import SwiftUI
 
@@ -15,8 +15,13 @@ struct ChattingListView: View {
     var body: some View {
         WithPerceptionTracking {
             List(store.chattingList) { chattingInfo in
-                Button {
-                    store.send(.chattingTapped(chattingInfo))
+                NavigationLink {
+                    ChattingRoomView(
+                        store: Store(
+                            initialState: ChattingRoomFeature.State(projectName: chattingInfo.title),
+                            reducer: { ChattingRoomFeature() }
+                        )
+                    )
                 } label: {
                     ChattingItemView(chattingInfo: chattingInfo)
                         .listRowSeparator(.hidden)
