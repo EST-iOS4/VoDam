@@ -8,6 +8,7 @@
 import Foundation
 import KakaoSDKAuth
 import KakaoSDKUser
+import GoogleSignIn
 
 enum AuthServiceError: Error, Equatable {
     case kakaoError(String)
@@ -16,7 +17,48 @@ enum AuthServiceError: Error, Equatable {
 }
 
 enum AuthService {
-    //카카오 로그인 + 사용자 정보 가져오기
+    
+    
+    //MARK: Google 로그인
+    static func loginWithGoogle() async throws -> User {
+        guard
+            let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+            let window = scene.windows.first(where: { $0.isKeyWindow }),
+            let rootVC = window.rootViewController
+        else {
+            throw AuthServiceError.kakaoError("No root view controller")
+        }
+        
+        let signInResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GIDSignInResult, Error>) in
+            GIDSignIn.sharedInstance.signIn(withPresenting: rootVC) { result, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                guard let result = result else {
+                    continuation.resume(throwing: AuthServiceError.noUser)
+                    return
+                }
+                continuation.resume(returning: result)
+            }
+        }
+        
+        let googleUser = signInResult.user
+        
+        let name = googleUser.profile?.name ?? "Google User"
+        let email = googleUser.profile?.email
+        let imageURL = googleUser.profile?.imageURL(withDimension: 200)
+        
+        return User (
+            name: name,
+            email: email,
+            provider: .google,
+            profileImageURL: imageURL,
+            localProfileImageData: nil
+        )
+    }
+    
+    //MARK: 카카오 로그인
     static func loginWithKaKao() async throws -> User {
         //로그인 해서 토큰 확보
         _ = try await kakaoLogin()
@@ -38,7 +80,8 @@ enum AuthService {
             name: name,
             email: email,
             provider: .kakao,
-            profileImageURL: profileURL
+            profileImageURL: profileURL,
+            localProfileImageData: nil
         )
     }
     

@@ -52,11 +52,12 @@ struct LoginProvidersFeature {
                             throw LoginError.notImplemented("Apple 로그인 미구현")
                             
                         case .google:
-                            throw LoginError.notImplemented("Google 로그인 미구현")
+                            user = try await AuthService.loginWithGoogle()
                             
                         }
                         
                         await send(.delegate(.login(true, user)))
+                        
                     } catch {
                         print("로그인 실패: \(error)")
                         await send(.delegate(.login(false, nil)))
