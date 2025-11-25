@@ -26,6 +26,7 @@ struct SettingsFeature {
         case deleteAccountTapped
 
         case deleteAccountConfirmed
+        case logoutConfirmed
         case logoutFinished(Bool)
         case deleteAccountFinished(Bool)
 
@@ -47,6 +48,7 @@ struct SettingsFeature {
             case confirmDeleteSuccess
             case confirmDeleteFailure
             case deleteAccountConfirmed
+            case logoutConfirmed
         }
     }
 
@@ -61,6 +63,24 @@ struct SettingsFeature {
                 return .none
 
             case .logoutTapped:
+                state.alert = AlertState {
+                    TextState("로그아웃")
+                } actions: {
+                    ButtonState(
+                        role: .destructive,
+                        action: .logoutConfirmed
+                    ) {
+                        TextState("로그아웃")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("취소")
+                    }
+                } message: {
+                    TextState("정말 로그아웃 하시겠습니까?")
+                }
+                return .none
+
+            case .logoutConfirmed:
                 guard let user = state.user else {
                     return .send(.logoutFinished(false))
                 }
@@ -86,7 +106,6 @@ struct SettingsFeature {
                 case .apple:
                     return .send(.logoutFinished(false))
                 }
-                return .none
 
             case .logoutFinished(let isSuccess):
                 if isSuccess {
@@ -212,6 +231,9 @@ struct SettingsFeature {
 
             case .alert(.presented(.deleteAccountConfirmed)):
                 return .send(.deleteAccountConfirmed)
+
+            case .alert(.presented(.logoutConfirmed)):
+                return .send(.logoutConfirmed)
 
             case .alert(.presented(.confirmLogoutSuccess)),
                 .alert(.presented(.confirmLogoutFailure)),
