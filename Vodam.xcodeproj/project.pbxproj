@@ -12,6 +12,7 @@
 		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
 		A00B916C2ED4D84600E64B63 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = A00B916B2ED4D84600E64B63 /* FirebaseFirestore */; };
+		A00B91702ED53F4500E64B63 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = A00B916F2ED53F4500E64B63 /* FirebaseCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +49,7 @@
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
 				A00B916C2ED4D84600E64B63 /* FirebaseFirestore in Frameworks */,
+				A00B91702ED53F4500E64B63 /* FirebaseCore in Frameworks */,
 				7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -96,6 +98,7 @@
 				7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */,
 				7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */,
 				A00B916B2ED4D84600E64B63 /* FirebaseFirestore */,
+				A00B916F2ED53F4500E64B63 /* FirebaseCore */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -439,6 +442,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A00B916A2ED4D84600E64B63 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		A00B916F2ED53F4500E64B63 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A00B916A2ED4D84600E64B63 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
