@@ -12,7 +12,7 @@ struct AppView: View {
     @Bindable var store: StoreOf<AppFeature>
 
     var body: some View {
-        WithPerceptionTracking {
+//        WithPerceptionTracking {
             TabView(selection: $store.startTab.sending(\.startTab)) {
                 NavigationStack {
                     MainView(
@@ -51,4 +51,4 @@ struct AppView: View {
         }
     }
 
-}
+//}
