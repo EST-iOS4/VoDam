@@ -5,7 +5,7 @@
         //  Created by EunYoung Wang on 11/24/25.
     //
 
-    import SwiftData
+    import FirebaseFirestore
     import Foundation
     import ComposableArchitecture
 
@@ -32,6 +32,8 @@
             case aIResponse(String)
             case setAITyping(Bool)
         }
+        
+        let db = Firestore.firestore()
         
             // MARK: - Reducer
         var body: some Reducer<State, Action> {
@@ -62,7 +64,12 @@
                         state.messageText = ""
                         
                         return .run { [projectName = state.projectName] send in
+                            // 유저 메세지 저장
+                            
                             await send(.setAITyping(true))
+                            
+                            // 외부 API 호출
+                            
                             try await Task.sleep(for: .seconds(2))
                             await send(.aIResponse("안녕하세요! 오늘 \(projectName)에 대해 궁금하신 점이 있나요?"))
                             await send(.setAITyping(false))
@@ -74,6 +81,8 @@
                             isFromUser: false
                         )
                         state.messages.append(aIMessage)
+                        // Ai 메세지 저장
+                        
                         return .none
                         
                     case .setAITyping(let isTyping):

@@ -6,20 +6,17 @@
 //
 
 
-import FirebaseFirestoreSwift
+import FirebaseFirestore
 import Foundation
 
-@Model
-final class Message {
-    var id: UUID
-        // 메세지 내용(text)
+struct Message: Identifiable, Codable,Equatable {
+    @DocumentID var id: String?
     var content: String
-        // 메세지 발신자 (False = AI, True = 사용자)
     var isFromUser: Bool
     var timestamp: Date
     
-        // 메세지 인스턴스 초기화
-    init(id: UUID = UUID(), content: String, isFromUser: Bool, timestamp: Date = Date()) {
+    // 기본 생성자 (timestamp 기본값 생성 가능)
+    init(id: String? = nil, content: String, isFromUser: Bool, timestamp: Date = Date()) {
         self.id = id
         self.content = content
         self.isFromUser = isFromUser
