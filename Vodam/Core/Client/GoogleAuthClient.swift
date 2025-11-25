@@ -32,15 +32,24 @@ extension GoogleAuthClient: DependencyKey {
 
     static var testValue: GoogleAuthClient {
         .init(
-            login: { .placeholder },
+            login: {
+                User(
+                    id: "test-google-id",
+                    name: "Test Google User",
+                    email: "Test@google.com",
+                    provider: .google,
+                    profileImageURL: nil,
+                    localProfileImageData: nil
+                )
+            },
             signOut: {},
             disconnect: {}
         )
     }
 
-    static var previewValue: GoogleAuthClient {
-        .testValue
-    }
+//    static var previewValue: GoogleAuthClient {
+//        .testValue
+//    }
 
 }
 
