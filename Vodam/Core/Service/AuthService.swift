@@ -11,7 +11,7 @@ import KakaoSDKUser
 import GoogleSignIn
 
 enum AuthServiceError: Error, Equatable {
-    case kakaoError(String)
+    case authError(String)
     case noUser
     case scopeAgreementFailed
 }
@@ -26,7 +26,7 @@ enum AuthService {
             let window = scene.windows.first(where: { $0.isKeyWindow }),
             let rootVC = window.rootViewController
         else {
-            throw AuthServiceError.kakaoError("No root view controller")
+            throw AuthServiceError.authError("No root view controller")
         }
         
         let signInResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GIDSignInResult, Error>) in
@@ -93,7 +93,7 @@ enum AuthService {
                     UserApi.shared.loginWithKakaoTalk() { token, error in
                         if let error = error {
                             continuation.resume(
-                                throwing: AuthServiceError.kakaoError(
+                                throwing: AuthServiceError.authError(
                                     error.localizedDescription
                                 )
                             )
@@ -108,7 +108,7 @@ enum AuthService {
                     UserApi.shared.loginWithKakaoAccount { token, error in
                         if let error = error {
                             continuation.resume(
-                                throwing: AuthServiceError.kakaoError(
+                                throwing: AuthServiceError.authError(
                                     error.localizedDescription
                                 )
                             )
@@ -128,7 +128,7 @@ enum AuthService {
             UserApi.shared.me { user, error in
                 if let error = error {
                     continuation.resume(
-                        throwing: AuthServiceError.kakaoError(
+                        throwing: AuthServiceError.authError(
                             error.localizedDescription
                         )
                     )
