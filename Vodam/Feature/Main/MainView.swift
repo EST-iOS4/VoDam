@@ -46,7 +46,7 @@ struct MainView: View {
                     Button {
                         store.send(.profileButtonTapped)
                     } label: {
-                        if let user = store.currentUser {
+                        if store.currentUser != nil {
                             ProfileImageView(
                                 user: store.currentUser,
                                 size: 36,
