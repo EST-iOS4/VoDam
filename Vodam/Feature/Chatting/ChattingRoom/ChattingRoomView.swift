@@ -15,14 +15,31 @@ struct ChattingRoomView: View {
     var body: some View {
         VStack(spacing: 0) {
                 // MARK: - 메시지 리스트
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(store.messages) { message in
-                        MessageRow(message: message)
-                    }
-                }
-                .padding()
-            }
+            ScrollViewReader { proxy in
+                            ScrollView {
+                                LazyVStack(spacing: 12) {
+                                    ForEach(store.messages) { message in
+                                        MessageRow(message: message)
+                                    }
+                                }
+                                .padding()
+                            }
+                            .onChange(of: store.messages) { _ in
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    withAnimation {
+                                        proxy.scrollTo(store.messages.last?.id, anchor: .bottom)
+                                    }
+                                }
+                            }
+                            .onAppear {
+                                store.send(.onAppear)
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    withAnimation {
+                                        proxy.scrollTo(store.messages.last?.id, anchor: .bottom)
+                                    }
+                                }
+                            }
+                        }
             
                 // MARK: - 입력창
             HStack(spacing: 12) {
