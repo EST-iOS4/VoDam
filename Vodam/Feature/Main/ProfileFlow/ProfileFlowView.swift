@@ -10,6 +10,7 @@ import SwiftUI
 
 struct ProfileFlowView: View {
     let store: StoreOf<ProfileFlowFeature>
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,14 +21,14 @@ struct ProfileFlowView: View {
                 } label: {
                     Image(systemName: "xmark")
                         .foregroundColor(.gray)
-                        .frame(width: 30 , height: 30)
+                        .frame(width: 30, height: 30)
                         .background(Color(.systemGray5))
                         .clipShape(Circle())
                 }
                 .padding(12)
             }
-          Spacer()
-            
+            Spacer()
+
             VStack(spacing: 16) {
                 Text(
                     """
@@ -46,7 +47,7 @@ struct ProfileFlowView: View {
 
                 Button {
                     store.send(.loginButtonTapped)
-                    
+
                 } label: {
                     Text("로그인")
                         .foregroundStyle(.white)
@@ -56,17 +57,21 @@ struct ProfileFlowView: View {
                         .cornerRadius(14)
                 }
                 .padding(.horizontal, 24)
-                
+
                 Button {
                     store.send(.guestButtonTapped)
-                    
-                } label: {
+
+                }  label: {
                     Text("비회원으로 사용")
-                        .foregroundStyle(.gray)
+                        .foregroundStyle(.primary)
+                        .fontWeight(.medium)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(14)
+                        .background(Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(Color(.systemGray4), lineWidth: 1.5)
+                        )
                 }
                 .padding(.horizontal, 24)
             }
