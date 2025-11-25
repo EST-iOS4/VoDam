@@ -9,6 +9,7 @@ import Dependencies
 import GoogleSignIn
 
 struct GoogleAuthClient {
+    var login: @Sendable () async throws -> User
     var signOut: @Sendable () -> Void
     var disconnect: @Sendable () async throws -> Void
 
@@ -17,6 +18,9 @@ struct GoogleAuthClient {
 extension GoogleAuthClient: DependencyKey {
     static var liveValue: GoogleAuthClient {
         .init(
+            login: {
+                try await AuthService.loginWithGoogle()
+            },
             signOut: {
                 GIDSignIn.sharedInstance.signOut()
             },
@@ -28,6 +32,7 @@ extension GoogleAuthClient: DependencyKey {
 
     static var testValue: GoogleAuthClient {
         .init(
+            login: { .placeholder },
             signOut: {},
             disconnect: {}
         )
