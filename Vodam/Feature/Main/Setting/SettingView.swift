@@ -8,7 +8,6 @@
 import ComposableArchitecture
 import PhotosUI
 import SwiftUI
-import UIKit
 
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
@@ -154,7 +153,7 @@ struct SettingView: View {
 private func providerText(_ provider: AuthProvider) -> String {
     switch provider {
     case .apple: return "Apple"
-    case .google: return "google"
+    case .google: return "Google"
     case .kakao: return "Kakao"
     }
 }
