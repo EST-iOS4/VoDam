@@ -27,6 +27,8 @@ struct LoginProvidersFeature {
     enum Action: Equatable {
         case providerTapped(Provider)
         
+        case appleLoginResponse(Result<User, String>)
+        
         enum Delegate: Equatable {
            case login(Bool, User?)
         }
