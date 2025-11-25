@@ -24,27 +24,44 @@ struct LoginProvidersView: View {
                 .fontWeight(.bold)
 
             VStack(spacing: 16) {
-                SignInWithAppleButton(
-                    .signIn,
-                    onRequest: { request in
-                    },
-                    onCompletion: { result in
-                        switch result {
-                        case .success:
-                            store.send(.providerTapped(.apple))
-                            print("Apple 로그인 성공")
+                //                SignInWithAppleButton(
+                //                    .signIn,
+                //                    onRequest: { request in
+                //                    },
+                //                    onCompletion: { result in
+                //                        switch result {
+                //                        case .success:
+                //                            store.send(.providerTapped(.apple))
+                //                            print("Apple 로그인 성공")
+                //
+                //                        case .failure(let error):
+                //                            print("Apple 로그인 실패: \(error.localizedDescription)")
+                //
+                //                        }
+                //                    }
+                //                )
+                //                .signInWithAppleButtonStyle(
+                //                    colorScheme == .light ? .black : .white
+                //                )
+                //                .frame(height: buttonHeight)
+                //                .frame(maxWidth: .infinity)
+                //                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
 
-                        case .failure(let error):
-                            print("Apple 로그인 실패: \(error.localizedDescription)")
+                Button {
+                    store.send(.providerTapped(.apple))
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "apple.logo")
+                            .imageScale(.large)
 
-                        }
+                        Text("Sign in with Apple")
+                            .font(.system(size: 19, weight: .medium))
                     }
-                )
-                .signInWithAppleButtonStyle(
-                    colorScheme == .light ? .black : .white
-                )
-                .frame(height: buttonHeight)
-                .frame(maxWidth: .infinity)
+                    .frame(height: buttonHeight)
+                    .frame(maxWidth: .infinity)
+                }
+                .background(colorScheme == .dark ? Color.white : Color.black)
+                .foregroundColor(colorScheme == .dark ? .black : .white)
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
 
                 Button {

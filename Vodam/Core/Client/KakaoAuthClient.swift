@@ -10,9 +10,7 @@ import Foundation
 
 struct KakaoAuthClient {
     var login: @Sendable () async throws -> User
-
     var logout: @Sendable () async throws -> Void
-
     var deleteAccount: @Sendable () async throws -> Void
 }
 
@@ -47,10 +45,6 @@ extension KakaoAuthClient: DependencyKey {
             deleteAccount: {}
         )
     }
-
-//    static var previewValue: KakaoAuthClient {
-//        .testValue
-//    }
 }
 
 extension DependencyValues {
