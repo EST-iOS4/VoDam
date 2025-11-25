@@ -7,7 +7,6 @@
 
 import ComposableArchitecture
 import SwiftUI
-import UIKit
 
 struct MainView: View {
     @Bindable var store: StoreOf<MainFeature>
