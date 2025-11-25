@@ -8,15 +8,15 @@
 import Dependencies
 import GoogleSignIn
 
-struct GoogleSignInClient {
+struct GoogleAuthClient {
     var signOut: @Sendable () -> Void
     var disconnect: @Sendable () async throws -> Void
-    
+
 }
 
-extension GoogleSignInClient: DependencyKey {
-    static var liveValue: GoogleSignInClient {
-        .init (
+extension GoogleAuthClient: DependencyKey {
+    static var liveValue: GoogleAuthClient {
+        .init(
             signOut: {
                 GIDSignIn.sharedInstance.signOut()
             },
@@ -25,23 +25,27 @@ extension GoogleSignInClient: DependencyKey {
             }
         )
     }
-    
-    static var testValue: GoogleSignInClient {
-        .init(signOut: {}, disconnect: {})
+
+    static var testValue: GoogleAuthClient {
+        .init(
+            signOut: {},
+            disconnect: {}
+        )
     }
-    
-    static var previewValue: GoogleSignInClient {
+
+    static var previewValue: GoogleAuthClient {
         .testValue
     }
-    
+
 }
 
 extension DependencyValues {
-    var googleSignInClient: GoogleSignInClient {
+    var googleSignInClient: GoogleAuthClient {
         get {
-            self[GoogleSignInClient.self]
-        } set {
-            self[GoogleSignInClient.self] = newValue
+            self[GoogleAuthClient.self]
+        }
+        set {
+            self[GoogleAuthClient.self] = newValue
         }
     }
 }

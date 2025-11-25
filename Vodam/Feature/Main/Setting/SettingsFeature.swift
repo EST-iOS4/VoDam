@@ -43,6 +43,8 @@ struct SettingsFeature {
             case deleteAccountConfirmed
         }
     }
+    
+    @Dependency(\.googleSignInClient) var googleSignInClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
