@@ -19,6 +19,7 @@ struct SettingView: View {
     }
 
     var body: some View {
+        
         List {
             profileSection
             userInfoSection

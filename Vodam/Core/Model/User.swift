@@ -13,7 +13,8 @@ enum AuthProvider: Equatable, Codable {
     case kakao
 }
 
-struct User: Equatable, Codable {
+struct User: Equatable, Codable, Identifiable {
+    var id:String
     var name: String
     var email: String?
     var provider: AuthProvider
@@ -21,6 +22,7 @@ struct User: Equatable, Codable {
     var localProfileImageData: Data?
 
     static let placeholder = User(
+        id: "placeholder",
         name: "Vodam",
         email: nil,
         provider: .kakao,
