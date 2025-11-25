@@ -7,9 +7,11 @@
 
 import ComposableArchitecture
 import SwiftUI
+import AuthenticationServices
 
 struct LoginProvidersView: View {
    let store: StoreOf<LoginProvidersFeature>
+    @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(spacing: 24) {
@@ -21,18 +23,28 @@ struct LoginProvidersView: View {
             Spacer()
 
             VStack(spacing: 16) {
-                Button {
-                    store.send(.providerTapped(.apple))
-                } label: {
-                    Text("Sign in with Apple")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.black)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                }
-
+                SignInWithAppleButton (
+                    .signIn,
+                    onRequest: { request in
+                    },
+                    onCompletion: { result in
+                        switch result {
+                        case .success:
+                            store.send(.providerTapped(.apple))
+                            print("Apple 로그인 성공")
+                                                        
+                        case .failure(let error):
+                        print("Apple 로그인 실패: \(error.localizedDescription)")
+                
+                        }
+                    }
+                )
+                .signInWithAppleButtonStyle(
+                    colorScheme == .light ? .black : .white
+                )
+                .frame(height: 50)
+                .cornerRadius(12)
+                  
                 Button {
                     store.send(.providerTapped(.google))
                 } label: {
