@@ -43,10 +43,6 @@ struct SettingsFeature {
         }
 
         enum Alert: Equatable {
-            case confirmLogoutSuccess
-            case confirmLogoutFailure
-            case confirmDeleteSuccess
-            case confirmDeleteFailure
             case deleteAccountConfirmed
             case logoutConfirmed
         }
@@ -234,12 +230,6 @@ struct SettingsFeature {
 
             case .alert(.presented(.logoutConfirmed)):
                 return .send(.logoutConfirmed)
-
-            case .alert(.presented(.confirmLogoutSuccess)),
-                .alert(.presented(.confirmLogoutFailure)),
-                .alert(.presented(.confirmDeleteSuccess)),
-                .alert(.presented(.confirmDeleteFailure)):
-                return .none
 
             case .alert:
                 return .none
