@@ -45,7 +45,7 @@ extension GoogleAuthClient: DependencyKey {
 }
 
 extension DependencyValues {
-    var googleSignInClient: GoogleAuthClient {
+    var googleAuthClient: GoogleAuthClient {
         get {
             self[GoogleAuthClient.self]
         }
