@@ -26,7 +26,7 @@ enum AuthService {
             let window = scene.windows.first(where: { $0.isKeyWindow }),
             let rootVC = window.rootViewController
         else {
-            throw AuthServiceError.authError("No root view controller")
+            throw AuthServiceError.authError("구글 로그인 실패")
         }
         
         let signInResult = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GIDSignInResult, Error>) in
