@@ -50,6 +50,7 @@ struct SettingsFeature {
 
     @Dependency(\.googleAuthClient) var googleAuthClient
     @Dependency(\.kakaoAuthClient) var kakaoAuthClient
+    @Dependency(\.appleAuthClient) var appleAuthClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -102,7 +103,15 @@ struct SettingsFeature {
                     }
 
                 case .apple:
-                    return .send(.logoutFinished(false))
+                    return .run { [appleAuthClient] send in
+                        do {
+                            try await appleAuthClient.logout()
+                            await send(.logoutFinished(true))
+                        } catch {
+                            print("애플 로그아웃 실패: \(error)")
+                            await send(.logoutFinished(false))
+                        }
+                    }
                 }
 
             case .logoutFinished(let isSuccess):
@@ -161,7 +170,15 @@ struct SettingsFeature {
                     }
 
                 case .apple:
-                    return .send(.deleteAccountFinished(false))
+                    return .run { [appleAuthClient] send in
+                        do {
+                            try await appleAuthClient.deleteAccount()
+                            await send(.deleteAccountFinished(true))
+                        } catch {
+                            print("애플 회원 탈퇴 실패: \(error)")
+                            await send(.deleteAccountFinished(false))
+                        }
+                    }
                 }
 
             case .deleteAccountFinished(let isSuccess):
