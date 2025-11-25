@@ -3,6 +3,7 @@ import KakaoSDKAuth
 import SwiftUI
 import ComposableArchitecture
 import SwiftData
+import FirebaseCore
 
 @main
 struct VodamApp: App {
@@ -14,6 +15,10 @@ struct VodamApp: App {
 //                }
 //                KakaoSDK.initSDK(appKey: token)
 //    }
+    
+    init(){
+        FirebaseApp.configure()
+    }
     
     var body: some Scene {
         WindowGroup {
