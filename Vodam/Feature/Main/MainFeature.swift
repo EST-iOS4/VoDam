@@ -34,12 +34,13 @@ struct MainFeature {
         case recording(RecordingFeature.Action)
         case fileButton(FileButtonFeature.Action)
         case pdfButton(PDFButtonFeature.Action)
-        
+
         case onAppear
+        case userLoaded(User?)
     }
 
     @Dependency(\.userStorageClient) var userStorageClient
-    
+
     var body: some Reducer<State, Action> {
         Scope(state: \.recording, action: \.recording) {
             RecordingFeature()
@@ -57,11 +58,15 @@ struct MainFeature {
             switch action {
 
             case .onAppear:
-                if let storedUser = userStorageClient.load() {
-                    state.currentUser = storedUser
+                return .run { send in
+                    let user = await userStorageClient.load()
+                    await send(.userLoaded(user))
                 }
+
+            case .userLoaded(let user):
+                state.currentUser = user
                 return .none
-                
+
             case .profileButtonTapped:
                 if let user = state.currentUser {
                     state.settings = SettingsFeature.State(user: user)
@@ -69,24 +74,30 @@ struct MainFeature {
                     state.profileFlow = ProfileFlowFeature.State()
                 }
                 return .none
-                
-            case let .settings(.presented(.delegate(.userUpdated(user)))):
+
+            case .settings(.presented(.delegate(.userUpdated(let user)))):
                 state.currentUser = user
-                userStorageClient.save(user)
-                return .none
-                
-            case let .settings(.presented(.delegate(.accountCleared(isSuccess)))):
+                return .run { _ in
+                    await userStorageClient.save(user)
+                }
+
+            case .settings(
+                .presented(.delegate(.accountCleared(let isSuccess)))
+            ):
                 if isSuccess {
                     state.currentUser = nil
-                    userStorageClient.clear()
+                    return .run { _ in
+                        await userStorageClient.clear()
+                    }
                 }
                 return .none
 
             case .profileFlow(.presented(.guestButtonTapped)):
                 state.profileFlow = nil
                 state.settings = SettingsFeature.State(user: nil)
-                userStorageClient.clear()
-                return .none
+                return .run { _ in
+                    await userStorageClient.clear()
+                }
 
             case .profileFlow(.presented(.loginButtonTapped)):
                 state.profileFlow = nil
@@ -109,8 +120,10 @@ struct MainFeature {
                     state.currentUser = user
                     state.settings = SettingsFeature.State(user: user)
                     state.loginProviders = nil
-                    
-                    userStorageClient.save(user)
+
+                    return .run { _ in
+                        await userStorageClient.save(user)
+                    }
                 } else {
                     print("로그인 실패")
                 }

@@ -8,10 +8,10 @@
 import Dependencies
 import Foundation
 
-struct UserStorageClient {
-    var load: @Sendable () -> User?
-    var save: @Sendable (User?) -> Void
-    var clear: @Sendable () -> Void
+struct UserStorageClient: Sendable {
+    var load: @Sendable () async -> User?
+    var save: @Sendable (User?) async -> Void
+    var clear: @Sendable () async -> Void
 }
 
 extension UserStorageClient: DependencyKey {
@@ -20,33 +20,37 @@ extension UserStorageClient: DependencyKey {
 
         return .init(
             load: {
-                guard
-                    let data = UserDefaults.standard.data(forKey: key)
-                else {
-                    return nil
-                }
-
-                do {
-                    let user = try JSONDecoder().decode(User.self, from: data)
-                    return user
-                } catch {
-                    print("UserStorage 디코딩 실패: \(error)")
-                    return nil
+                await MainActor.run {
+                    guard
+                        let data = UserDefaults.standard.data(forKey: key)
+                    else {
+                        return nil
+                    }
+                    
+                    do {
+                        let user = try JSONDecoder().decode(User.self, from: data)
+                        return user
+                    } catch {
+                        print("UserStorage 디코딩 실패: \(error)")
+                        return nil
+                    }
                 }
             },
             save: { user in
-                let defaults = UserDefaults.standard
-
-                guard let user else {
-                    defaults.removeObject(forKey: key)
-                    return
-                }
-
-                do {
-                    let data = try JSONEncoder().encode(user)
-                    defaults.set(data, forKey: key)
-                } catch {
-                    print("UserStorage 인코딩 실패: \(error)")
+                await MainActor.run {
+                    let defaults = UserDefaults.standard
+                    
+                    guard let user else {
+                        defaults.removeObject(forKey: key)
+                        return
+                    }
+                    
+                    do {
+                        let data = try JSONEncoder().encode(user)
+                        defaults.set(data, forKey: key)
+                    } catch {
+                        print("UserStorage 인코딩 실패: \(error)")
+                    }
                 }
             },
             clear: {
@@ -54,21 +58,38 @@ extension UserStorageClient: DependencyKey {
             }
         )
     }
-    
+
     static var testValue: UserStorageClient {
-        var storedUser: User?
-        
+        let storage = UserStorageActor()
+
         return .init(
             load: {
-                storedUser
+                await storage.getUser()
             },
             save: { user in
-                storedUser = user
+                await storage.setUser(user)
             },
             clear: {
-                storedUser = nil
+                await storage.clear()
             }
         )
+    }
+}
+
+// 테스트용 Actor
+private actor UserStorageActor {
+    private var storedUser: User?
+
+    func getUser() -> User? {
+        return storedUser
+    }
+
+    func setUser(_ user: User?) {
+        storedUser = user
+    }
+
+    func clear() {
+        storedUser = nil
     }
 }
 
