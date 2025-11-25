@@ -106,28 +106,6 @@ struct MainFeature {
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
 
-//            case .settings(
-//                .presented(.alert(.presented(.confirmLogoutSuccess)))
-//            ):
-//                state.settings = SettingsFeature.State(user: nil)
-//                return .none
-//
-//            case .settings(
-//                .presented(.alert(.presented(.confirmLogoutFailure)))
-//            ):
-//                return .none
-//
-//            case .settings(
-//                .presented(.alert(.presented(.confirmDeleteSuccess)))
-//            ):
-//                state.settings = SettingsFeature.State(user: nil)
-//                return .none
-//
-//            case .settings(
-//                .presented(.alert(.presented(.confirmDeleteFailure)))
-//            ):
-//                return .none
-
             case .loginProviders:
                 return .none
 
