@@ -43,7 +43,8 @@ struct ProfileImageView: View {
     private var imageContent: some View {
         Group {
             if let data = user?.localProfileImageData,
-                let uiImage = UIImage(data: data) {
+                let uiImage = UIImage(data: data)
+            {
                 localImage(uiImage)
             } else if let loadedImage {
                 localImage(loadedImage)
@@ -64,7 +65,7 @@ struct ProfileImageView: View {
 
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            
+
             if let image = UIImage(data: data) {
                 loadedImage = image
             }
@@ -82,15 +83,28 @@ struct ProfileImageView: View {
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 
+    @ViewBuilder
     private var defaultProfileImage: some View {
-        RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
+        if let user, user.provider == .apple {
+            ZStack {
+                Circle()
+                    .fill(Color.gray.opacity(0.2))
+
+                Text(user.name.isEmpty ? "A" : String(user.name.prefix(1)))
+                    .font(.system(size: size * 0.4, weight: .bold))
+                    .foregroundColor(.gray)
+            }
             .frame(width: size, height: size)
-            .overlay(
-                Image(systemName: "person")
-                    .font(.system(size: size * 0.5))
-                    .foregroundColor(.white)
-            )
+        } else {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
+                .frame(width: size, height: size)
+                .overlay(
+                    Image(systemName: "person")
+                        .font(.system(size: size * 0.5))
+                        .foregroundColor(.white)
+                )
+        }
     }
 
     private var editButton: some View {
