@@ -1,8 +1,8 @@
 //
-//  ProjectDetailFeature.swift
+//  AudioDetailFeature.swift
 //  Vodam
 //
-//  Created by 서정원 on 11/18/25.
+//  Created by 서정원 on 11/20/25.
 //
 
 import ComposableArchitecture
@@ -13,13 +13,35 @@ struct AudioDetailFeature {
     @ObservableState
     struct State: Equatable {
         let project: Project
+        var selectedTab: Tab
+
+        var script: ScriptFeature.State
+        var aiSummary: AISummaryFeature.State
+        
+        init(project: Project) {
+            self.project = project
+            self.selectedTab = .aiSummary
+            self.script = ScriptFeature.State()
+            self.aiSummary = AISummaryFeature.State()
+        }
     }
     
-    enum Action {
+    enum Action: BindableAction {
+        case script(ScriptFeature.Action)
+        case aiSummary(AISummaryFeature.Action)
         
+        case binding(BindingAction<State>)
     }
     
     var body: some Reducer<State, Action> {
-        EmptyReducer()
+        BindingReducer()
+
+        Scope(state: \.script, action: \.script) {
+            ScriptFeature()
+        }
+        
+        Scope(state: \.aiSummary, action: \.aiSummary) {
+            AISummaryFeature()
+        }
     }
 }

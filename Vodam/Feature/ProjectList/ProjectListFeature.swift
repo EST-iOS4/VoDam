@@ -64,7 +64,6 @@ struct ProjectListFeature {
     //    @Dependency(\.continuousClock) var clock
     
     // MARK: - Reducer Body
-    
     var body: some Reducer<State, Action> {
         BindingReducer()
         
