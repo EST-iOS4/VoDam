@@ -19,18 +19,16 @@ struct SettingView: View {
     }
 
     var body: some View {
-        WithPerceptionTracking {
-            List {
-                profileSection
-                userInfoSection
-                accountSection
-            }
-            .navigationTitle("설정")
-            .navigationBarTitleDisplayMode(.inline)
-            .alert($store.scope(state: \.alert, action: \.alert))
-            .onChange(of: selectedItem) { newItem in
-                store.send(.photoPickerItemChanged(newItem))
-            }
+        List {
+            profileSection
+            userInfoSection
+            accountSection
+        }
+        .navigationTitle("설정")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert($store.scope(state: \.alert, action: \.alert))
+        .onChange(of: selectedItem) { _, newItem in
+            store.send(.photoPickerItemChanged(newItem))
         }
     }
 

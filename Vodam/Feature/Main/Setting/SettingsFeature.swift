@@ -87,7 +87,7 @@ struct SettingsFeature {
                             return
                         }
                         
-                        guard let resizedImage = uiImage.resized(toWidth: 200) else {
+                        guard let resizedImage = await uiImage.resized(toWidth: 200) else {
                             return
                         }
                         
