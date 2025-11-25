@@ -34,8 +34,12 @@ struct MainFeature {
         case recording(RecordingFeature.Action)
         case fileButton(FileButtonFeature.Action)
         case pdfButton(PDFButtonFeature.Action)
+        
+        case onAppear
     }
 
+    @Dependency(\.userStorageClient) var userStorageClient
+    
     var body: some Reducer<State, Action> {
         Scope(state: \.recording, action: \.recording) {
             RecordingFeature()
@@ -52,6 +56,12 @@ struct MainFeature {
         Reduce { state, action in
             switch action {
 
+            case .onAppear:
+                if let storedUser = userStorageClient.load() {
+                    state.currentUser = storedUser
+                }
+                return .none
+                
             case .profileButtonTapped:
                 if let user = state.currentUser {
                     state.settings = SettingsFeature.State(user: user)
@@ -62,17 +72,20 @@ struct MainFeature {
                 
             case let .settings(.presented(.delegate(.userUpdated(user)))):
                 state.currentUser = user
+                userStorageClient.save(user)
                 return .none
                 
             case let .settings(.presented(.delegate(.accountCleared(isSuccess)))):
                 if isSuccess {
                     state.currentUser = nil
+                    userStorageClient.clear()
                 }
                 return .none
 
             case .profileFlow(.presented(.guestButtonTapped)):
                 state.profileFlow = nil
                 state.settings = SettingsFeature.State(user: nil)
+                userStorageClient.clear()
                 return .none
 
             case .profileFlow(.presented(.loginButtonTapped)):
@@ -96,6 +109,8 @@ struct MainFeature {
                     state.currentUser = user
                     state.settings = SettingsFeature.State(user: user)
                     state.loginProviders = nil
+                    
+                    userStorageClient.save(user)
                 } else {
                     print("로그인 실패")
                 }

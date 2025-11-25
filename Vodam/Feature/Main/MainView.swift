@@ -90,5 +90,8 @@ struct MainView: View {
             settingStore in
             SettingView(store: settingStore)
         }
+        .onAppear {
+            store.send(.onAppear)
+        }
     }
 }
