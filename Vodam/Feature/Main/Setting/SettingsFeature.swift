@@ -94,8 +94,10 @@ struct SettingsFeature {
                     }
 
                 case .google:
-                    return .run { send in
-                        googleAuthClient.signOut()
+                    return .run { [googleAuthClient] send in
+                        await MainActor.run {
+                            googleAuthClient.signOut()
+                        }
                         await send(.logoutFinished(true))
                     }
 
