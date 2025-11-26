@@ -62,12 +62,12 @@ struct LoginProvidersFeature {
                             rawUser = try await googleAuthClient.login()
                         }
 
-                        print("🧩 [LoginProviders] provider:", provider)
-                        print("🧩 [LoginProviders] rawUser:", rawUser)
+                        print("[LoginProviders] provider:", provider)
+                        print("[LoginProviders] rawUser:", rawUser)
 
                         let storedUser = await userStorageClient.load()
                         print(
-                            "🧩 [LoginProviders] storedUser:",
+                            "[LoginProviders] storedUser:",
                             storedUser as Any
                         )
 
@@ -77,15 +77,15 @@ struct LoginProvidersFeature {
                             stored.ownerId == rawUser.ownerId
                         {
                             print(
-                                "🧩 [LoginProviders] use storedUser (same ownerId)"
+                                "[LoginProviders] use storedUser (same ownerId)"
                             )
                             finalUser = stored
                         } else {
-                            print("🧩 [LoginProviders] use rawUser")
+                            print("[LoginProviders] use rawUser")
                             finalUser = rawUser
                         }
 
-                        print("🧩 [LoginProviders] finalUser:", finalUser)
+                        print("[LoginProviders] finalUser:", finalUser)
 
                         await userStorageClient.save(finalUser)
 

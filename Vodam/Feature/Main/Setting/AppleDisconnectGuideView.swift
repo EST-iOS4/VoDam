@@ -21,7 +21,7 @@ struct AppleDisconnectGuideView: View {
                 Text(
                     """
                     1. iPhone의 설정 앱을 엽니다.
-                    2. 맨 위의 Apple ID(본인 이름)를 탭합니다.
+                    2. 설정 메인 화면 맨 위의 Apple ID(본인 이름)를 탭합니다.
                     3. [Apple로 로그인] 선택합니다.
                     4. 목록에서 [Vodam iOS App]을 선택합니다.
                     5. [삭제] 선택 -> 사용 중단을 탭합니다.
