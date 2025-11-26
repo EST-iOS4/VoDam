@@ -2,18 +2,16 @@
 //  RecordingModel.swift
 //  VoDam
 //
-//  Created by 강지원 on 11/19/25.
-//
 
 import Foundation
 import SwiftData
 
 @Model
 final class RecordingModel {
-    @Attribute(.unique) var id: String
+    @Attribute(.unique) var id: UUID
     var filename: String
     var filePath: String
-    var length: Int
+    var length: Int    // 초 단위 녹음 길이
     var createdAt: Date
 
     var ownerId: String?
