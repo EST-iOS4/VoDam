@@ -7,190 +7,184 @@
 
 import ComposableArchitecture
 import PhotosUI
-import SwiftData
 import SwiftUI
 
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
-    @State private var selectedItem: PhotosPickerItem?
-
-    @Environment(\.modelContext) private var modelContext
-    @Dependency(\.recordingLocalDataClient) private var recordingLocalDataClient
-
-    private var user: User? {
-        store.user
-    }
 
     var body: some View {
+        let user = store.user
 
         List {
-            profileSection
-            userInfoSection
-            accountSection
+            //프로필
+            Section {
+                HStack {
+                    Spacer()
+
+                    Button(action: {
+                        //(일단) 로그인 상태만 프로필 이미지 변경 가능하게
+                        if user != nil{
+                            store.send(.profileImageChage)
+                        }
+                    }) {
+                        ZStack(alignment: .bottomTrailing) {
+                            if let url = user?.profileImageURL {
+                                AsyncImage(url: url) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ProgressView()
+                                            .frame(width: 80, height: 80)
+
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 80, height: 80)
+                                            .clipShape(
+                                                RoundedRectangle(
+                                                    cornerRadius: 24
+                                                )
+                                            )
+
+                                    case .failure:
+                                        defaultProfileRect()
+
+                                    @unknown default:
+                                        defaultProfileRect()
+                                    }
+
+                                }
+                            } else {
+                                defaultProfileRect()
+                            }
+                            //로그인 일때만 편집 버튼 보여주기
+                            if user != nil {
+                                Circle()
+                                    .fill(Color.black)
+                                    .frame(width: 30, height: 30)
+                                    .overlay(
+                                        Image(systemName: "pencil")
+                                            .font(.system(size: 25))
+                                            .foregroundColor(.white)
+                                    )
+                            }
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .disabled(user == nil)
+                    
+                    Spacer()
+                }
+
+            }
+            .listRowBackground(Color.clear)
+
+            //메뉴1
+            Section {
+                HStack {
+                    Image(systemName: "person.circle")
+                    Text("이름")
+                    Spacer()
+                    Text(user?.name ?? "게스트")
+                        .foregroundColor(.secondary)
+                }
+                .foregroundColor(.primary)
+
+                HStack {
+                    Image(systemName: "envelope.circle")
+                    Text("이메일")
+                    Spacer()
+                    if let email = user?.email {
+                        Text(email)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(user != nil ? "이메일 없음" : "비로그인")
+                            .foregroundColor(.secondary)
+                    }
+
+                }
+                .foregroundColor(.primary)
+
+                HStack {
+                    Image(systemName: "exclamationmark.circle")
+                    Text("개인정보처리방침")
+                }
+                .foregroundColor(.primary)
+
+                HStack {
+                    Image(systemName: "questionmark.circle")
+                    Text("문의하기")
+                }
+                .foregroundColor(.primary)
+            }
+
+            //메뉴2
+            Section {
+                if let user = user {
+                    Button {
+                        store.send(.logoutTapped)
+                    } label: {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text("로그아웃")
+                            Spacer()
+                            Text(providerText(user.provider))
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                    
+                    Button {
+                        store.send(.deleteAccountTapped)
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash.circle")
+                            Text("계정 삭제")
+                                .foregroundColor(.red)
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                } else {
+                    //비로그인
+                    Button {
+                        store.send(.loginButtonTapped)
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.badge.plus")
+                            Text("로그인")
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .foregroundStyle(.primary)
+                }
+            }
         }
         .navigationTitle("설정")
         .navigationBarTitleDisplayMode(.inline)
         .alert($store.scope(state: \.alert, action: \.alert))
-        .onChange(of: selectedItem) { _, newItem in
-            store.send(.photoPickerItemChanged(newItem))
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { store.isShowingAppleDisconnectGuide },
-                set: { isPresented in
-                    if !isPresented {
-                        store.send(.appleDisconnectGuideDismissed)
-                    }
-                }
+    }
+
+    private func defaultProfileRect() -> some View {
+        RoundedRectangle(cornerRadius: 24)
+            .fill(Color(red: 0.0, green: 0.5, blue: 1.0))
+            .frame(width: 80, height: 80)
+            .overlay(
+                Image(systemName: "person")
+                    .font(.system(size: 40))
+                    .foregroundColor(.white)
             )
-        ) {
-            AppleDisconnectGuideView(
-                onOpenSettings: {
-                    store.send(.appleDisconnectGuideOpenSettingsButtonTapped)
-                },
-                onCompleted: {
-                    store.send(.appleDisconnectGuideCompletedButtonTapped)
-                }
-            )
-        }
-        .onChange(of: store.lastDeletedOwnerId) { _, newValue in
-            guard let ownerId = newValue else { return }
-
-            Task {
-                do {
-                    try recordingLocalDataClient.deleteAllForOwner(
-                        modelContext,
-                        ownerId
-                    )
-                    print("SettingView: ownerId=\(ownerId) 로컬 녹음 삭제 완료")
-                } catch {
-                    print("SettingView: 로컬 녹음 삭제 실패 \(error)")
-                }
-            }
-        }
     }
 
-    @ViewBuilder
-    private var profileSection: some View {
-        Section {
-            HStack {
-                Spacer()
-
-                PhotosPicker(
-                    selection: $selectedItem,
-                    matching: .images,
-                    photoLibrary: .shared()
-                ) {
-                    ProfileImageView(
-                        user: user,
-                        size: 80,
-                        cornerRadius: 24,
-                        showEditButton: true
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(user == nil)
-
-                Spacer()
-            }
-        }
-        .listRowBackground(Color.clear)
-    }
-
-    @ViewBuilder
-    private var userInfoSection: some View {
-        Section {
-            HStack {
-                Image(systemName: "person.circle")
-                Text("이름")
-                Spacer()
-                Text(user?.name ?? "게스트")
-                    .foregroundColor(.secondary)
-            }
-            .foregroundColor(.primary)
-
-            HStack {
-                Image(systemName: "envelope.circle")
-                Text("이메일")
-                Spacer()
-                if let email = user?.email {
-                    Text(email)
-                        .foregroundColor(.secondary)
-                } else {
-                    Text(user != nil ? "이메일 없음" : "비로그인")
-                        .foregroundColor(.secondary)
-                }
-
-            }
-            .foregroundColor(.primary)
-
-            HStack {
-                Image(systemName: "exclamationmark.circle")
-                Text("개인정보처리방침")
-            }
-            .foregroundColor(.primary)
-
-            HStack {
-                Image(systemName: "questionmark.circle")
-                Text("문의하기")
-            }
-            .foregroundColor(.primary)
-        }
-    }
-
-    @ViewBuilder
-    private var accountSection: some View {
-        Section {
-            if let user = user {
-                Button {
-                    store.send(.logoutTapped)
-                } label: {
-                    HStack {
-                        Image(
-                            systemName: "rectangle.portrait.and.arrow.right"
-                        )
-                        Text("로그아웃")
-                        Spacer()
-                        Text(providerText(user.provider))
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
-                    }
-                }
-                .foregroundStyle(.primary)
-
-                Button {
-                    store.send(.deleteAccountTapped)
-                } label: {
-                    HStack {
-                        Image(systemName: "trash.circle")
-                        Text("계정 삭제")
-                            .foregroundColor(.red)
-                    }
-                }
-                .foregroundStyle(.primary)
-            } else {
-                Button {
-                    store.send(.loginButtonTapped)
-                } label: {
-                    HStack {
-                        Image(systemName: "person.badge.plus")
-                        Text("로그인")
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                }
-                .foregroundStyle(.primary)
-            }
-        }
-    }
 }
 
 private func providerText(_ provider: AuthProvider) -> String {
     switch provider {
     case .apple: return "Apple"
-    case .google: return "Google"
+    case .google: return "google"
     case .kakao: return "Kakao"
     }
 }
