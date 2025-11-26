@@ -36,28 +36,41 @@ struct LoginProvidersFeature {
     @Dependency(\.kakaoAuthClient) var kakaoAuthClient
     @Dependency(\.googleAuthClient) var googleAuthClient
     @Dependency(\.appleAuthClient) var appleAuthClient
+    @Dependency(\.userStorageClient) var userStorageClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
                 
             case let .providerTapped(provider):
-                return .run { send in
+                return .run { [userStorageClient] send in
                     do {
-                        let user: User
+                        let rawUser: User
                         
                         switch provider {
                         case .kakao:
-                            user = try await kakaoAuthClient.login()
+                            rawUser = try await kakaoAuthClient.login()
                             
                         case .apple:
-                            user = try await appleAuthClient.login()
+                            rawUser = try await appleAuthClient.login()
                             
                         case .google:
-                            user = try await googleAuthClient.login()
+                            rawUser = try await googleAuthClient.login()
                         }
                         
-                        await send(.delegate(.login(true, user)))
+                        let storedUser = await userStorageClient.load()
+                        
+                        let finalUer: User
+                        
+                        if rawUser.provider == .apple, let stored = storedUser, stored.ownerId == rawUser.ownerId{
+                            finalUer = stored
+                        } else {
+                            finalUer = rawUser
+                        }
+                        
+                        await userStorageClient.save(finalUer)
+                        
+                        await send(.delegate(.login(true, rawUser)))
                         
                     } catch {
                         print("로그인 실패: \(error)")
