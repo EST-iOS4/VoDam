@@ -1,10 +1,3 @@
-//
-//  SettingView.swift
-//  Vodam
-//
-//  Created by 송영민 on 11/17/25.
-//
-
 import ComposableArchitecture
 import PhotosUI
 import SwiftData
@@ -13,6 +6,7 @@ import SwiftUI
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
     @State private var selectedItem: PhotosPickerItem?
+    @State private var showDeleteConfirmation = false
 
     @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
@@ -22,7 +16,6 @@ struct SettingView: View {
     }
 
     var body: some View {
-
         List {
             profileSection
             userInfoSection
@@ -53,21 +46,22 @@ struct SettingView: View {
                 }
             )
         }
-        // 로컬 데이터 삭제 요청 처리
-        .onChange(of: store.pendingDeleteOwnerId) { _, newOwnerId in
-            guard let ownerId = newOwnerId else { return }
-            deleteLocalData(ownerId: ownerId)
+        .task(id: store.pendingDeleteOwnerId) {
+            // pendingDeleteOwnerId가 설정되면 로컬 데이터 삭제
+            if let ownerId = store.pendingDeleteOwnerId {
+                deleteLocalData(ownerId: ownerId)
+            }
         }
     }
-    
+
     // MARK: - 로컬 데이터 삭제
     private func deleteLocalData(ownerId: String) {
         do {
             try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
             store.send(.localDataDeleted(ownerId))
-            print("✅ 로컬 프로젝트 데이터 삭제 완료: \(ownerId)")
+            print("로컬 프로젝트 데이터 삭제 완료: \(ownerId)")
         } catch {
-            print("❌ 로컬 프로젝트 데이터 삭제 실패: \(error)")
+            print("로컬 프로젝트 데이터 삭제 실패: \(error)")
         }
     }
 
@@ -121,7 +115,6 @@ struct SettingView: View {
                     Text(user != nil ? "이메일 없음" : "비로그인")
                         .foregroundColor(.secondary)
                 }
-
             }
             .foregroundColor(.primary)
 
@@ -147,9 +140,7 @@ struct SettingView: View {
                     store.send(.logoutTapped)
                 } label: {
                     HStack {
-                        Image(
-                            systemName: "rectangle.portrait.and.arrow.right"
-                        )
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
                         Text("로그아웃")
                         Spacer()
                         Text(providerText(user.provider))
