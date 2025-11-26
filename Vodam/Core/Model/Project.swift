@@ -14,6 +14,7 @@ struct Project: Hashable, Equatable, Identifiable {
     var creationDate: Date
     var category: ProjectCategory
     var isFavorite: Bool
+    var filePath: String? = nil
     
     static let mock: IdentifiedArrayOf<Project> = [
         Project(id: UUID(), name: "파일로 저장된 프로젝트", creationDate: Calendar.current.date(from: DateComponents(year: 2025, month: 1, day: 19)) ?? Date(), category: .file, isFavorite: false),
