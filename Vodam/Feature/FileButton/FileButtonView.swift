@@ -68,8 +68,6 @@ struct FileButtonView: View {
                         .foregroundColor(.red)
                         .padding(.horizontal, 20)
                 }
-                
-                Spacer(minLength: 0)
             }
         }
     }
