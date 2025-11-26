@@ -324,12 +324,17 @@ extension AuthService {
             let name =
                 (fullName?.isEmpty == false ? fullName : nil) ?? "Apple User"
             let email = credential.email
-            
+
             let appleUserId = credential.user
+
+            print("🔵 [Apple] credential.user:", appleUserId)
+            print("🔵 [Apple] fullName:", fullName as Any)
+            print("🔵 [Apple] name used:", name)
+            print("🔵 [Apple] email:", email as Any)
 
             return User(
                 appleUserId: appleUserId,
-                id: credential.user,
+                id: appleUserId,
                 name: name,
                 email: email,
                 provider: .apple,
