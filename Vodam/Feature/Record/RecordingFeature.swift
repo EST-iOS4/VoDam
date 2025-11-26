@@ -12,6 +12,11 @@ struct RecordingFeature {
     @Dependency(\.continuousClock) var clock
     @Dependency(\.speechService) var speechService
 
+    private enum CancelID {
+        static let recordingTimer = "recording_timer"
+        static let sttStream = "stt_stream"
+    }
+
     enum Status: Equatable {
         case ready
         case recording
@@ -46,21 +51,30 @@ struct RecordingFeature {
             switch action {
 
             case .startTapped:
-                if state.status == .ready {
-                    state.elapsedSeconds = 0
+                do {
+                    if state.status == .paused {
+                        recorder.resumeRecording()
+                    } else {
+                        state.fileURL = try recorder.startRecording()
+                        state.elapsedSeconds = 0
+                    }
+                } catch {
+                    state.status = .ready
+                    return .none
                 }
+
                 state.status = .recording
 
                 return .merge(
                     .run { _ in speechService.startLiveTranscription() }
-                        .cancellable(id: "stt_stream", cancelInFlight: true),
+                        .cancellable(id: CancelID.sttStream, cancelInFlight: true),
 
                     .run { send in
                         for await _ in clock.timer(interval: .seconds(1)) {
                             await send(.tick)
                         }
                     }
-                    .cancellable(id: "recording_timer", cancelInFlight: true)
+                    .cancellable(id: CancelID.recordingTimer, cancelInFlight: true)
                 )
 
             case .pauseTapped:
@@ -69,7 +83,7 @@ struct RecordingFeature {
                 state.status = .paused
 
                 return .merge(
-                    .cancel(id: "recording_timer"),
+                    .cancel(id: CancelID.recordingTimer),
                     .run { _ in speechService.stopLiveTranscription() }
                 )
 
@@ -81,7 +95,7 @@ struct RecordingFeature {
                 state.elapsedSeconds = 0
 
                 return .merge(
-                    .cancel(id: "recording_timer"),
+                    .cancel(id: CancelID.recordingTimer),
                     .run { _ in speechService.stopLiveTranscription() }
                 )
 
