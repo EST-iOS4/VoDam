@@ -12,8 +12,18 @@ import SwiftUI
 struct RecordingView: View {
     @Environment(\.modelContext) var context  // SwiftData ModelContext
     let store: StoreOf<RecordingFeature>
+    
+    let ownerId: String?
 
     @Dependency(\.recordingLocalDataClient) var recordingLocalDataClient
+    
+    init (
+        store: StoreOf<RecordingFeature>,
+        ownerId: String?
+    ) {
+        self.store = store
+        self.ownerId = ownerId
+    }
 
     var body: some View {
         ZStack {
@@ -54,18 +64,8 @@ struct RecordingView: View {
 
     // MARK: - SwiftData 저장
     private func saveToSwiftData(url: URL, length: Int) {
-        let model = RecordingModel(
-            filename: url.lastPathComponent,
-            filePath: url.path,
-            length: length,
-            createdAt: .now
-        )
-
-        context.insert(model)
-
         do {
-            try context.save()
-            print("💾 SwiftData 저장 성공 → \(url.lastPathComponent)")
+            try recordingLocalDataClient.save(context, url, length, ownerId)
         } catch {
             print("❌ SwiftData 저장 실패: \(error)")
         }

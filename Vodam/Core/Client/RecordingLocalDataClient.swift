@@ -10,19 +10,20 @@ import Foundation
 import SwiftData
 
 struct RecordingLocalDataClient {
-    var save: @Sendable (_ context: ModelContext, _ url: URL, _ length: Int) throws -> Void
+    var save: @Sendable (_ context: ModelContext, _ url: URL, _ length: Int, _ ownerId: String?) throws -> Void
 }
 
 extension RecordingLocalDataClient: DependencyKey {
     static var liveValue: RecordingLocalDataClient {
         .init(
-            save: { context, url, length in
+            save: { context, url, length, ownerId in
                 let model = RecordingModel(
                     filename: url.lastPathComponent,
                     filePath: url.path,
                     length: length,
-                    createdAt: .now
-                    // ownerId, syncStatus는 일단 기본값(nil, .localOnly) 사용
+                    createdAt: .now,
+                    ownerId: ownerId,
+                    syncStatus: .localOnly
                 )
 
                 context.insert(model)
@@ -40,7 +41,7 @@ extension RecordingLocalDataClient: DependencyKey {
 
     static var testValue: RecordingLocalDataClient {
         .init(
-            save: { _, _, _ in
+            save: { _, _, _, _ in
     
             }
         )
