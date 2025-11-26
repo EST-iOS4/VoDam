@@ -1,5 +1,5 @@
     //
-    //  ChatView.swift
+    //  ChattingRoomView.swift
     //  Vodam
     //
     //  Created by EunYoung Wang on 11/24/25.
