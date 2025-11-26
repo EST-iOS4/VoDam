@@ -55,8 +55,6 @@
 				7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */,
 				7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
-				A00B916C2ED4D84600E64B63 /* FirebaseFirestore in Frameworks */,
-				A00B91702ED53F4500E64B63 /* FirebaseCore in Frameworks */,
 				7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
