@@ -9,7 +9,8 @@ import Foundation
 import Speech
 
 struct AudioFileSTTClient {
-    var transcribe: @Sendable (URL) async -> Result<String, FileButtonFeature.STTError>
+    var transcribe:
+        @Sendable (URL) async -> Result<String, FileButtonFeature.STTError>
 }
 
 extension AudioFileSTTClient {
@@ -19,7 +20,9 @@ extension AudioFileSTTClient {
 }
 
 // 수정된 STTError 타입 반영
-func transcribeAudioFile(url: URL) async -> Result<String, FileButtonFeature.STTError> {
+func transcribeAudioFile(url: URL) async -> Result<
+    String, FileButtonFeature.STTError
+> {
 
     return await withCheckedContinuation { continuation in
 
@@ -42,7 +45,11 @@ func transcribeAudioFile(url: URL) async -> Result<String, FileButtonFeature.STT
                 try FileManager.default.startDownloadingUbiquitousItem(at: url)
             } catch {
                 continuation.resume(
-                    returning: .failure(.failed("iCloud에서 파일 다운로드 실패: \(error.localizedDescription)"))
+                    returning: .failure(
+                        .failed(
+                            "iCloud에서 파일 다운로드 실패: \(error.localizedDescription)"
+                        )
+                    )
                 )
                 return
             }
@@ -62,7 +69,9 @@ func transcribeAudioFile(url: URL) async -> Result<String, FileButtonFeature.STT
             try fileManager.copyItem(at: url, to: localURL)
         } catch {
             continuation.resume(
-                returning: .failure(.failed("임시 파일 복사 실패: \(error.localizedDescription)"))
+                returning: .failure(
+                    .failed("임시 파일 복사 실패: \(error.localizedDescription)")
+                )
             )
             return
         }
@@ -76,8 +85,12 @@ func transcribeAudioFile(url: URL) async -> Result<String, FileButtonFeature.STT
                 return
             }
 
-            guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "ko-KR")),
-                  recognizer.isAvailable else {
+            guard
+                let recognizer = SFSpeechRecognizer(
+                    locale: Locale(identifier: "ko-KR")
+                ),
+                recognizer.isAvailable
+            else {
                 continuation.resume(
                     returning: .failure(.failed("SpeechRecognizer 사용 불가"))
                 )
@@ -108,4 +121,3 @@ func transcribeAudioFile(url: URL) async -> Result<String, FileButtonFeature.STT
         }
     }
 }
-
