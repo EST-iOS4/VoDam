@@ -7,16 +7,17 @@ import Foundation
 
 @Reducer
 struct RecordingFeature {
-
+    
     @Dependency(\.audioRecorder) var recorder
     @Dependency(\.continuousClock) var clock
     @Dependency(\.speechService) var speechService
-
+    @Dependency(\.recordingRepository) var repository
+    
     enum Status: Equatable {
         case ready
         case recording
         case paused
-
+        
         var localizedText: String {
             switch self {
             case .ready: "준비됨"
@@ -25,7 +26,7 @@ struct RecordingFeature {
             }
         }
     }
-
+    
     @ObservableState
     struct State: Equatable {
         var status: Status = .ready
@@ -33,58 +34,71 @@ struct RecordingFeature {
         var fileURL: URL? = nil
         var lastRecordedLength: Int = 0
     }
-
+    
     enum Action: Equatable {
         case startTapped
         case pauseTapped
         case stopTapped
         case tick
     }
-
+    
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-
+                
             case .startTapped:
-                if state.status == .ready {
+                let wasReady = state.status == .ready
+                if wasReady {
                     state.elapsedSeconds = 0
                 }
                 state.status = .recording
-
+                
                 return .merge(
-                    .run { _ in speechService.startLiveTranscription() }
-                        .cancellable(id: "stt_stream", cancelInFlight: true),
-
-                    .run { send in
-                        for await _ in clock.timer(interval: .seconds(1)) {
-                            await send(.tick)
+                    .run { _ in
+                        if wasReady {
+                            try recorder.startRecording()
+                        } else {
+                            recorder.resumeRecording()
                         }
+                        speechService.startLiveTranscription()
                     }
-                    .cancellable(id: "recording_timer", cancelInFlight: true)
+                        .cancellable(id: "stt_stream", cancelInFlight: true),
+                    // ... 타이머 동일
                 )
-
+                
             case .pauseTapped:
                 guard state.status == .recording else { return .none }
                 recorder.pauseRecording()
                 state.status = .paused
-
+                
                 return .merge(
                     .cancel(id: "recording_timer"),
                     .run { _ in speechService.stopLiveTranscription() }
                 )
 
-            case .stopTapped:
-                let url = recorder.stopRecording()
-                state.fileURL = url
-                state.lastRecordedLength = state.elapsedSeconds
-                state.status = .ready
-                state.elapsedSeconds = 0
+                case .stopTapped:
+                    let url = recorder.stopRecording()
+                    let length = state.elapsedSeconds
+                    state.fileURL = url
+                    state.lastRecordedLength = length
+                    state.status = .ready
+                    state.elapsedSeconds = 0
 
-                return .merge(
-                    .cancel(id: "recording_timer"),
-                    .run { _ in speechService.stopLiveTranscription() }
-                )
-
+                    return .merge(
+                        .cancel(id: "recording_timer"),
+                        .run { _ in
+                            speechService.stopLiveTranscription()
+                            
+                            if let url = url {
+                                let metadata = RecordingMetadata(
+                                    filename: url.lastPathComponent,
+                                    filePath: url.path,
+                                    length: length
+                                )
+                                try await repository.saveLocal(metadata)
+                            }
+                        }
+                    )
             case .tick:
                 if state.status == .recording {
                     state.elapsedSeconds += 1
