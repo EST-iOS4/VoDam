@@ -10,7 +10,7 @@ import Foundation
 import SwiftData
 
 struct RecordingLocalDataClient {
-    var save: @Sendable (_ context: ModelContext, _ url: URL, _ length: Int, _ ownerId: String?) throws -> Void
+    var save: @Sendable (_ context: ModelContext, _ url: URL, _ length: Int, _ ownerId: String?) throws -> RecordingPayload
 }
 
 extension RecordingLocalDataClient: DependencyKey {
@@ -30,7 +30,8 @@ extension RecordingLocalDataClient: DependencyKey {
 
                 do {
                     try context.save()
-                    print("SwiftData 저장 성공 → \(url.lastPathComponent)")
+                    print("SwiftData 저장 성공 → \(url.lastPathComponent), ownerId: \(ownerId ?? "nil")")
+                    return RecordingPayload(model: model)
                 } catch {
                     print("SwiftData 저장 실패: \(error)")
                     throw error
@@ -41,13 +42,20 @@ extension RecordingLocalDataClient: DependencyKey {
 
     static var testValue: RecordingLocalDataClient {
         .init(
-            save: { _, _, _, _ in
-    
+            save: { _, url, length, ownerId in
+                                return RecordingPayload(
+                                id: UUID().uuidString,
+                                filename: url.lastPathComponent,
+                                filePath: url.path,
+                                length: length,
+                                createdAt: .now,
+                                ownerId: ownerId,
+                                syncStatus: .localOnly
+                            )
+                        }
+                    )
+                }
             }
-        )
-    }
-}
-
 extension DependencyValues {
     var recordingLocalDataClient: RecordingLocalDataClient {
         get { self[RecordingLocalDataClient.self] }
