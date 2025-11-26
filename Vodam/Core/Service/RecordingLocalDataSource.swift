@@ -16,7 +16,6 @@ final class RecordingLocalDataSource {
 
     func save(_ metadata: RecordingMetadata) throws {
         let model = RecordingModel(
-            id: metadata.id,
             filename: metadata.filename,
             filePath: metadata.filePath,
             length: metadata.length,
