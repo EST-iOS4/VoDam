@@ -10,7 +10,7 @@ import FirebaseFirestore
 import Foundation
 
 struct FirebaseClient {
-//    var deleteAllForUser: @Sendable (_ ownerId: String) async throws -> Void
+    var deleteAllForUser: @Sendable (_ ownerId: String) async throws -> Void
     
     // MARK: - Project Functions (신규)
     var uploadProjects:
@@ -32,34 +32,34 @@ struct FirebaseClient {
 extension FirebaseClient: DependencyKey {
     static var liveValue: FirebaseClient {
         .init(
-//            deleteAllForUser: { ownerId in
-//               let db = Firestore.firestore()
-//             let userRef = db.collection("users").document(ownerId)
-//                
-//                // recordings 삭제
-//                let recordingsRef = userRef.collection("recordings")
-//                let recordingsSnapshot = try await recordingsRef.getDocuments()
-//                
-//                // projects 삭제
-//                let projectsRef = userRef.collection("projects")
-//                let projectsSnapshot = try await projectsRef.getDocuments()
-//                
-//                let batch = db.batch()
-//
-//                for doc in recordingsSnapshot.documents {
-//                    batch.deleteDocument(doc.reference)
-//                }
-//                
-//                for doc in projectsSnapshot.documents {
-//                    batch.deleteDocument(doc.reference)
-//                }
-//
-//                batch.deleteDocument(userRef)
-//
-//                try await batch.commit()
-//
-//                print("[FirebaseClient] deleteAllForUser 완료: ownerId=\(ownerId), recordings=\(recordingsSnapshot.documents.count)개, projects=\(projectsSnapshot.documents.count)개 삭제")
-//            },
+            deleteAllForUser: { ownerId in
+               let db = Firestore.firestore()
+             let userRef = db.collection("users").document(ownerId)
+                
+                // recordings 삭제
+                let recordingsRef = userRef.collection("recordings")
+                let recordingsSnapshot = try await recordingsRef.getDocuments()
+                
+                // projects 삭제
+                let projectsRef = userRef.collection("projects")
+                let projectsSnapshot = try await projectsRef.getDocuments()
+                
+                let batch = db.batch()
+
+                for doc in recordingsSnapshot.documents {
+                    batch.deleteDocument(doc.reference)
+                }
+                
+                for doc in projectsSnapshot.documents {
+                    batch.deleteDocument(doc.reference)
+                }
+
+                batch.deleteDocument(userRef)
+
+                try await batch.commit()
+
+                print("[FirebaseClient] deleteAllForUser 완료: ownerId=\(ownerId), recordings=\(recordingsSnapshot.documents.count)개, projects=\(projectsSnapshot.documents.count)개 삭제")
+            },
             
             // MARK: - Project Functions Implementation
             uploadProjects: { ownerId, projects in
@@ -129,7 +129,7 @@ extension FirebaseClient: DependencyKey {
 
     static var testValue: FirebaseClient {
         .init(
-//            deleteAllForUser: { _ in },
+            deleteAllForUser: { _ in },
             uploadProjects: { _, _ in },
             fetchProjects: { _ in [] },
             updateProject: { _, _ in },
