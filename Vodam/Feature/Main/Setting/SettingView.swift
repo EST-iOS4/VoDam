@@ -15,7 +15,7 @@ struct SettingView: View {
     @State private var selectedItem: PhotosPickerItem?
 
     @Environment(\.modelContext) private var modelContext
-    @Dependency(\.recordingLocalDataClient) private var recordingLocalDataClient
+    @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
 
     private var user: User? {
         store.user
@@ -53,20 +53,21 @@ struct SettingView: View {
                 }
             )
         }
-        .onChange(of: store.lastDeletedOwnerId) { _, newValue in
-            guard let ownerId = newValue else { return }
-
-            Task {
-                do {
-                    try recordingLocalDataClient.deleteAllForOwner(
-                        modelContext,
-                        ownerId
-                    )
-                    print("SettingView: ownerId=\(ownerId) 로컬 녹음 삭제 완료")
-                } catch {
-                    print("SettingView: 로컬 녹음 삭제 실패 \(error)")
-                }
-            }
+        // 로컬 데이터 삭제 요청 처리
+        .onChange(of: store.pendingDeleteOwnerId) { _, newOwnerId in
+            guard let ownerId = newOwnerId else { return }
+            deleteLocalData(ownerId: ownerId)
+        }
+    }
+    
+    // MARK: - 로컬 데이터 삭제
+    private func deleteLocalData(ownerId: String) {
+        do {
+            try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
+            store.send(.localDataDeleted(ownerId))
+            print("✅ 로컬 프로젝트 데이터 삭제 완료: \(ownerId)")
+        } catch {
+            print("❌ 로컬 프로젝트 데이터 삭제 실패: \(error)")
         }
     }
 
