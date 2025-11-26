@@ -86,6 +86,10 @@ struct MainFeature {
             ):
                 if isSuccess {
                     state.currentUser = nil
+                    //                    state.settings = nil
+                    return .run { _ in
+                        await userStorageClient.clear()
+                    }
                 }
                 return .none
 
