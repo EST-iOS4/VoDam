@@ -62,21 +62,34 @@ struct LoginProvidersFeature {
                             rawUser = try await googleAuthClient.login()
                         }
 
+                        print("🧩 [LoginProviders] provider:", provider)
+                        print("🧩 [LoginProviders] rawUser:", rawUser)
+
                         let storedUser = await userStorageClient.load()
+                        print(
+                            "🧩 [LoginProviders] storedUser:",
+                            storedUser as Any
+                        )
 
                         let finalUser: User
 
-                        if rawUser.provider == .apple, let stored = storedUser,
+                        if provider == .apple, let stored = storedUser,
                             stored.ownerId == rawUser.ownerId
                         {
+                            print(
+                                "🧩 [LoginProviders] use storedUser (same ownerId)"
+                            )
                             finalUser = stored
                         } else {
+                            print("🧩 [LoginProviders] use rawUser")
                             finalUser = rawUser
                         }
 
+                        print("🧩 [LoginProviders] finalUser:", finalUser)
+
                         await userStorageClient.save(finalUser)
 
-                        await send(.delegate(.login(true, rawUser)))
+                        await send(.delegate(.login(true, finalUser)))
 
                     } catch {
                         print("로그인 실패: \(error)")

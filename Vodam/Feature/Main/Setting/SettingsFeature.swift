@@ -41,7 +41,8 @@ struct SettingsFeature {
 
         enum Delegate: Equatable {
             case userUpdated(User)
-            case accountCleared(Bool)
+            case loggedOut(Bool)
+            case accountDeleted(Bool)
         }
 
         enum Alert: Equatable {
@@ -120,10 +121,10 @@ struct SettingsFeature {
             case .logoutFinished(let isSuccess):
                 if isSuccess {
                     state.user = nil
-                    return .send(.delegate(.accountCleared(true)))
+                    return .send(.delegate(.loggedOut(true)))
                 } else {
                     print("로그아웃 실패")
-                    return .send(.delegate(.accountCleared(false)))
+                    return .send(.delegate(.loggedOut(false)))
                 }
 
             case .deleteAccountTapped:
@@ -192,11 +193,11 @@ struct SettingsFeature {
                 if isSuccess {
                     state.user = nil
                     state.lastDeletedOwnerId = nil
-                    return .send(.delegate(.accountCleared(true)))
+                    return .send(.delegate(.accountDeleted(true)))
                 } else {
                     print("회원 탈퇴 실패")
                     state.lastDeletedOwnerId = nil
-                    return .send(.delegate(.accountCleared(false)))
+                    return .send(.delegate(.accountDeleted(false)))
                 }
 
             case .photoPickerItemChanged(let item):
