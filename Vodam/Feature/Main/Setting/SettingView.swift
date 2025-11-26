@@ -8,10 +8,14 @@
 import ComposableArchitecture
 import PhotosUI
 import SwiftUI
+import SwiftData
 
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
     @State private var selectedItem: PhotosPickerItem?
+    
+    @Environment(\.modelContext) private var modelContext
+    @Dependency(\.recordingLocalDataClient) private var recordingLocalDataClient
 
     private var user: User? {
         store.user
@@ -29,6 +33,21 @@ struct SettingView: View {
         .alert($store.scope(state: \.alert, action: \.alert))
         .onChange(of: selectedItem) { _, newItem in
             store.send(.photoPickerItemChanged(newItem))
+        }
+        .onChange(of: store.lastDeletedOwnerId) { _, newValue in
+            guard let ownerId = newValue else { return }
+            
+            Task {
+                do {
+                    try recordingLocalDataClient.deleteAllForOwner(
+                        modelContext,
+                        ownerId
+                    )
+                    print("SettingView: ownerId=\(ownerId) 로컬 녹음 삭제 완료")
+                } catch {
+                    print("SettingView: 로컬 녹음 삭제 실패 \(error)")
+                }
+            }
         }
     }
 
