@@ -20,15 +20,7 @@ extension AppleAuthClient: DependencyKey {
     static var liveValue: AppleAuthClient {
         .init(
             login: {
-                let rawUser = try await AuthService.loginWithApple()
-                
-                let repo = DependencyValues.current.userRepository
-                if let existing = try await repo.load(rawUser.ownerId) {
-                    return existing
-                }
-                
-                try await repo.save(rawUser)
-                return rawUser
+                    try await AuthService.loginWithApple()
             },
             logout: {
                 
