@@ -168,6 +168,7 @@ struct SettingsFeature {
                     return .run { send in
                         do {
                             try await googleAuthClient.disconnect()
+                            try await firebaseClient.deleteAllForUser(user.ownerId)
                             await send(.deleteAccountFinished(true))
                         } catch {
                             print("구글 계정 연결 해제 실패: \(error)")
@@ -190,9 +191,11 @@ struct SettingsFeature {
             case .deleteAccountFinished(let isSuccess):
                 if isSuccess {
                     state.user = nil
+                    state.lastDeletedOwnerId = nil
                     return .send(.delegate(.accountCleared(true)))
                 } else {
                     print("회원 탈퇴 실패")
+                    state.lastDeletedOwnerId = nil
                     return .send(.delegate(.accountCleared(false)))
                 }
 

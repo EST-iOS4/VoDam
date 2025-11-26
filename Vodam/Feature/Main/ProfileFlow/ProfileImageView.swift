@@ -70,7 +70,11 @@ struct ProfileImageView: View {
                 loadedImage = image
             }
         } catch {
-            print("이미지 로드 실패: \(error)")
+            if let urlError = error as? URLError, urlError.code == .cancelled {
+                print("이미지 로드 취소(정상 동작): \(url)")
+            } else {
+                print("이미지 로드 실패: \(error)")
+            }
         }
     }
 
