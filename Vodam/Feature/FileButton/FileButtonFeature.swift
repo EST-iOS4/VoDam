@@ -6,12 +6,12 @@
 //
 
 import ComposableArchitecture
-import SwiftUI
 import Speech
+import SwiftUI
 
 @Reducer
 struct FileButtonFeature {
-    
+
     @Dependency(\.audioFileSTTClient) var sttClient
 
     @ObservableState
@@ -19,7 +19,7 @@ struct FileButtonFeature {
         var title: String = "파일 가져오기"
         var selectedFileURL: URL?
         var isImporterPresented: Bool = false
-        
+
         // STT 상태
         var isTranscribing: Bool = false
         var transcript: String = ""
@@ -30,7 +30,7 @@ struct FileButtonFeature {
         case tapped
         case importerPresented(Bool)
         case fileImported(Result<URL, FileImportError>)
-        
+
         // STT
         case startSTT(URL)
         case sttResponse(Result<String, STTError>)
@@ -53,12 +53,12 @@ struct FileButtonFeature {
                 state.isImporterPresented = true
                 return .none
 
-            case let .importerPresented(isPresented):
+            case .importerPresented(let isPresented):
                 state.isImporterPresented = isPresented
                 return .none
 
             // 파일 선택 후
-            case let .fileImported(result):
+            case .fileImported(let result):
                 switch result {
                 case .success(let url):
                     print("📁 선택된 파일:", url)
@@ -72,7 +72,7 @@ struct FileButtonFeature {
                 }
 
             // STT 시작
-            case let .startSTT(url):
+            case .startSTT(let url):
                 state.isTranscribing = true
                 print("🎤 STT 시작: \(url.lastPathComponent)")
                 return .run { [url, sttClient] send in
@@ -81,14 +81,14 @@ struct FileButtonFeature {
                 }
 
             // STT 결과 전달
-            case let .sttResponse(result):
+            case .sttResponse(let result):
                 state.isTranscribing = false
                 print("🎤 STT 종료")
 
                 switch result {
                 case .success(let text):
                     print("📄 STT 결과:")
-                    print(text)   // ← 결과 콘솔 출력
+                    print(text)  // ← 결과 콘솔 출력
                     state.transcript = text
 
                 case .failure(let error):
