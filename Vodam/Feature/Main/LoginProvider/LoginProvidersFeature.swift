@@ -43,7 +43,11 @@ struct LoginProvidersFeature {
             switch action {
 
             case .providerTapped(let provider):
-                return .run { [userStorageClient] send in
+                return .run {
+                    [
+                        userStorageClient, kakaoAuthClient, appleAuthClient,
+                        googleAuthClient
+                    ] send in
                     do {
                         let rawUser: User
 
@@ -60,17 +64,17 @@ struct LoginProvidersFeature {
 
                         let storedUser = await userStorageClient.load()
 
-                        let finalUer: User
+                        let finalUser: User
 
                         if rawUser.provider == .apple, let stored = storedUser,
                             stored.ownerId == rawUser.ownerId
                         {
-                            finalUer = stored
+                            finalUser = stored
                         } else {
-                            finalUer = rawUser
+                            finalUser = rawUser
                         }
 
-                        await userStorageClient.save(finalUer)
+                        await userStorageClient.save(finalUser)
 
                         await send(.delegate(.login(true, rawUser)))
 
