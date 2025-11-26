@@ -18,6 +18,8 @@ struct SettingsFeature {
         var user: User?
 
         @Presents var alert: AlertState<Action.Alert>?
+        
+        var lastDeletedOwnerId: String? = nil
     }
 
     enum Action: Equatable {
@@ -154,6 +156,7 @@ struct SettingsFeature {
                     return .run { send in
                         do {
                             try await kakaoAuthClient.deleteAccount()
+                            try await firebaseClient.deleteAllForUser(user.ownerId)
                             await send(.deleteAccountFinished(true))
                         } catch {
                             print("카카오 회원 탈퇴 실패: \(error)")
