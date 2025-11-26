@@ -1,8 +1,6 @@
 //
-//  RecordingButton.swift
+//  RecordingView.swift
 //  VoDam
-//
-//  Created by 강지원 on 11/18/25.
 //
 
 import ComposableArchitecture
@@ -61,6 +59,8 @@ struct RecordingView: View {
             guard let url = newValue else { return }
             saveToSwiftData(url: url, length: store.lastRecordedLength)
         }
+        .frame(height: 240)
+        .padding(.horizontal, 20)
     }
 
     // MARK: - SwiftData 저장
@@ -94,9 +94,11 @@ struct RecordingView: View {
         } catch {
             print("SwiftData 저장 실패: \(error)")
         }
+
+//        showTitleSheet = false
     }
 
-    // MARK: - 상태별 버튼 UI
+    // MARK: - 버튼 UI
     @ViewBuilder
     private func controls(
         status: RecordingFeature.Status,
@@ -145,5 +147,13 @@ struct RecordingView: View {
                 }
             }
         }
+    }
+
+    // MARK: - 시간 포맷
+    private func formatTime(_ seconds: Int) -> String {
+        let h = seconds / 3600
+        let m = (seconds % 3600) / 60
+        let s = seconds % 60
+        return String(format: "%02d:%02d:%02d", h, m, s)
     }
 }
