@@ -18,16 +18,28 @@ struct ChattingRoomView: View {
             ScrollViewReader { proxy in
                             ScrollView {
                                 LazyVStack(spacing: 12) {
-                                    ForEach(store.messages) { message in
+                                    ForEach(store.messages, id: \.uniqueId) { message in
                                         MessageRow(message: message)
                                     }
+                                    if store.isAITyping{
+                                        HStack{
+                                            LoadingBubbleView()
+                                            Spacer()
+                                        }
+                                        .onAppear{
+                                            withAnimation{
+                                                proxy.scrollTo(store.messages.last?.uniqueId, anchor: .bottom)
+                                            }
+                                        }
+                                    }
+                                    
                                 }
                                 .padding()
                             }
                             .onChange(of: store.messages) { _ in
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                     withAnimation {
-                                        proxy.scrollTo(store.messages.last?.id, anchor: .bottom)
+                                        proxy.scrollTo(store.messages.last?.uniqueId, anchor: .bottom)
                                     }
                                 }
                             }
@@ -35,7 +47,7 @@ struct ChattingRoomView: View {
                                 store.send(.onAppear)
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                     withAnimation {
-                                        proxy.scrollTo(store.messages.last?.id, anchor: .bottom)
+                                        proxy.scrollTo(store.messages.last?.uniqueId, anchor: .bottom)
                                     }
                                 }
                             }
@@ -107,6 +119,43 @@ struct MessageRow: View {
         return formatter.string(from: date)
     }
 }
+
+// MARK: - 메세지 입력 중 애니메이션
+
+struct LoadingBubbleView: View {
+    @State private var isAnimating = false
+    
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 4) {
+            HStack(spacing: 4) {
+                ForEach(0..<3) { index in
+                    Circle()
+                        .frame(width: 8, height: 8)
+                        .foregroundColor(.gray.opacity(0.5))
+                        .scaleEffect(isAnimating ? 1.0 : 0.6)
+                        .animation(
+                            .easeInOut(duration: 0.6)
+                            .repeatForever()
+                            .delay(Double(index) * 0.2),
+                            value: isAnimating
+                        )
+                }
+            }
+            .padding(12)
+            .background(Color.gray.opacity(0.2))
+            .cornerRadius(16)
+            .onAppear {
+                isAnimating = true
+            }
+        }
+        .padding(.leading, 16)
+    }
+}
+
+//#Preview {
+//    LoadingBubbleView()
+//}
+
     
 //        // MARK: - Preview
 //    #Preview {

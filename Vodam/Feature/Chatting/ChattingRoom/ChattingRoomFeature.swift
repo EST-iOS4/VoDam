@@ -81,6 +81,7 @@ struct ChattingRoomFeature {
                     return .none
                     
                 case .sendMessage:
+                    print("1")
                     let userMessage = Message(
                         content: state.messageText,
                         isFromUser: true
@@ -89,12 +90,14 @@ struct ChattingRoomFeature {
                     state.messageText = ""
                     
                     return .run { [projectName = state.projectName] send in
+                        print("2")
                             // 유저 메세지 저장
                         do {
                             try await db.collection("chats")
                                 .document(projectName)
                                 .collection("messages")
                                 .addDocument(from: userMessage)
+                            print("3")
                         } catch {
                             print("Failed to save user message: \(error)")
                         }

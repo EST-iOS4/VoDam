@@ -14,6 +14,11 @@ struct Message: Identifiable, Codable,Equatable {
     var content: String
     var isFromUser: Bool
     var timestamp: Date
+    var localId: String = UUID().uuidString
+    
+    var uniqueId: String {
+        return id ?? localId
+    }
     
     init(id: String? = nil, content: String, isFromUser: Bool, timestamp: Date = Date()) {
         self.id = id
