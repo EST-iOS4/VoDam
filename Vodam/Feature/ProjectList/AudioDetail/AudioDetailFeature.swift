@@ -67,24 +67,46 @@ struct AudioDetailFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
+                print(
+                    "[AudioDetail] onAppear 진입 - project: \(state.project.name)"
+                )
+
                 guard let filePath = state.project.filePath else {
-                    print("❌ AudioDetail: project.filePath 가 없음")
+                    print("[AudioDetail] project.filePath 가 없음")
                     return .none
                 }
 
                 let url = URL(fileURLWithPath: filePath)
+                print("[AudioDetail] 시도할 파일 경로: \(url.path)")
 
                 guard FileManager.default.fileExists(atPath: url.path) else {
-                    print("❌ AudioDetail: 파일이 존재하지 않음 → \(url.path)")
+                    print("[AudioDetail] 파일이 존재하지 않음 → \(url.path)")
                     return .none
                 }
 
+                do {
+                    let session = AVAudioSession.sharedInstance()
+                    try session.setCategory(
+                        .playback,
+                        mode: .default,
+                        options: []
+                    )
+                    try session.setActive(true)
+                    print("[AudioDetail] AVAudioSession playback 세팅 완료")
+                } catch {
+                    print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
+                }
+
                 state.player = AVPlayer(url: url)
+                print("[AudioDetail] AVPlayer 생성 완료")
 
                 return .run { [player = state.player] send in
                     guard let player = player,
                         let item = player.currentItem
-                    else { return }
+                    else {
+                        print("[AudioDetail] player 또는 currentItem 이 nil")
+                        return
+                    }
 
                     let totalSeconds: Double
                     do {
@@ -93,12 +115,14 @@ struct AudioDetailFeature {
                         if !totalSeconds.isNaN && !totalSeconds.isInfinite {
                             await send(.setTotalTime(formatTime(totalSeconds)))
                         }
+                        print("[AudioDetail] 총 재생 시간: \(totalSeconds)초")
                     } catch {
-                        print("AudioDetail: duration 로드 실패 \(error)")
+                        print("[AudioDetail] duration 로드 실패: \(error)")
                         return
                     }
 
                     await withThrowingTaskGroup(of: Void.self) { group in
+                        // progress 업데이트 스트림
                         group.addTask {
                             let stream = AsyncStream<Double> { continuation in
                                 let timeScale = CMTimeScale(NSEC_PER_SEC)
@@ -125,19 +149,40 @@ struct AudioDetailFeature {
                                 await send(.updateProgress(progress))
                             }
                         }
+
+                        // 재생 완료 알림
+                        group.addTask {
+                            for await _ in NotificationCenter.default
+                                .notifications(
+                                    named: .AVPlayerItemDidPlayToEndTime,
+                                    object: item
+                                )
+                            {
+                                await send(.playerFinishedPlaying)
+                            }
+                        }
                     }
                 }
 
             case .playButtonTapped:
-                guard let player = state.player else { return .none }
+                guard let player = state.player else {
+                    print("[AudioDetail] playButtonTapped 호출됐는데 player 가 nil")
+                    return .none
+                }
+
                 state.isPlaying.toggle()
+                print("[AudioDetail] playButtonTapped - isPlaying = \(state.isPlaying)")
+
                 if state.isPlaying {
                     player.play()
                     player.rate = state.playbackRate
+                    print("[AudioDetail] player.play() 호출, rate = \(state.playbackRate)")
                 } else {
                     player.pause()
+                    print("[AudioDetail] player.pause() 호출")
                 }
                 return .none
+
 
             case .backwardButtonTapped:
                 guard let player = state.player else { return .none }
