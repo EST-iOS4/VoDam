@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum SyncStatus: String, Codable {
+enum SyncStatus: String, Codable, Sendable {
     case localOnly 
     case synced
     case deleted
