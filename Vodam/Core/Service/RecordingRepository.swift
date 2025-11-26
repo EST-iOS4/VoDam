@@ -5,8 +5,11 @@
 //  Created by 강지원 on 11/20/25.
 //
 
+// RecordingRepository.swift
+
 import Foundation
 import ComposableArchitecture
+import SwiftData
 
 // MARK: - RecordingMetadata
 struct RecordingMetadata: Identifiable, Codable, Equatable {
@@ -29,42 +32,70 @@ struct RecordingMetadata: Identifiable, Codable, Equatable {
     }
 }
 
-
 // MARK: - RecordingRepository 인터페이스
 struct RecordingRepository {
-    /// SwiftData 저장
     var saveLocal: (RecordingMetadata) async throws -> Void
-
-    /// Firebase 저장 (추후 구현)
+    var fetchAll: () async throws -> [RecordingMetadata]
+    var delete: (String) async throws -> Void
     var saveRemote: (RecordingMetadata) async throws -> Void
-
-    /// 로그인 여부 (Firebase Auth 연결 시 사용)
     var isLoggedIn: () -> Bool
 }
 
-
 // MARK: - DependencyKey 등록
 enum RecordingRepositoryKey: DependencyKey {
-
-    static let liveValue: RecordingRepository = RecordingRepository(
-
-        saveLocal: { metadata in
-            // 실제 SwiftData 저장 로직은 View에서 ModelContext로 처리
-            // 여기서는 저장 요청만 알림
-            print("📥 로컬 저장 요청됨: \(metadata.filename)")
-        },
-
-        saveRemote: { metadata in
-            print("🌐 원격 저장 요청됨 (Firebase 준비 예정): \(metadata.filename)")
-        },
-
-        isLoggedIn: {
-            // TODO: Firebase Auth 붙이면 변경
-            return false
-        }
-    )
+    
+    static let liveValue: RecordingRepository = {
+        let container = try! ModelContainer(for: RecordingModel.self)
+        let context = ModelContext(container)
+        
+        return RecordingRepository(
+            saveLocal: { metadata in
+                let model = RecordingModel(
+                    id: UUID(uuidString: metadata.id) ?? UUID(),
+                    filename: metadata.filename,
+                    filePath: metadata.filePath,
+                    length: metadata.length,
+                    createdAt: metadata.createdAt
+                )
+                context.insert(model)
+                try context.save()
+            },
+            
+            fetchAll: {
+                let descriptor = FetchDescriptor<RecordingModel>(
+                    sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+                )
+                let models = try context.fetch(descriptor)
+                return models.map { model in
+                    RecordingMetadata(
+                        id: model.id.uuidString,
+                        filename: model.filename,
+                        filePath: model.filePath,
+                        length: model.length,
+                        createdAt: model.createdAt
+                    )
+                }
+            },
+            
+            delete: { id in
+                guard let uuid = UUID(uuidString: id) else { return }
+                let descriptor = FetchDescriptor<RecordingModel>(
+                    predicate: #Predicate { $0.id == uuid }
+                )
+                if let model = try context.fetch(descriptor).first {
+                    context.delete(model)
+                    try context.save()
+                }
+            },
+            
+            saveRemote: { metadata in
+                print("🌐 Firebase 준비 예정: \(metadata.filename)")
+            },
+            
+            isLoggedIn: { false }
+        )
+    }()
 }
-
 
 // MARK: - DependencyValues 확장
 extension DependencyValues {
