@@ -171,7 +171,8 @@ struct ProjectListFeature {
                         creationDate: payload.creationDate,
                         category: payload.category,
                         isFavorite: payload.isFavorite,
-                        filePath: payload.filePath 
+                        filePath: payload.filePath,
+                        fileLength: payload.fileLength
                     )
                 }
                 

@@ -64,6 +64,10 @@ struct RecordingView: View {
     // MARK: - SwiftData 저장
     private func saveToSwiftData(url: URL, length: Int) {
         do {
+            guard let storedPath = copyRecordedFileToDocuments(url: url) else {
+                        print("녹음 파일 복사 실패 – 프로젝트 저장 중단")
+                        return
+                    }
 
             let projectName = generateProjectName(from: url)
 
@@ -71,7 +75,7 @@ struct RecordingView: View {
                 context,
                 projectName,
                 .audio,
-                url.path,
+                storedPath,
                 length,
                 nil,
                 ownerId
@@ -121,6 +125,37 @@ struct RecordingView: View {
         } catch {
             print("프로젝트 저장 실패: \(error)")
             store.send(.recordingSaveFailed(error.localizedDescription))
+        }
+    }
+
+    private func copyRecordedFileToDocuments(url: URL) -> String? {
+        let fileManager = FileManager.default
+
+        guard
+            let documentsDir = fileManager.urls(
+                for: .documentDirectory,
+                in: .userDomainMask
+            ).first
+        else {
+            print("Documents 디렉토리 조회 실패")
+            return nil
+        }
+
+        let destinationURL = documentsDir.appendingPathComponent(
+            url.lastPathComponent
+        )
+
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            try? fileManager.removeItem(at: destinationURL)
+        }
+
+        do {
+            try fileManager.copyItem(at: url, to: destinationURL)
+            print("녹음 파일 복사 성공 → \(destinationURL.path)")
+            return destinationURL.path
+        } catch {
+            print("녹음 파일 복사 실패: \(error)")
+            return nil
         }
     }
 
