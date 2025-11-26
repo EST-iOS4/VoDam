@@ -12,12 +12,13 @@ import SwiftUI
 struct RecordingView: View {
     @Environment(\.modelContext) var context  // SwiftData ModelContext
     let store: StoreOf<RecordingFeature>
-    
+
     let ownerId: String?
 
     @Dependency(\.recordingLocalDataClient) var recordingLocalDataClient
-    
-    init (
+    @Dependency(\.firebaseClient) var firebaseClient
+
+    init(
         store: StoreOf<RecordingFeature>,
         ownerId: String?
     ) {
@@ -56,7 +57,7 @@ struct RecordingView: View {
         .padding(.horizontal, 20)
 
         // MARK: - 🔥 fileURL 변경 감지 → SwiftData 저장
-        .onChange(of: store.fileURL) {_, newValue in
+        .onChange(of: store.fileURL) { _, newValue in
             guard let url = newValue else { return }
             saveToSwiftData(url: url, length: store.lastRecordedLength)
         }
@@ -65,9 +66,33 @@ struct RecordingView: View {
     // MARK: - SwiftData 저장
     private func saveToSwiftData(url: URL, length: Int) {
         do {
-            try recordingLocalDataClient.save(context, url, length, ownerId)
+            let playload = try recordingLocalDataClient.save(
+                context,
+                url,
+                length,
+                ownerId
+            )
+
+            if let ownerId {
+                Task {
+                    do {
+                        try await firebaseClient.uploadRecordings(
+                            ownerId,
+                            [playload]
+                        )
+                        print(
+                            "Firebase 업로드 성공 → ownerId: \(ownerId), id: \(playload.id)"
+                        )
+                    } catch {
+                        print("Firebase 업로드 실패: \(error)")
+                    }
+                }
+            } else {
+                // 비회원(게스트) 저장
+                print("비회원 모드: Firebase 업로드 생략 (ownerId = nil)")
+            }
         } catch {
-            print("❌ SwiftData 저장 실패: \(error)")
+            print("SwiftData 저장 실패: \(error)")
         }
     }
 
