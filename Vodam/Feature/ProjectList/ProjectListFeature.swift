@@ -3,11 +3,14 @@ import Foundation
 
 @Reducer
 struct ProjectListFeature {
+    
+    @Dependency(\.recordingRepository) var recordingRepository  // 추가
+    
     @ObservableState
     struct State: Equatable {
-        var projects: IdentifiedArrayOf<Project> = Project.mock
+        var projects: IdentifiedArrayOf<Project> = []  // mock 제거
         var isLoading = false
-        var allCategories: [FilterCategory] =  FilterCategory.allCases
+        var allCategories: [FilterCategory] = FilterCategory.allCases
         var selectedCategory: FilterCategory = .all
         var currentSort: SortFilter = .sortedDate
         var searchText: String = ""
@@ -61,12 +64,12 @@ struct ProjectListFeature {
             switch action {
             case .onAppear:
                 state.isLoading = true
-                // TODO: 실제 파이어베이스에 저장된 데이터를 불러오는 로직으로 교체해야함.
                 return .run { send in
-
                     await send(._projectsResponse(
-                        Result { try await Task.sleep(for: .seconds(1))
-                            return Project.mock
+                        Result {
+                            let recordings = try await recordingRepository.fetchAll()
+                            let projects = recordings.map { Project(from: $0) }
+                            return IdentifiedArrayOf(uniqueElements: projects)
                         }
                     ))
                 }
@@ -85,7 +88,6 @@ struct ProjectListFeature {
                 return .none
                 
             case let .favoriteButtonTapped(id: projectId):
-                //TODO: 파이어베이스에 저장된 상태도 변경이 되어야해서 .run 으로 변경해야 한다.
                 if var project = state.projects[id: projectId] {
                     project.isFavorite.toggle()
                     state.projects[id: projectId] = project
@@ -99,7 +101,6 @@ struct ProjectListFeature {
                 
             case ._projectsResponse(.failure):
                 state.isLoading = false
-                // TODO: 에러 처리 (예: 에러 알림 표시)
                 return .none
                 
             case .destination, .binding:

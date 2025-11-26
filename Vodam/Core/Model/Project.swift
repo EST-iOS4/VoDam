@@ -30,3 +30,13 @@ struct Project: Hashable, Equatable, Identifiable {
         Project(id: UUID(), name: "12", creationDate: Calendar.current.date(from: DateComponents(year: 2025, month: 12, day: 16)) ?? Date(), category: .audio, isFavorite: false)
     ]
 }
+// RecordingMetadata 변환
+extension Project {
+    init(from recording: RecordingMetadata) {
+        self.id = UUID(uuidString: recording.id) ?? UUID()
+        self.name = recording.filename
+        self.creationDate = recording.createdAt
+        self.category = .audio
+        self.isFavorite = false
+    }
+}
