@@ -34,6 +34,7 @@
 			membershipExceptions = (
 				Application/AppFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
+				Feature/ProjectList/ProjectListFeatureTests.swift,
 				Resource/Info.plist,
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
@@ -43,6 +44,7 @@
 			membershipExceptions = (
 				Application/AppFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
+				Feature/ProjectList/ProjectListFeatureTests.swift,
 			);
 			target = 70C1292E2ED5A2BA00D7BB2A /* VodamTests */;
 		};
