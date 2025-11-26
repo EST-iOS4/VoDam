@@ -4,11 +4,14 @@ import KakaoSDKAuth
 import KakaoSDKCommon
 import SwiftData
 import SwiftUI
+import FirebaseCore
 
 @main
 struct VodamApp: App {
 
     init() {
+        FirebaseApp.configure()
+        
         guard
             let token = Bundle.main.object(
                 forInfoDictionaryKey: "KAKAO_APP_KEY"
