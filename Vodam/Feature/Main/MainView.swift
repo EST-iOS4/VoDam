@@ -109,7 +109,7 @@ struct MainView: View {
                         predicate: #Predicate { recording in
                             recording.ownerId == nil
                                 && recording.syncStatusRaw
-                                    == SyncStatus.localOnly.rawValue
+                                    == "localOnly"
                         }
                     )
 
