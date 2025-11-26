@@ -9,6 +9,7 @@ import AuthenticationServices
 import Foundation
 import GoogleSignIn
 import KakaoSDKAuth
+import KakaoSDKCommon
 import KakaoSDKUser
 
 enum AuthServiceError: Error, Equatable {
@@ -154,8 +155,20 @@ enum AuthService {
             (continuation: CheckedContinuation<Void, Error>) in
             UserApi.shared.logout { error in
                 if let error = error {
+
+                    if let sdkError = error as? SdkError {
+                        if case .ClientFailed(let reason, _) = sdkError,
+                            case .TokenNotFound = reason
+                        {
+                            print("카카오 logout: 토큰 없음 → 이미 로그아웃 상태로 처리")
+                            continuation.resume(returning: ())
+                            return
+                        }
+                    }
+                    print("카카오 logout 실패: \(error)")
                     continuation.resume(throwing: error)
                 } else {
+                    print("카카오 logout 성공")
                     continuation.resume(returning: ())
                 }
             }
@@ -168,8 +181,19 @@ enum AuthService {
             (continuation: CheckedContinuation<Void, Error>) in
             UserApi.shared.unlink { error in
                 if let error = error {
+                    if let sdkError = error as? SdkError {
+                        if case .ClientFailed(let reason, _) = sdkError,
+                            case .TokenNotFound = reason
+                        {
+                            print("카카오 unlink: 토큰 없음 → 이미 탈퇴된 상태로 처리")
+                            continuation.resume(returning: ())
+                            return
+                        }
+                    }
+                    print("카카오 unlink 실패: \(error)")
                     continuation.resume(throwing: error)
                 } else {
+                    print("카카오 unlink 성공")
                     continuation.resume(returning: ())
                 }
             }
@@ -237,7 +261,7 @@ extension AuthService {
         let delegate = AppleAuthControllerDelegate(presentationAnchor: window)
         controller.delegate = delegate
         controller.presentationContextProvider = delegate
-        
+
         return try await withCheckedThrowingContinuation { continuation in
             delegate.continuation = continuation
             controller.performRequests()
