@@ -11,19 +11,24 @@ import ComposableArchitecture
 struct AISummaryFeature {
     @ObservableState
     struct State: Equatable {
-        var summary: String = "This is the AI summary content."
-    }
-
-    enum Action {
+        var summary: String
         
+        init(summary: String = "This is the AI summary content.") {
+            self.summary = summary
+        }
     }
-
+    
+    enum Action {
+        case setSummary(String)
+    }
+    
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-                
+            case let .setSummary(text):
+                state.summary = text
+                return .none
             }
-            return .none
         }
     }
 }

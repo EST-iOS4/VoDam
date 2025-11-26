@@ -14,8 +14,10 @@ struct Project: Hashable, Equatable, Identifiable {
     var creationDate: Date
     var category: ProjectCategory
     var isFavorite: Bool
+    
     var filePath: String? = nil
     var fileLength: Int? = nil
+    var transcript: String?
     
     static let mock: IdentifiedArrayOf<Project> = [
         Project(
