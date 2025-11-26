@@ -21,7 +21,8 @@ struct MainView: View {
                 store: store.scope(
                     state: \.recording,
                     action: \.recording
-                )
+                ),
+                ownerId: store.currentUser?.ownerId
             )
             FileButtonView(
                 store: store.scope(

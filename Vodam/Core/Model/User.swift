@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum AuthProvider: Equatable, Codable, Sendable {
+enum AuthProvider: String, Equatable, Codable, Sendable {
     case apple
     case google
     case kakao
