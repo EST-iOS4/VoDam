@@ -105,7 +105,7 @@ struct MainView: View {
 
             Task {
                 do {
-                    let descriptor = FetchDescriptor<RecordingModel>(
+                    let descriptor = FetchDescriptor<ProjectModel>(
                         predicate: #Predicate { recording in
                             recording.ownerId == nil
                                 && recording.syncStatusRaw
@@ -123,7 +123,7 @@ struct MainView: View {
                     print("마이그레이션 대상 게스트 녹음 개수: \(guestRecordings.count)")
 
                     let payloads = guestRecordings.map(
-                        RecordingPayload.init(model:)
+                        ProjectPayload.init(model:)
                     )
 
                     try await firebaseClient.uploadRecordings(ownerId, payloads)
