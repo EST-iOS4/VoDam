@@ -6,10 +6,14 @@
 //
 
 import ComposableArchitecture
+import SwiftData
 import SwiftUI
 
 struct MainView: View {
     @Bindable var store: StoreOf<MainFeature>
+
+    @Environment(\.modelContext) private var modelContext
+    @Dependency(\.firebaseClient) private var firebaseClient
 
     init(store: StoreOf<MainFeature>) {
         self.store = store
@@ -21,7 +25,8 @@ struct MainView: View {
                 store: store.scope(
                     state: \.recording,
                     action: \.recording
-                )
+                ),
+                ownerId: store.currentUser?.ownerId
             )
             FileButtonView(
                 store: store.scope(
@@ -92,6 +97,51 @@ struct MainView: View {
         }
         .onAppear {
             store.send(.onAppear)
+        }
+        .onChange(of: store.currentUser) { oldValue, newValue in
+            guard let user = newValue else { return }
+
+            let ownerId = user.ownerId
+
+            Task {
+                do {
+                    let descriptor = FetchDescriptor<RecordingModel>(
+                        predicate: #Predicate { recording in
+                            recording.ownerId == nil
+                                && recording.syncStatusRaw
+                                    == "localOnly"
+                        }
+                    )
+
+                    let guestRecordings = try modelContext.fetch(descriptor)
+
+                    guard !guestRecordings.isEmpty else {
+                        print("마이그레이션 대상 게스트 녹음 없음")
+                        return
+                    }
+
+                    print("마이그레이션 대상 게스트 녹음 개수: \(guestRecordings.count)")
+
+                    let payloads = guestRecordings.map(
+                        RecordingPayload.init(model:)
+                    )
+
+                    try await firebaseClient.uploadRecordings(ownerId, payloads)
+
+                    for recording in guestRecordings {
+                        recording.ownerId = ownerId
+                        recording.syncStatus = .synced
+                    }
+
+                    try modelContext.save()
+                    print(
+                        "게스트 녹음 \(guestRecordings.count)개 Firebase 업로드 및 SwiftData 마이그레이션 완료"
+                    )
+
+                } catch {
+                    print("게스트 → 로그인 마이그레이션 실패: \(error)")
+                }
+            }
         }
     }
 }

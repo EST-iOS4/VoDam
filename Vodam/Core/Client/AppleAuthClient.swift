@@ -20,7 +20,7 @@ extension AppleAuthClient: DependencyKey {
     static var liveValue: AppleAuthClient {
         .init(
             login: {
-                try await AuthService.loginWithApple()
+                    try await AuthService.loginWithApple()
             },
             logout: {
                 
