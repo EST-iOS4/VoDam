@@ -172,7 +172,8 @@ struct ProjectListFeature {
                         category: payload.category,
                         isFavorite: payload.isFavorite,
                         filePath: payload.filePath,
-                        fileLength: payload.fileLength
+                        fileLength: payload.fileLength,
+                        transcript: payload.transcript
                     )
                 }
                 
