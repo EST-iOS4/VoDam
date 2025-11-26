@@ -54,9 +54,22 @@ extension FirebaseClient: DependencyKey {
                 return []
             },
             deleteAllForUser: { ownerId in
-                print(
-                    "[FirebaseClient] deleteAllForUser(ownerId: \(ownerId)) 호출 (아직 구현 전)"
-                )
+                            let db = Firestore.firestore()
+                            let userRef = db.collection("users").document(ownerId)
+                            let recordingsRef = userRef.collection("recordings")
+
+                            let snapshot = try await recordingsRef.getDocuments()
+                            let batch = db.batch()
+
+                            for doc in snapshot.documents {
+                                batch.deleteDocument(doc.reference)
+                            }
+
+                            batch.deleteDocument(userRef)
+
+                            try await batch.commit()
+
+                            print("[FirebaseClient] deleteAllForUser 완료: ownerId=\(ownerId), deleted=\(snapshot.documents.count)개 + user문서")
             }
         )
     }
