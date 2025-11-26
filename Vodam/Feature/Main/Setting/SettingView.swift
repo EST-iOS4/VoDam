@@ -7,22 +7,18 @@
 
 import ComposableArchitecture
 import PhotosUI
-import SwiftData
 import SwiftUI
 
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
     @State private var selectedItem: PhotosPickerItem?
 
-    @Environment(\.modelContext) private var modelContext
-    @Dependency(\.recordingLocalDataClient) private var recordingLocalDataClient
-
     private var user: User? {
         store.user
     }
 
     var body: some View {
-
+        
         List {
             profileSection
             userInfoSection
@@ -33,40 +29,6 @@ struct SettingView: View {
         .alert($store.scope(state: \.alert, action: \.alert))
         .onChange(of: selectedItem) { _, newItem in
             store.send(.photoPickerItemChanged(newItem))
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { store.isShowingAppleDisconnectGuide },
-                set: { isPresented in
-                    if !isPresented {
-                        store.send(.appleDisconnectGuideDismissed)
-                    }
-                }
-            )
-        ) {
-            AppleDisconnectGuideView(
-                onOpenSettings: {
-                    store.send(.appleDisconnectGuideOpenSettingsButtonTapped)
-                },
-                onCompleted: {
-                    store.send(.appleDisconnectGuideCompletedButtonTapped)
-                }
-            )
-        }
-        .onChange(of: store.lastDeletedOwnerId) { _, newValue in
-            guard let ownerId = newValue else { return }
-
-            Task {
-                do {
-                    try recordingLocalDataClient.deleteAllForOwner(
-                        modelContext,
-                        ownerId
-                    )
-                    print("SettingView: ownerId=\(ownerId) 로컬 녹음 삭제 완료")
-                } catch {
-                    print("SettingView: 로컬 녹음 삭제 실패 \(error)")
-                }
-            }
         }
     }
 
@@ -169,6 +131,7 @@ struct SettingView: View {
                 }
                 .foregroundStyle(.primary)
             } else {
+                //비로그인
                 Button {
                     store.send(.loginButtonTapped)
                 } label: {

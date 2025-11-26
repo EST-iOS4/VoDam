@@ -21,43 +21,40 @@ extension UserStorageClient: DependencyKey {
         return .init(
             load: {
                 await MainActor.run {
-                    let defaults = UserDefaults.standard
-                    guard let data = defaults.data(forKey: key) else {
-                        print("[UserStorage] load: no stored user")
+                    guard
+                        let data = UserDefaults.standard.data(forKey: key)
+                    else {
                         return nil
                     }
+                    
                     do {
-                        let user = try JSONDecoder().decode(
-                            User.self,
-                            from: data
-                        )
-                        print("[UserStorage] load:", user)
+                        let user = try JSONDecoder().decode(User.self, from: data)
                         return user
                     } catch {
-                        print("[UserStorage] load decode error:", error)
+                        print("UserStorage 디코딩 실패: \(error)")
                         return nil
                     }
                 }
             },
             save: { user in
-                let defaults = UserDefaults.standard
-                if let user {
+                await MainActor.run {
+                    let defaults = UserDefaults.standard
+                    
+                    guard let user else {
+                        defaults.removeObject(forKey: key)
+                        return
+                    }
+                    
                     do {
                         let data = try JSONEncoder().encode(user)
                         defaults.set(data, forKey: key)
-                        print("[UserStorage] save:", user)
                     } catch {
-                        print("[UserStorage] save encode error:", error)
+                        print("UserStorage 인코딩 실패: \(error)")
                     }
-                } else {
-                    defaults.removeObject(forKey: key)
-                    print("[UserStorage] save(nil) → removed")
                 }
             },
             clear: {
-                let defaults = UserDefaults.standard
-                defaults.removeObject(forKey: key)
-                print("[UserStorage] clear called")
+                UserDefaults.standard.removeObject(forKey: key)
             }
         )
     }
@@ -79,6 +76,7 @@ extension UserStorageClient: DependencyKey {
     }
 }
 
+// 테스트용 Actor
 private actor UserStorageActor {
     private var storedUser: User?
 

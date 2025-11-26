@@ -82,15 +82,7 @@ struct MainFeature {
                 }
 
             case .settings(
-                .presented(.delegate(.loggedOut(let isSuccess)))
-            ):
-                if isSuccess {
-                    state.currentUser = nil
-                }
-                return .none
-
-            case .settings(
-                .presented(.delegate(.accountDeleted(let isSuccess)))
+                .presented(.delegate(.accountCleared(let isSuccess)))
             ):
                 if isSuccess {
                     state.currentUser = nil

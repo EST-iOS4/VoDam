@@ -13,8 +13,6 @@
 		7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F372ED5344700EC191C /* GoogleSignIn */; };
 		7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F392ED5344700EC191C /* GoogleSignInSwift */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
-		7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F378E2ED694C6008961A3 /* FirebaseCore */; };
-		7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F37902ED694C6008961A3 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,8 +50,6 @@
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
 				7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */,
-				7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */,
-				7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
 				A00B916C2ED4D84600E64B63 /* FirebaseFirestore in Frameworks */,
 				A00B91702ED53F4500E64B63 /* FirebaseCore in Frameworks */,
@@ -106,8 +102,6 @@
 				7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */,
 				7D522F372ED5344700EC191C /* GoogleSignIn */,
 				7D522F392ED5344700EC191C /* GoogleSignInSwift */,
-				7D9F378E2ED694C6008961A3 /* FirebaseCore */,
-				7D9F37902ED694C6008961A3 /* FirebaseFirestore */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -141,7 +135,6 @@
 				7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
 				7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
-				7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B4C67C42EBC8481003C67F9 /* Products */;
@@ -435,14 +428,6 @@
 				minimumVersion = 1.23.1;
 			};
 		};
-		7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 12.6.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -475,16 +460,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
 			productName = ComposableArchitecture;
-		};
-		7D9F378E2ED694C6008961A3 /* FirebaseCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseCore;
-		};
-		7D9F37902ED694C6008961A3 /* FirebaseFirestore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

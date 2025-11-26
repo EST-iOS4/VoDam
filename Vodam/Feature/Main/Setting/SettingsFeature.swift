@@ -9,7 +9,6 @@ import ComposableArchitecture
 import Foundation
 import PhotosUI
 import SwiftUI
-import UIKit
 
 @Reducer
 struct SettingsFeature {
@@ -19,9 +18,6 @@ struct SettingsFeature {
         var user: User?
 
         @Presents var alert: AlertState<Action.Alert>?
-
-        var lastDeletedOwnerId: String? = nil
-        var isShowingAppleDisconnectGuide: Bool = false
     }
 
     enum Action: Equatable {
@@ -34,10 +30,6 @@ struct SettingsFeature {
         case logoutFinished(Bool)
         case deleteAccountFinished(Bool)
 
-        case appleDisconnectGuideOpenSettingsButtonTapped
-        case appleDisconnectGuideCompletedButtonTapped
-        case appleDisconnectGuideDismissed
-
         case profileImagePicked(Data)
         case photoPickerItemChanged(PhotosPickerItem?)
 
@@ -47,8 +39,7 @@ struct SettingsFeature {
 
         enum Delegate: Equatable {
             case userUpdated(User)
-            case loggedOut(Bool)
-            case accountDeleted(Bool)
+            case accountCleared(Bool)
         }
 
         enum Alert: Equatable {
@@ -60,7 +51,6 @@ struct SettingsFeature {
     @Dependency(\.googleAuthClient) var googleAuthClient
     @Dependency(\.kakaoAuthClient) var kakaoAuthClient
     @Dependency(\.appleAuthClient) var appleAuthClient
-    @Dependency(\.firebaseClient) var firebaseClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -127,10 +117,10 @@ struct SettingsFeature {
             case .logoutFinished(let isSuccess):
                 if isSuccess {
                     state.user = nil
-                    return .send(.delegate(.loggedOut(true)))
+                    return .send(.delegate(.accountCleared(true)))
                 } else {
                     print("로그아웃 실패")
-                    return .send(.delegate(.loggedOut(false)))
+                    return .send(.delegate(.accountCleared(false)))
                 }
 
             case .deleteAccountTapped:
@@ -156,21 +146,11 @@ struct SettingsFeature {
                     return .send(.deleteAccountFinished(false))
                 }
 
-                if user.provider == .apple {
-                    state.isShowingAppleDisconnectGuide = true
-                    return .none
-                }
-
-                let ownerId = user.ownerId
-
                 switch user.provider {
                 case .kakao:
                     return .run { send in
                         do {
                             try await kakaoAuthClient.deleteAccount()
-                            try await firebaseClient.deleteAllForUser(
-                                user.ownerId
-                            )
                             await send(.deleteAccountFinished(true))
                         } catch {
                             print("카카오 회원 탈퇴 실패: \(error)")
@@ -182,9 +162,6 @@ struct SettingsFeature {
                     return .run { send in
                         do {
                             try await googleAuthClient.disconnect()
-                            try await firebaseClient.deleteAllForUser(
-                                user.ownerId
-                            )
                             await send(.deleteAccountFinished(true))
                         } catch {
                             print("구글 계정 연결 해제 실패: \(error)")
@@ -193,49 +170,24 @@ struct SettingsFeature {
                     }
 
                 case .apple:
-                    return .none
-                }
-
-            case .appleDisconnectGuideOpenSettingsButtonTapped:
-                return .run { _ in
-                    if let url = URL(
-                        string: UIApplication.openSettingsURLString
-                    ) {
-                        UIApplication.shared.open(url)
+                    return .run { [appleAuthClient] send in
+                        do {
+                            try await appleAuthClient.deleteAccount()
+                            await send(.deleteAccountFinished(true))
+                        } catch {
+                            print("애플 회원 탈퇴 실패: \(error)")
+                            await send(.deleteAccountFinished(false))
+                        }
                     }
                 }
-
-            case .appleDisconnectGuideCompletedButtonTapped:
-                state.isShowingAppleDisconnectGuide = false
-
-                guard let user = state.user else {
-                    return .send(.deleteAccountFinished(false))
-                }
-                let ownerId = user.ownerId
-
-                return .run { send in
-                    do {
-                        try await firebaseClient.deleteAllForUser(ownerId)
-                        await send(.deleteAccountFinished(true))
-                    } catch {
-                        print("애플 회원 탈퇴 실패: \(error)")
-                        await send(.deleteAccountFinished(false))
-                    }
-                }
-
-            case .appleDisconnectGuideDismissed:
-                state.isShowingAppleDisconnectGuide = false
-                return .none
 
             case .deleteAccountFinished(let isSuccess):
                 if isSuccess {
                     state.user = nil
-                    state.lastDeletedOwnerId = nil
-                    return .send(.delegate(.accountDeleted(true)))
+                    return .send(.delegate(.accountCleared(true)))
                 } else {
                     print("회원 탈퇴 실패")
-                    state.lastDeletedOwnerId = nil
-                    return .send(.delegate(.accountDeleted(false)))
+                    return .send(.delegate(.accountCleared(false)))
                 }
 
             case .photoPickerItemChanged(let item):
