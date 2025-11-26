@@ -14,8 +14,6 @@ struct AppFeature {
     @ObservableState
     struct State: Equatable {
         var startTab: State.Tab = .main
-        
-        var user: User? = nil
        
         var main = MainFeature.State()
         var list = ProjectListFeature.State()
@@ -44,17 +42,12 @@ struct AppFeature {
     }
     
     enum Action {
-        case onAppear
-        
-        case setUser(User?)
-        
         case startTab(State.Tab)
         case main(MainFeature.Action)
         case list(ProjectListFeature.Action)
         case chat(ChattingListFeature.Action)
         
     }
-    @Dependency(\.userStorageClient) var userStorageClient
     
     var body: some Reducer<State, Action> {
         Scope(state: \.main, action: \.main) {
@@ -73,16 +66,6 @@ struct AppFeature {
         
         Reduce { state, action in
             switch action {
-            case .onAppear:
-                return .run { [userStorageClient] send in
-                let storedUser = await userStorageClient.load()
-                    await send(.setUser(storedUser))
-                }
-                
-            case let .setUser(user):
-                state.user = user
-                return .none
-                
             case .startTab(let tab):
                 state.startTab = tab
                 return .none
