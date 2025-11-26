@@ -24,29 +24,6 @@ struct LoginProvidersView: View {
                 .fontWeight(.bold)
 
             VStack(spacing: 16) {
-                //                SignInWithAppleButton(
-                //                    .signIn,
-                //                    onRequest: { request in
-                //                    },
-                //                    onCompletion: { result in
-                //                        switch result {
-                //                        case .success:
-                //                            store.send(.providerTapped(.apple))
-                //                            print("Apple 로그인 성공")
-                //
-                //                        case .failure(let error):
-                //                            print("Apple 로그인 실패: \(error.localizedDescription)")
-                //
-                //                        }
-                //                    }
-                //                )
-                //                .signInWithAppleButtonStyle(
-                //                    colorScheme == .light ? .black : .white
-                //                )
-                //                .frame(height: buttonHeight)
-                //                .frame(maxWidth: .infinity)
-                //                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-
                 Button {
                     store.send(.providerTapped(.apple))
                 } label: {
@@ -132,7 +109,7 @@ struct LoginProvidersView: View {
                         red: 0xFE / 255,
                         green: 0xE5 / 255,
                         blue: 0x00 / 255
-                    )  // #FEE500
+                    )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             }
