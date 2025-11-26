@@ -33,6 +33,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Application/AppFeatureTests.swift,
+				Feature/Chatting/ChattingListFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
 				Feature/ProjectList/ProjectListFeatureTests.swift,
 				Resource/Info.plist,
@@ -43,6 +44,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Application/AppFeatureTests.swift,
+				Feature/Chatting/ChattingListFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
 				Feature/ProjectList/ProjectListFeatureTests.swift,
 			);
