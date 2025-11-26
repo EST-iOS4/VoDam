@@ -14,6 +14,8 @@ enum AuthProvider: String, Equatable, Codable, Sendable {
 }
 
 struct User: Equatable, Codable, Identifiable, Sendable {
+    var appleUserId: String?
+    
     var id:String
     var name: String
     var email: String?
