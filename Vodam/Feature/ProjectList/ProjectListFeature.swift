@@ -5,31 +5,27 @@ import Foundation
 struct ProjectListFeature {
     @ObservableState
     struct State: Equatable {
-        // 1. 원본 데이터 및 UI 상태
         var projects: IdentifiedArrayOf<Project> = Project.mock
         var isLoading = false
-        var allCategories: [Category] =  Category.allCases
-        var selectedCategory: Category = .all
+        var allCategories: [FilterCategory] =  FilterCategory.allCases
+        var selectedCategory: FilterCategory = .all
         var currentSort: SortFilter = .sortedDate
         var searchText: String = ""
         var isFavorite = false
         
-        // 2. 화면 이동 상태 (상세 화면)
-        // 자식뷰의 상태를 관리하는 변수로, nil 인 경우, 상세화면이 보이지 않고, nil이 아니라면 상세화면
         @Presents var destination: Destination.State?
         
         var projectState: IdentifiedArrayOf<Project> {
             var filtered = projects
-            // 카테고리 필터링
-            if selectedCategory != .all {
-                filtered = filtered.filter { $0.category == selectedCategory }
+            
+            if let selectedProjectCategory = selectedCategory.projectCategory {
+                filtered = filtered.filter { $0.category == selectedProjectCategory }
             }
             
             if !searchText.isEmpty {
                 filtered = filtered.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
             }
             
-            // 정렬
             filtered.sort { p1, p2 in
                 if p1.isFavorite != p2.isFavorite {
                     return p1.isFavorite && !p2.isFavorite
@@ -48,23 +44,16 @@ struct ProjectListFeature {
     }
     
     enum Action: BindableAction {
-        // 사용자 액션
         case onAppear
         case projectTapped(id: Project.ID)
         case favoriteButtonTapped(id: Project.ID)
         
-        // 내부 액션
         case _projectsResponse(Result<IdentifiedArrayOf<Project>, Error>)
         case binding(BindingAction<State>)
         
-        // 화면 전환 액션
         case destination(PresentationAction<Destination.Action>)
     }
-    
-    //    @Dependency(\.continuousClock) var clock
-    
-    // MARK: - Reducer Body
-    
+
     var body: some Reducer<State, Action> {
         BindingReducer()
         
@@ -74,10 +63,9 @@ struct ProjectListFeature {
                 state.isLoading = true
                 // TODO: 실제 파이어베이스에 저장된 데이터를 불러오는 로직으로 교체해야함.
                 return .run { send in
-                    //                    try await self.clock.sleep(for: .seconds(1))
+
                     await send(._projectsResponse(
                         Result { try await Task.sleep(for: .seconds(1))
-                            //                            clock.sleep(for: .seconds(1))
                             return Project.mock
                         }
                     ))
@@ -131,7 +119,6 @@ extension ProjectListFeature {
     struct Destination {
         @ObservableState
         enum State: Equatable {
-            // TODO: 실제 프로젝트 상세 화면의 Feature로 교체
             case audioDetail(AudioDetailFeature.State)
             case pdfDetail(PdfDetailFeature.State)
         }
