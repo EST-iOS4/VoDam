@@ -3,108 +3,49 @@
 //  VoDam
 //
 
-import SwiftUI
 import ComposableArchitecture
 import SwiftData
+import SwiftUI
 
 struct RecordingView: View {
-    @Environment(\.modelContext) private var context
-    @State private var showTitleSheet: Bool = false
-    @State private var inputTitle: String = ""
-
+    @Environment(\.modelContext) var context  // SwiftData ModelContext
     let store: StoreOf<RecordingFeature>
 
-    var body: some View {
-        WithViewStore(store, observe: { $0 }) { viewStore in
-            ZStack {
-                // 메인 녹음 카드
-                mainContent(viewStore)
-            }
-            .onChange(of: viewStore.state.fileURL) { newURL in
-                guard newURL != nil else { return }
+    let ownerId: String?
 
-                // 🔥 SwiftData에 있는 녹음 개수 기반으로 기본 제목 생성
-                Task { @MainActor in
-                    do {
-                        let descriptor = FetchDescriptor<RecordingModel>()
-                        let count = try context.fetchCount(descriptor)
-                        inputTitle = "음성 녹음 \(count + 1)"
-                    } catch {
-                        inputTitle = "음성 녹음"
-                    }
-                    showTitleSheet = true
-                }
-            }
-            .sheet(isPresented: $showTitleSheet) {
-                VStack(spacing: 24) {
-                    Capsule()
-                        .fill(Color.gray.opacity(0.4))
-                        .frame(width: 40, height: 5)
-                        .padding(.top, 8)
+    @Dependency(\.recordingLocalDataClient) var recordingLocalDataClient
+    @Dependency(\.firebaseClient) var firebaseClient
 
-                    Text("파일 제목 입력")
-                        .font(.headline)
-
-                    TextField("녹음 제목", text: $inputTitle)
-                        .padding(10)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-                        .padding(.horizontal)
-
-                    HStack(spacing: 12) {
-                        Button("취소") {
-                            showTitleSheet = false
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.gray.opacity(0.2))
-                        .foregroundColor(.black)
-                        .cornerRadius(10)
-
-                        Button {
-                            saveRecording(
-                                url: viewStore.state.fileURL,
-                                length: viewStore.state.lastRecordedLength
-                            )
-                        } label: {
-                            Text("저장")
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    Spacer()
-                }
-                .padding(.bottom, 16)
-                .presentationDetents([.height(240)])
-                .presentationDragIndicator(.visible)
-            }
-        }
+    init(
+        store: StoreOf<RecordingFeature>,
+        ownerId: String?
+    ) {
+        self.store = store
+        self.ownerId = ownerId
     }
 
-    // MARK: - 메인 녹음 UI
-    private func mainContent(_ viewStore: ViewStore<RecordingFeature.State, RecordingFeature.Action>) -> some View {
+    var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color.white)
                 .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
 
             VStack(spacing: 24) {
+
+                // 상태별 버튼
                 controls(
-                    status: viewStore.state.status,
-                    onStart: { viewStore.send(.startTapped) },
-                    onPause: { viewStore.send(.pauseTapped) },
-                    onStop: { viewStore.send(.stopTapped) }
+                    status: store.status,
+                    onStart: { store.send(.startTapped) },
+                    onPause: { store.send(.pauseTapped) },
+                    onStop: { store.send(.stopTapped) }
                 )
 
-                Text(viewStore.state.status.localizedText)
+                // 상태 텍스트
+                Text(store.status.localizedText)
                     .font(.headline)
 
-                Text(formatTime(viewStore.state.elapsedSeconds))
+                // 녹음 시간 표시
+                Text(store.elapsedSeconds.formattedTime)
                     .font(.system(size: 32, weight: .medium))
                     .monospacedDigit()
             }
@@ -112,25 +53,46 @@ struct RecordingView: View {
         }
         .frame(height: 240)
         .padding(.horizontal, 20)
+
+        // MARK: - 🔥 fileURL 변경 감지 → SwiftData 저장
+        .onChange(of: store.fileURL) { _, newValue in
+            guard let url = newValue else { return }
+            saveToSwiftData(url: url, length: store.lastRecordedLength)
+        }
+        .frame(height: 240)
+        .padding(.horizontal, 20)
     }
 
     // MARK: - SwiftData 저장
-    private func saveRecording(url: URL?, length: Int) {
-        guard let url else { return }
-
-        let model = RecordingModel(
-            filename: inputTitle.isEmpty ? url.lastPathComponent : inputTitle,
-            filePath: url.path,
-            length: length,
-            createdAt: .now
-        )
-
-        context.insert(model)
+    private func saveToSwiftData(url: URL, length: Int) {
         do {
-            try context.save()
-            print("💾 SwiftData 저장 완료: \(model.filename)")
+            let playload = try recordingLocalDataClient.save(
+                context,
+                url,
+                length,
+                ownerId
+            )
+
+            if let ownerId {
+                Task {
+                    do {
+                        try await firebaseClient.uploadRecordings(
+                            ownerId,
+                            [playload]
+                        )
+                        print(
+                            "Firebase 업로드 성공 → ownerId: \(ownerId), id: \(playload.id)"
+                        )
+                    } catch {
+                        print("Firebase 업로드 실패: \(error)")
+                    }
+                }
+            } else {
+                // 비회원(게스트) 저장
+                print("비회원 모드: Firebase 업로드 생략 (ownerId = nil)")
+            }
         } catch {
-            print("❌ SwiftData 저장 실패: \(error)")
+            print("SwiftData 저장 실패: \(error)")
         }
 
         showTitleSheet = false
