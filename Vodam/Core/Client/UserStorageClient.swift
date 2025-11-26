@@ -79,7 +79,6 @@ extension UserStorageClient: DependencyKey {
     }
 }
 
-// 테스트용 Actor
 private actor UserStorageActor {
     private var storedUser: User?
 
