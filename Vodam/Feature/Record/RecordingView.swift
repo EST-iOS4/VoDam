@@ -5,50 +5,50 @@
 //  Created by 강지원 on 11/18/25.
 //
 
-import SwiftUI
 import ComposableArchitecture
 import SwiftData
+import SwiftUI
 
 struct RecordingView: View {
-    @Environment(\.modelContext) var context      // SwiftData ModelContext
+    @Environment(\.modelContext) var context  // SwiftData ModelContext
     let store: StoreOf<RecordingFeature>
 
+    @Dependency(\.recordingLocalDataClient) var recordingLocalDataClient
+
     var body: some View {
-        WithViewStore(self.store, observe: { $0 }) { viewStore in
-            ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.white)
-                    .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
+        ZStack {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
 
-                VStack(spacing: 24) {
+            VStack(spacing: 24) {
 
-                    // 상태별 버튼
-                    controls(
-                        status: viewStore.status,
-                        onStart: { viewStore.send(.startTapped) },
-                        onPause: { viewStore.send(.pauseTapped) },
-                        onStop: { viewStore.send(.stopTapped) }
-                    )
-                    
-                    // 상태 텍스트
-                    Text(viewStore.status.localizedText)
-                        .font(.headline)
-                    
-                    // 녹음 시간 표시
-                    Text(viewStore.elapsedSeconds.formattedTime)
-                        .font(.system(size: 32, weight: .medium))
-                        .monospacedDigit()
-                }
-                .padding(.vertical, 40)
+                // 상태별 버튼
+                controls(
+                    status: store.status,
+                    onStart: { store.send(.startTapped) },
+                    onPause: { store.send(.pauseTapped) },
+                    onStop: { store.send(.stopTapped) }
+                )
+
+                // 상태 텍스트
+                Text(store.status.localizedText)
+                    .font(.headline)
+
+                // 녹음 시간 표시
+                Text(store.elapsedSeconds.formattedTime)
+                    .font(.system(size: 32, weight: .medium))
+                    .monospacedDigit()
             }
-            .frame(height: 240)
-            .padding(.horizontal, 20)
+            .padding(.vertical, 40)
+        }
+        .frame(height: 240)
+        .padding(.horizontal, 20)
 
-            // MARK: - 🔥 fileURL 변경 감지 → SwiftData 저장
-            .onChange(of: viewStore.fileURL) { newValue in
-                guard let url = newValue else { return }
-                saveToSwiftData(url: url, length: viewStore.lastRecordedLength)
-            }
+        // MARK: - 🔥 fileURL 변경 감지 → SwiftData 저장
+        .onChange(of: store.fileURL) {_, newValue in
+            guard let url = newValue else { return }
+            saveToSwiftData(url: url, length: store.lastRecordedLength)
         }
     }
 
