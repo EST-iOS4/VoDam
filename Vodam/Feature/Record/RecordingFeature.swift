@@ -58,22 +58,53 @@ struct RecordingFeature {
             switch action {
 
             case .startTapped:
-                if state.status == .ready {
+                switch state.status {
+                case .ready:
                     state.elapsedSeconds = 0
-                }
-                state.status = .recording
+                    state.status = .recording
 
-                return .merge(
-                    .run { _ in speechService.startLiveTranscription() }
+                    return .merge(
+                        .run { _ in
+                            _ = try? recorder.startRecording()
+                        },
+
+                        .run { _ in
+                            speechService.startLiveTranscription()
+                        }
                         .cancellable(id: "stt_stream", cancelInFlight: true),
 
-                    .run { send in
-                        for await _ in clock.timer(interval: .seconds(1)) {
-                            await send(.tick)
+                        .run { send in
+                            for await _ in clock.timer(interval: .seconds(1)) {
+                                await send(.tick)
+                            }
                         }
-                    }
-                    .cancellable(id: "recording_timer", cancelInFlight: true)
-                )
+                        .cancellable(id: "recording_timer", cancelInFlight: true)
+                    )
+
+                case .paused:
+                    state.status = .recording
+
+                    return .merge(
+                        .run { _ in
+                            recorder.resumeRecording()
+                        },
+
+                        .run { _ in
+                            speechService.startLiveTranscription()
+                        }
+                        .cancellable(id: "stt_stream", cancelInFlight: true),
+
+                        .run { send in
+                            for await _ in clock.timer(interval: .seconds(1)) {
+                                await send(.tick)
+                            }
+                        }
+                        .cancellable(id: "recording_timer", cancelInFlight: true)
+                    )
+
+                case .recording:
+                    return .none
+                }
 
             case .pauseTapped:
                 guard state.status == .recording else { return .none }

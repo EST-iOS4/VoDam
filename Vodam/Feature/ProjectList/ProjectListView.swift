@@ -94,7 +94,7 @@ struct ProjectListView: View {
                 }
             }
             .onAppear {
-                store.send(.onAppear)
+                store.send(.loadProjects(modelContext))
             }
             .navigationDestination(
                 store: self.store.scope(state: \.$destination, action: \.destination)
@@ -113,15 +113,3 @@ struct ProjectListView: View {
         }
     }
 }
-//
-//#Preview {
-//    ProjectListView(
-//        store: Store(
-//            initialState: ProjectListFeature.State(
-//                projects: Project.mock
-//            )
-//        ) {
-//            ProjectListFeature()
-//        }
-//    )
-//}
