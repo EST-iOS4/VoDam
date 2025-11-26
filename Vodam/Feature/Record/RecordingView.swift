@@ -13,7 +13,7 @@ struct RecordingView: View {
 
     let ownerId: String?
 
-    @Dependency(\.recordingLocalDataClient) var recordingLocalDataClient
+    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
 
     init(
@@ -59,29 +59,56 @@ struct RecordingView: View {
             guard let url = newValue else { return }
             saveToSwiftData(url: url, length: store.lastRecordedLength)
         }
-        .frame(height: 240)
-        .padding(.horizontal, 20)
+        .frame(height: 240) // ?
+        .padding(.horizontal, 20) //?
     }
 
     // MARK: - SwiftData 저장
     private func saveToSwiftData(url: URL, length: Int) {
         do {
-            let playload = try recordingLocalDataClient.save(
+            
+            let projectName = generateProjectName(from: url)
+            
+            let payload = try projectLocalDataClient.save(
                 context,
-                url,
+                projectName,
+                .audio,
+                url.path,
                 length,
+                nil,
                 ownerId
             )
+            
+            print("프로젝트 저장 성공 → \(payload.name), id: \(payload.id)")
 
             if let ownerId {
                 Task {
                     do {
+                        let syncedPayload = ProjectPayload(
+                                                    id: payload.id,
+                                                    name: payload.name,
+                                                    creationDate: payload.creationDate,
+                                                    category: payload.category,
+                                                    isFavorite: payload.isFavorite,
+                                                    filePath: payload.filePath,
+                                                    fileLength: payload.fileLength,
+                                                    transcript: payload.transcript,
+                                                    ownerId: ownerId,
+                                                    syncStatus: .synced
+                                                )
+                        
                         try await firebaseClient.uploadRecordings(
                             ownerId,
-                            [playload]
+                            [syncedPayload])
+                            
+                            try projectLocalDataClient.updateSyncStatus(
+                                                        context,
+                                                        [payload.id],
+                                                        .synced,
+                                                        ownerId
                         )
                         print(
-                            "Firebase 업로드 성공 → ownerId: \(ownerId), id: \(playload.id)"
+                            "Firebase 업로드 성공 → ownerId: \(ownerId), id: \(payload.id)"
                         )
                     } catch {
                         print("Firebase 업로드 실패: \(error)")
@@ -97,6 +124,12 @@ struct RecordingView: View {
 
 //        showTitleSheet = false
     }
+    
+    private func generateProjectName(from url: URL) -> String {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy.MM.dd HH:mm"
+            return "녹음 \(formatter.string(from: Date()))"
+        }
 
     // MARK: - 버튼 UI
     @ViewBuilder

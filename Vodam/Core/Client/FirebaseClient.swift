@@ -11,11 +11,11 @@ import Foundation
 
 struct FirebaseClient {
     var uploadRecordings:
-        @Sendable (_ ownerId: String, _ recordings: [RecordingPayload])
+        @Sendable (_ ownerId: String, _ recordings: [ProjectPayload])
             async throws -> Void
 
     var fetchRecordings:
-        @Sendable (_ ownerId: String) async throws -> [RecordingPayload]
+        @Sendable (_ ownerId: String) async throws -> [ProjectPayload]
 
     var deleteAllForUser: @Sendable (_ ownerId: String) async throws -> Void
 }
@@ -90,14 +90,14 @@ extension DependencyValues {
     }
 }
 
-extension RecordingPayload {
+extension ProjectPayload {
     fileprivate func toFirestoreData() -> [String: Any] {
         var data: [String: Any] = [
             "id": id,
-            "filename": filename,
+            "name": name,
             "filePath": filePath,
-            "length": length,
-            "createdAt": Timestamp(date: createdAt),
+            "fileLength": fileLength,
+            "creationDate": Timestamp(date: creationDate),
             "syncStatus": syncStatus.rawValue,
         ]
 
