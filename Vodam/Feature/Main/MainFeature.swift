@@ -17,17 +17,11 @@ struct MainFeature {
         @Presents var loginProviders: LoginProvidersFeature.State?
         @Presents var settings: SettingsFeature.State?
 
-        // 현재 로그인한 사용자 (nil 비로그인)
         var currentUser: User?
 
         var recording = RecordingFeature.State()
         var fileButton = FileButtonFeature.State()
         var pdfButton = PDFButtonFeature.State()
-    }
-
-    enum AuthOperation: Equatable {
-        case logout(Bool)
-        case deleteAccount(Bool)
     }
 
     enum Action: Equatable {
@@ -37,12 +31,15 @@ struct MainFeature {
         case settings(PresentationAction<SettingsFeature.Action>)
         case dismissProfileSheet
 
-        case authOperationResponse(AuthOperation)
-
         case recording(RecordingFeature.Action)
         case fileButton(FileButtonFeature.Action)
         case pdfButton(PDFButtonFeature.Action)
+
+        case onAppear
+        case userLoaded(User?)
     }
+
+    @Dependency(\.userStorageClient) var userStorageClient
 
     var body: some Reducer<State, Action> {
         Scope(state: \.recording, action: \.recording) {
@@ -60,6 +57,16 @@ struct MainFeature {
         Reduce { state, action in
             switch action {
 
+            case .onAppear:
+                return .run { send in
+                    let user = await userStorageClient.load()
+                    await send(.userLoaded(user))
+                }
+
+            case .userLoaded(let user):
+                state.currentUser = user
+                return .none
+
             case .profileButtonTapped:
                 if let user = state.currentUser {
                     state.settings = SettingsFeature.State(user: user)
@@ -68,10 +75,29 @@ struct MainFeature {
                 }
                 return .none
 
+            case .settings(.presented(.delegate(.userUpdated(let user)))):
+                state.currentUser = user
+                return .run { _ in
+                    await userStorageClient.save(user)
+                }
+
+            case .settings(
+                .presented(.delegate(.accountCleared(let isSuccess)))
+            ):
+                if isSuccess {
+                    state.currentUser = nil
+                    return .run { _ in
+                        await userStorageClient.clear()
+                    }
+                }
+                return .none
+
             case .profileFlow(.presented(.guestButtonTapped)):
                 state.profileFlow = nil
                 state.settings = SettingsFeature.State(user: nil)
-                return .none
+                return .run { _ in
+                    await userStorageClient.clear()
+                }
 
             case .profileFlow(.presented(.loginButtonTapped)):
                 state.profileFlow = nil
@@ -94,6 +120,10 @@ struct MainFeature {
                     state.currentUser = user
                     state.settings = SettingsFeature.State(user: user)
                     state.loginProviders = nil
+
+                    return .run { _ in
+                        await userStorageClient.save(user)
+                    }
                 } else {
                     print("로그인 실패")
                 }
@@ -102,101 +132,6 @@ struct MainFeature {
             case .settings(.presented(.loginButtonTapped)):
                 state.settings = nil
                 state.loginProviders = LoginProvidersFeature.State()
-                return .none
-
-            //로그아웃
-            case .settings(.presented(.logoutTapped)):
-                return .run { send in
-                    do {
-                        try await AuthService.logout()
-                        print("로그아웃 성공")
-                        await send(.authOperationResponse(.logout(true)))
-                    } catch {
-                        print("로그아웃 실패:\(error)")
-                        await send(
-                            .authOperationResponse(.logout(false))
-                        )
-                    }
-                }
-
-            // 회원탈퇴( 로그아웃 + 정보 삭제)
-            case .settings(.presented(.deleteAccountConfirmed)):
-                return .run { send in
-                    do {
-                        try await AuthService.deleteAccount()
-                        // firebase 사용자 데이터 삭제 넣기
-                        await send(
-                            .authOperationResponse(.deleteAccount(true))
-                        )
-                    } catch {
-                        await send(
-                            .authOperationResponse(.deleteAccount(false))
-                        )
-
-                    }
-                }
-
-            case .authOperationResponse(let operation):
-                switch operation {
-                case .logout(let isSuccess):
-                    if isSuccess {
-                        state.currentUser = nil
-                    }
-                    state.settings?.alert = AlertState {
-                        TextState(isSuccess ? "로그아웃 성공" : "로그아웃 실패")
-                    } actions: {
-                        ButtonState(
-                            action: isSuccess
-                                ? .confirmLogoutSuccess : .confirmLogoutFailure
-                        ) {
-                            TextState("확인")
-                        }
-                    } message: {
-                        TextState(isSuccess ? "로그아웃 되었습니다." : "로그아웃에 실패했습니다")
-                    }
-                    return .none
-
-                case .deleteAccount(let isSuccess):
-                    if isSuccess {
-                        state.currentUser = nil
-                    }
-                    state.settings?.alert = AlertState {
-                        TextState(isSuccess ? "회원 탈퇴 완료" : "탈퇴 실패")
-                    } actions: {
-                        ButtonState(
-                            action: isSuccess
-                                ? .confirmDeleteSuccess : .confirmDeleteFailure
-                        ) {
-                            TextState("확인")
-                        }
-                    } message: {
-                        TextState(
-                            isSuccess ? "회원 탈퇴가 완료되었습니다" : "회원 탈퇴에 실패했습니다."
-                        )
-                    }
-                    return .none
-                }
-
-            case .settings(
-                .presented(.alert(.presented(.confirmLogoutSuccess)))
-            ):
-                state.settings = SettingsFeature.State(user: nil)
-                return .none
-
-            case .settings(
-                .presented(.alert(.presented(.confirmLogoutFailure)))
-            ):
-                return .none
-
-            case .settings(
-                .presented(.alert(.presented(.confirmDeleteSuccess)))
-            ):
-                state.settings = SettingsFeature.State(user: nil)
-                return .none
-
-            case .settings(
-                .presented(.alert(.presented(.confirmDeleteFailure)))
-            ):
                 return .none
 
             case .loginProviders:

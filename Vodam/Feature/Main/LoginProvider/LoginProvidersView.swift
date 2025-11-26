@@ -5,60 +5,140 @@
 //  Created by 송영민 on 11/17/25.
 //
 
+import AuthenticationServices
 import ComposableArchitecture
 import SwiftUI
 
 struct LoginProvidersView: View {
-   let store: StoreOf<LoginProvidersFeature>
-    
+    let store: StoreOf<LoginProvidersFeature>
+    @Environment(\.colorScheme) var colorScheme
+
+    private let buttonHeight: CGFloat = 52
+    private let cornerRadius: CGFloat = 12
+    private let horizontalPadding: CGFloat = 24
+
     var body: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 32) {
             Text("Vodam")
                 .font(.title)
                 .fontWeight(.bold)
-                .padding(.top, 40)
-
-            Spacer()
 
             VStack(spacing: 16) {
+                //                SignInWithAppleButton(
+                //                    .signIn,
+                //                    onRequest: { request in
+                //                    },
+                //                    onCompletion: { result in
+                //                        switch result {
+                //                        case .success:
+                //                            store.send(.providerTapped(.apple))
+                //                            print("Apple 로그인 성공")
+                //
+                //                        case .failure(let error):
+                //                            print("Apple 로그인 실패: \(error.localizedDescription)")
+                //
+                //                        }
+                //                    }
+                //                )
+                //                .signInWithAppleButtonStyle(
+                //                    colorScheme == .light ? .black : .white
+                //                )
+                //                .frame(height: buttonHeight)
+                //                .frame(maxWidth: .infinity)
+                //                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+
                 Button {
                     store.send(.providerTapped(.apple))
                 } label: {
-                    Text("Sign in with Apple")
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.black)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                    HStack(spacing: 8) {
+                        Image(systemName: "apple.logo")
+                            .imageScale(.large)
+
+                        Text("Sign in with Apple")
+                            .font(.system(size: 19, weight: .medium))
+                    }
+                    .frame(height: buttonHeight)
+                    .frame(maxWidth: .infinity)
                 }
+                .background(colorScheme == .dark ? Color.white : Color.black)
+                .foregroundColor(colorScheme == .dark ? .black : .white)
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
 
                 Button {
                     store.send(.providerTapped(.google))
                 } label: {
-                    Text("Sign in with Google")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.gray.opacity(0.4), lineWidth: 1)
-                        )
+                    HStack(spacing: 8) {
+                        Image("google_logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
+
+                        Text("Sign in with Google")
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundColor(.primary)
+
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: buttonHeight,
+                        maxHeight: buttonHeight,
+
+                    )
                 }
-                // kakao를 누르면 -> 카카오 로그인이 뜨고 성공하면 -> loginproviers를 닫고 -> settingView
+                .buttonStyle(.plain)
+                .frame(height: buttonHeight)
+                .frame(maxWidth: .infinity)
+                .background(Color.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(
+                            Color(
+                                red: 0xDA / 255,
+                                green: 0xDC / 255,
+                                blue: 0xE0 / 255
+                            ),
+                            lineWidth: 1
+                        )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+
                 Button {
                     store.send(.providerTapped(.kakao))
                 } label: {
-                    Text("Sign in with KaKao")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.yellow)
-                        .cornerRadius(12)
-                }
-            }
-            .padding(.horizontal, 24)
+                    HStack(spacing: 8) {
+                        Image("kakao_logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 20, height: 20)
 
-            Spacer()
+                        Text("Sign in with Kakao")
+                            .font(.system(size: 19, weight: .medium))
+                            .foregroundColor(Color.black.opacity(0.85))
+
+                    }
+                    .padding(.horizontal, 18)
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: buttonHeight,
+                        maxHeight: buttonHeight,
+                    )
+                }
+                .buttonStyle(.plain)
+                .frame(height: buttonHeight)
+                .frame(maxWidth: .infinity)
+                .background(
+                    Color(
+                        red: 0xFE / 255,
+                        green: 0xE5 / 255,
+                        blue: 0x00 / 255
+                    )  // #FEE500
+                )
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            }
+            .padding(.horizontal, horizontalPadding)
         }
+        .frame(maxHeight: .infinity, alignment: .center)
         .navigationTitle("로그인")
         .navigationBarTitleDisplayMode(.inline)
     }

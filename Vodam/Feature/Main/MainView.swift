@@ -17,7 +17,7 @@ struct MainView: View {
 
     var body: some View {
         VStack {
-            RecordingView( // RecordingView stae, action을 store
+            RecordingView(
                 store: store.scope(
                     state: \.recording,
                     action: \.recording
@@ -29,7 +29,7 @@ struct MainView: View {
                     action: \.fileButton
                 )
             )
-            
+
             PDFButtonView(
                 store: store.scope(
                     state: \.pdfButton,
@@ -44,12 +44,22 @@ struct MainView: View {
                 Button {
                     store.send(.profileButtonTapped)
                 } label: {
-                    Image(systemName: "person.circle")
-                        .imageScale(.large)
+                    if store.currentUser != nil {
+                        ProfileImageView(
+                            user: store.currentUser,
+                            size: 36,
+                            cornerRadius: 18,
+                            showEditButton: false
+                        )
+                    } else {
+                        Image(systemName: "person.circle")
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                            .foregroundColor(.gray)
+                    }
                 }
             }
         }
-
         .navigationDestination(
             store: store.scope(
                 state: \.$loginProviders,
@@ -79,6 +89,9 @@ struct MainView: View {
         ) {
             settingStore in
             SettingView(store: settingStore)
+        }
+        .onAppear {
+            store.send(.onAppear)
         }
     }
 }
