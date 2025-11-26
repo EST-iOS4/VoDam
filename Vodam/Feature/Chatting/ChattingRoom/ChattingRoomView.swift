@@ -14,46 +14,46 @@ struct ChattingRoomView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-                // MARK: - 메시지 리스트
+            // MARK: - 메시지 리스트
             ScrollViewReader { proxy in
-                            ScrollView {
-                                LazyVStack(spacing: 12) {
-                                    ForEach(store.messages, id: \.uniqueId) { message in
-                                        MessageRow(message: message)
-                                    }
-                                    if store.isAITyping{
-                                        HStack{
-                                            LoadingBubbleView()
-                                            Spacer()
-                                        }
-                                        .onAppear{
-                                            withAnimation{
-                                                proxy.scrollTo(store.messages.last?.uniqueId, anchor: .bottom)
-                                            }
-                                        }
-                                    }
-                                    
-                                }
-                                .padding()
+                ScrollView {
+                    VStack(spacing: 12) {
+                        ForEach(store.messages, id: \.uniqueId) { message in
+                            MessageRow(message: message)
+                                .id(message.uniqueId)
+                        }
+                        if store.isAITyping{
+                            HStack{
+                                LoadingBubbleView()
+                                Spacer()
                             }
-                            .onChange(of: store.messages) { _ in
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation {
-                                        proxy.scrollTo(store.messages.last?.uniqueId, anchor: .bottom)
-                                    }
-                                }
-                            }
-                            .onAppear {
-                                store.send(.onAppear)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                    withAnimation {
-                                        proxy.scrollTo(store.messages.last?.uniqueId, anchor: .bottom)
-                                    }
-                                }
+                            .id("ai_typing_bubble")
+                        }
+                    }
+                    .padding()
+                }
+                .onChange(of: store.messages) { _, newMessage in
+                    guard let lastId = newMessage.last?.uniqueId else { return }
+                    Task{
+                        try? await Task.sleep(for: .milliseconds(100))
+                        withAnimation {
+                            proxy.scrollTo(lastId, anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: store.isAITyping){_, isTyping in
+                    if isTyping {
+                        Task{
+                            try? await Task.sleep(for: .milliseconds(250))
+                            withAnimation {
+                                proxy.scrollTo("ai_typing_bubble", anchor: .bottom)
                             }
                         }
+                    }
+                }
+            }
             
-                // MARK: - 입력창
+            // MARK: - 입력창
             HStack(spacing: 12) {
                 TextField(
                     "메시지를 입력하세요",
@@ -78,7 +78,7 @@ struct ChattingRoomView: View {
     }
 }
 
-    // MARK: - 메시지 행
+// MARK: - 메시지 행
 struct MessageRow: View {
     let message: Message
     
@@ -151,20 +151,3 @@ struct LoadingBubbleView: View {
         .padding(.leading, 16)
     }
 }
-
-//#Preview {
-//    LoadingBubbleView()
-//}
-
-    
-//        // MARK: - Preview
-//    #Preview {
-//        NavigationStack {
-//            ChattingRoomView(
-//                store: Store(initialState: ChattingRoomFeature.State(projectName:"프로젝트 채팅 리스트")) {
-//                    ChattingRoomFeature()
-//                }
-//            )
-//        }
-//    }
-//    
