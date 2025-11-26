@@ -12,7 +12,7 @@ struct Project: Hashable, Equatable, Identifiable {
     let id: UUID
     var name: String
     var creationDate: Date
-    var category: Category
+    var category: ProjectCategory
     var isFavorite: Bool
     
     static let mock: IdentifiedArrayOf<Project> = [
