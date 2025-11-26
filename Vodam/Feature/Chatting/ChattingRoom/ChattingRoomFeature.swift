@@ -1,11 +1,11 @@
-    //
-    //  ChattingRoomFeature.swift
-    //  Vodam
-    //
-    //  Created by EunYoung Wang on 11/24/25.
-    //
+//
+//  ChattingRoomFeature.swift
+//  Vodam
+//
+//  Created by 이건준 on 11/24/25.
+//
 
-import FirebaseFirestore
+import SwiftData
 import Foundation
 import ComposableArchitecture
 
@@ -17,12 +17,7 @@ struct ChattingRoomFeature {
         var messageText: String = ""
         var messages: [Message] = []
         var isAITyping: Bool = false
-        var projectName: String
-        
-            // 채팅방 고유ID & API client_id
-        init (projectName: String){
-            self.projectName = projectName
-        }
+        var projectName: String = "Vodam"
     }
     
         // MARK: - Action
@@ -30,12 +25,11 @@ struct ChattingRoomFeature {
         case binding(BindingAction<State>)
         case onAppear
         case sendMessage
-        case loadMessages([Message])
         case aIResponse(String)
         case setAITyping(Bool)
+        case backButtonTapped
+        case settingButtonTapped
     }
-    
-    let db = Firestore.firestore()
     
         // MARK: - Reducer
     var body: some Reducer<State, Action> {
@@ -47,41 +41,17 @@ struct ChattingRoomFeature {
                     return .none
                     
                 case .onAppear:
-                    return .run { [projectName = state.projectName] send in
-                        do {
-                            let snapshot = try await db.collection("chats")
-                                .document(projectName)
-                                .collection("messages")
-                                .order(by: "timestamp", descending: false)
-                                .getDocuments()
-                            
-                            let messages = snapshot.documents.compactMap { doc -> Message? in
-                                try? doc.data(as: Message.self)
-                            }
-                            
-                            await send(.loadMessages(messages))
-                            
-                        } catch {
-                            print("Failed to load messages: \(error)")
-                            await send(.loadMessages([]))
-                        }
-                    }
-                    
-                case .loadMessages(let loadedMessages):
-                    if loadedMessages.isEmpty{
+                    if state.messages.isEmpty {
                         let dummyMessage = Message(
                             content: "안녕하세요! 오늘 \(state.projectName)에 대해 무엇을 도와드릴까요?",
                             isFromUser: false,
                             timestamp: Date().addingTimeInterval(-300)
                         )
-                        state.messages = [dummyMessage]
-                    } else{
-                        state.messages = loadedMessages
+                        state.messages.append(dummyMessage)
                     }
                     return .none
                     
                 case .sendMessage:
-                    print("1")
                     let userMessage = Message(
                         content: state.messageText,
                         isFromUser: true
@@ -90,32 +60,9 @@ struct ChattingRoomFeature {
                     state.messageText = ""
                     
                     return .run { [projectName = state.projectName] send in
-                        print("2")
-                            // 유저 메세지 저장
-                        do {
-                            try await db.collection("chats")
-                                .document(projectName)
-                                .collection("messages")
-                                .addDocument(from: userMessage)
-                            print("3")
-                        } catch {
-                            print("Failed to save user message: \(error)")
-                        }
-                        
                         await send(.setAITyping(true))
-                            // API
-                        do {
-                            let question = AlanClient.Question(userMessage.content)
-                            
-                            let answer = try await AlanClient.shared.question(question)
-                            
-                            await send(.aIResponse(answer.content))
-                            
-                        } catch {
-                            print("Alan API Error: \(error)")
-                            await send(.aIResponse("죄송해요, 지금은 대답하기 어려워요."))
-                        }
-                        
+                        try await Task.sleep(for: .seconds(2))
+                        await send(.aIResponse("안녕하세요! 오늘 \(projectName)에 대해 궁금하신 점이 있나요?"))
                         await send(.setAITyping(false))
                     }
                     
@@ -125,16 +72,16 @@ struct ChattingRoomFeature {
                         isFromUser: false
                     )
                     state.messages.append(aIMessage)
-                        // AI 메세지 저장
-                    return .run{ [projectName = state.projectName] _ in
-                        try? await db.collection("chats")
-                            .document(projectName)
-                            .collection("messages")
-                            .addDocument(from: aIMessage)
-                    }
+                    return .none
                     
                 case .setAITyping(let isTyping):
                     state.isAITyping = isTyping
+                    return .none
+                    
+                case .backButtonTapped:
+                    return .none
+                    
+                case .settingButtonTapped:
                     return .none
             }
         }
