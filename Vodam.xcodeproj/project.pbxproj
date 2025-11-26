@@ -10,9 +10,11 @@
 		7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */; };
 		7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */; };
 		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
+		7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F372ED5344700EC191C /* GoogleSignIn */; };
+		7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F392ED5344700EC191C /* GoogleSignInSwift */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
-		A00B916C2ED4D84600E64B63 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = A00B916B2ED4D84600E64B63 /* FirebaseFirestore */; };
-		A00B91702ED53F4500E64B63 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = A00B916F2ED53F4500E64B63 /* FirebaseCore */; };
+		7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F378E2ED694C6008961A3 /* FirebaseCore */; };
+		7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F37902ED694C6008961A3 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +26,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Resource/Info.plist,
+				Secrets.xcconfig,
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
 		};
@@ -45,8 +48,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */,
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
+				7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */,
+				7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */,
+				7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
 				A00B916C2ED4D84600E64B63 /* FirebaseFirestore in Frameworks */,
 				A00B91702ED53F4500E64B63 /* FirebaseCore in Frameworks */,
@@ -97,8 +104,10 @@
 				7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */,
 				7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */,
 				7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */,
-				A00B916B2ED4D84600E64B63 /* FirebaseFirestore */,
-				A00B916F2ED53F4500E64B63 /* FirebaseCore */,
+				7D522F372ED5344700EC191C /* GoogleSignIn */,
+				7D522F392ED5344700EC191C /* GoogleSignInSwift */,
+				7D9F378E2ED694C6008961A3 /* FirebaseCore */,
+				7D9F37902ED694C6008961A3 /* FirebaseFirestore */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -112,7 +121,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					8B4C67C22EBC8481003C67F9 = {
 						CreatedOnToolsVersion = 26.0.1;
@@ -131,7 +140,8 @@
 			packageReferences = (
 				7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
-				A00B916A2ED4D84600E64B63 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B4C67C42EBC8481003C67F9 /* Products */;
@@ -225,6 +235,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -284,6 +295,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -296,10 +308,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Vodam/Vodam.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = AHWGD5X6EC;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3X262XJF5T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Vodam/Resource/Info.plist;
@@ -315,9 +330,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam;
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.mandooplz.vodam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "VoDam-Dev-Minwoo";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -335,10 +351,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Vodam/Vodam.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = AHWGD5X6EC;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3X262XJF5T;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Vodam/Resource/Info.plist;
@@ -354,9 +373,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam;
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.mandooplz.vodam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "VoDam-Dev-Minwoo";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -399,6 +419,14 @@
 				kind = branch;
 			};
 		};
+		7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
 		7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
@@ -407,7 +435,7 @@
 				minimumVersion = 1.23.1;
 			};
 		};
-		A00B916A2ED4D84600E64B63 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+		7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
 			requirement = {
@@ -433,20 +461,30 @@
 			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
 			productName = KakaoSDKUser;
 		};
+		7D522F372ED5344700EC191C /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		7D522F392ED5344700EC191C /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
 		7D5C88932ECAAC3400977C6E /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
 			productName = ComposableArchitecture;
 		};
-		A00B916B2ED4D84600E64B63 /* FirebaseFirestore */ = {
+		7D9F378E2ED694C6008961A3 /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A00B916A2ED4D84600E64B63 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseFirestore;
-		};
-		A00B916F2ED53F4500E64B63 /* FirebaseCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A00B916A2ED4D84600E64B63 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		7D9F37902ED694C6008961A3 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

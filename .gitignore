@@ -12,10 +12,7 @@ xcuserdata/
 # Custom Sensitive Configuration Files
 *.xcconfig
 
-# Secrets
-Secrets.xcconfig
-
-# Firebase Config
+# iOS
 GoogleService-Info.plist
 
 ## compatibility with Xcode 8 and earlier (ignoring not required starting Xcode 9)
