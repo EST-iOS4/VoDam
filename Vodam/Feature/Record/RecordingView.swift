@@ -97,7 +97,7 @@ struct RecordingView: View {
                                                     syncStatus: .synced
                                                 )
                         
-                        try await firebaseClient.uploadRecordings(
+                        try await firebaseClient.uploadProjects(
                             ownerId,
                             [syncedPayload])
                             
