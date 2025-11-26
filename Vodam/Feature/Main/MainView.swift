@@ -7,9 +7,13 @@
 
 import ComposableArchitecture
 import SwiftUI
+import SwiftData
 
 struct MainView: View {
     @Bindable var store: StoreOf<MainFeature>
+    
+    @Environment(\.modelContext) private var modelContext
+    @Dependency(\.firebaseClient) private var firebaseClient
 
     init(store: StoreOf<MainFeature>) {
         self.store = store
@@ -93,6 +97,8 @@ struct MainView: View {
         }
         .onAppear {
             store.send(.onAppear)
+        }
+        .onChange(of: store.currentUser) { oldValue, newValue in
         }
     }
 }
