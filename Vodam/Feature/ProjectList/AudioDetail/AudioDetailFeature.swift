@@ -69,7 +69,7 @@ struct AudioDetailFeature {
             switch action {
             case .onAppear:
                 guard let url = Bundle.main.url(
-                    forResource: "sample", withExtension: "m4a"
+                    forResource: "sample", withExtension: "mp4"
                 ) else {
                     return .none
                 }
