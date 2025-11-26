@@ -10,75 +10,130 @@ import FirebaseFirestore
 import Foundation
 
 struct FirebaseClient {
-    var uploadRecordings:
-        @Sendable (_ ownerId: String, _ recordings: [ProjectPayload])
+//    var deleteAllForUser: @Sendable (_ ownerId: String) async throws -> Void
+    
+    // MARK: - Project Functions (신규)
+    var uploadProjects:
+        @Sendable (_ ownerId: String, _ projects: [ProjectPayload])
             async throws -> Void
-
-    var fetchRecordings:
+    
+    var fetchProjects:
         @Sendable (_ ownerId: String) async throws -> [ProjectPayload]
-
-    var deleteAllForUser: @Sendable (_ ownerId: String) async throws -> Void
+    
+    var updateProject:
+        @Sendable (_ ownerId: String, _ project: ProjectPayload)
+            async throws -> Void
+    
+    var deleteProject:
+        @Sendable (_ ownerId: String, _ projectId: String)
+            async throws -> Void
 }
 
 extension FirebaseClient: DependencyKey {
     static var liveValue: FirebaseClient {
         .init(
-            uploadRecordings: { ownerId, recordings in
+//            deleteAllForUser: { ownerId in
+//               let db = Firestore.firestore()
+//             let userRef = db.collection("users").document(ownerId)
+//                
+//                // recordings 삭제
+//                let recordingsRef = userRef.collection("recordings")
+//                let recordingsSnapshot = try await recordingsRef.getDocuments()
+//                
+//                // projects 삭제
+//                let projectsRef = userRef.collection("projects")
+//                let projectsSnapshot = try await projectsRef.getDocuments()
+//                
+//                let batch = db.batch()
+//
+//                for doc in recordingsSnapshot.documents {
+//                    batch.deleteDocument(doc.reference)
+//                }
+//                
+//                for doc in projectsSnapshot.documents {
+//                    batch.deleteDocument(doc.reference)
+//                }
+//
+//                batch.deleteDocument(userRef)
+//
+//                try await batch.commit()
+//
+//                print("[FirebaseClient] deleteAllForUser 완료: ownerId=\(ownerId), recordings=\(recordingsSnapshot.documents.count)개, projects=\(projectsSnapshot.documents.count)개 삭제")
+//            },
+            
+            // MARK: - Project Functions Implementation
+            uploadProjects: { ownerId, projects in
                 let db = Firestore.firestore()
-
                 let batch = db.batch()
-
-                for recording in recordings {
-                    let docRef =
-                        db
+                
+                for project in projects {
+                    let docRef = db
                         .collection("users")
                         .document(ownerId)
-                        .collection("recordings")
-                        .document(recording.id)
-
+                        .collection("projects")
+                        .document(project.id)
+                    
                     batch.setData(
-                        recording.toFirestoreData(),
+                        project.toFirestoreData(),
                         forDocument: docRef
                     )
                 }
-
+                
                 try await batch.commit()
-                print(
-                    "[FirebaseClient] Firestore 업로드 완료: ownerId=\(ownerId), count=\(recordings.count)"
-                )
+                print("[FirebaseClient] projects 업로드 완료: ownerId=\(ownerId), count=\(projects.count)")
             },
-            fetchRecordings: { ownerId in
-                print(
-                    "[FirebaseClient] fetchRecordings(ownerId: \(ownerId)) 호출 (아직 구현 전)"
-                )
-                return []
+            
+            fetchProjects: { ownerId in
+                let db = Firestore.firestore()
+                let snapshot = try await db
+                    .collection("users")
+                    .document(ownerId)
+                    .collection("projects")
+                    .order(by: "creationDate", descending: true)
+                    .getDocuments()
+                
+                let projects = snapshot.documents.compactMap { doc -> ProjectPayload? in
+                    let data = doc.data()
+                    return ProjectPayload.fromFirestoreData(data)
+                }
+                
+                print("[FirebaseClient] fetchProjects 완료: ownerId=\(ownerId), count=\(projects.count)")
+                return projects
             },
-            deleteAllForUser: { ownerId in
-                            let db = Firestore.firestore()
-                            let userRef = db.collection("users").document(ownerId)
-                            let recordingsRef = userRef.collection("recordings")
-
-                            let snapshot = try await recordingsRef.getDocuments()
-                            let batch = db.batch()
-
-                            for doc in snapshot.documents {
-                                batch.deleteDocument(doc.reference)
-                            }
-
-                            batch.deleteDocument(userRef)
-
-                            try await batch.commit()
-
-                            print("[FirebaseClient] deleteAllForUser 완료: ownerId=\(ownerId), deleted=\(snapshot.documents.count)개 + user문서")
+            
+            updateProject: { ownerId, project in
+                let db = Firestore.firestore()
+                try await db
+                    .collection("users")
+                    .document(ownerId)
+                    .collection("projects")
+                    .document(project.id)
+                    .setData(project.toFirestoreData(), merge: true)
+                
+                print("[FirebaseClient] project 업데이트 완료: ownerId=\(ownerId), id=\(project.id)")
+            },
+            
+            deleteProject: { ownerId, projectId in
+                let db = Firestore.firestore()
+                try await db
+                    .collection("users")
+                    .document(ownerId)
+                    .collection("projects")
+                    .document(projectId)
+                    .delete()
+                
+                print("[FirebaseClient] project 삭제 완료: ownerId=\(ownerId), id=\(projectId)")
             }
         )
     }
 
     static var testValue: FirebaseClient {
         .init(
-            uploadRecordings: { _, _ in },
-            fetchRecordings: { _ in [] },
-            deleteAllForUser: { _ in }
+//            deleteAllForUser: { _ in },
+            uploadProjects: { _, _ in },
+            fetchProjects: { _ in [] },
+            updateProject: { _, _ in },
+            deleteProject: { _, _ in }
         )
     }
 }
@@ -90,21 +145,51 @@ extension DependencyValues {
     }
 }
 
+// MARK: - ProjectPayload Firestore Extension
 extension ProjectPayload {
-    fileprivate func toFirestoreData() -> [String: Any] {
+    func toFirestoreData() -> [String: Any] {
         var data: [String: Any] = [
             "id": id,
             "name": name,
-            "filePath": filePath,
-            "fileLength": fileLength,
             "creationDate": Timestamp(date: creationDate),
-            "syncStatus": syncStatus.rawValue,
+            "category": category.rawValue,
+            "isFavorite": isFavorite,
+            "syncStatus": syncStatus.rawValue
         ]
-
-        if let ownerId {
-            data["ownerId"] = ownerId
-        }
-
+        
+        if let filePath { data["filePath"] = filePath }
+        if let fileLength { data["fileLength"] = fileLength }
+        if let transcript { data["transcript"] = transcript }
+        if let ownerId { data["ownerId"] = ownerId }
+        
         return data
+    }
+    
+    static func fromFirestoreData(_ data: [String: Any]) -> ProjectPayload? {
+        guard
+            let id = data["id"] as? String,
+            let name = data["name"] as? String,
+            let timestamp = data["creationDate"] as? Timestamp,
+            let categoryRaw = data["category"] as? String,
+            let category = ProjectCategory(rawValue: categoryRaw),
+            let isFavorite = data["isFavorite"] as? Bool,
+            let syncStatusRaw = data["syncStatus"] as? String,
+            let syncStatus = SyncStatus(rawValue: syncStatusRaw)
+        else {
+            return nil
+        }
+        
+        return ProjectPayload(
+            id: id,
+            name: name,
+            creationDate: timestamp.dateValue(),
+            category: category,
+            isFavorite: isFavorite,
+            filePath: data["filePath"] as? String,
+            fileLength: data["fileLength"] as? Int,
+            transcript: data["transcript"] as? String,
+            ownerId: data["ownerId"] as? String,
+            syncStatus: syncStatus
+        )
     }
 }
