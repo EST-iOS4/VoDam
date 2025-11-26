@@ -120,7 +120,7 @@ struct MainView: View {
                         return
                     }
 
-                    print("🔥 마이그레이션 대상 게스트 녹음 개수: \(guestRecordings.count)")
+                    print("마이그레이션 대상 게스트 녹음 개수: \(guestRecordings.count)")
 
                     let payloads = guestRecordings.map(
                         RecordingPayload.init(model:)

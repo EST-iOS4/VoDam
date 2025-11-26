@@ -23,7 +23,7 @@ extension UserStorageClient: DependencyKey {
                 await MainActor.run {
                     let defaults = UserDefaults.standard
                     guard let data = defaults.data(forKey: key) else {
-                        print("🟡 [UserStorage] load: no stored user")
+                        print("[UserStorage] load: no stored user")
                         return nil
                     }
                     do {
@@ -31,10 +31,10 @@ extension UserStorageClient: DependencyKey {
                             User.self,
                             from: data
                         )
-                        print("🟡 [UserStorage] load:", user)
+                        print("[UserStorage] load:", user)
                         return user
                     } catch {
-                        print("🟡 [UserStorage] load decode error:", error)
+                        print("[UserStorage] load decode error:", error)
                         return nil
                     }
                 }
@@ -45,19 +45,19 @@ extension UserStorageClient: DependencyKey {
                     do {
                         let data = try JSONEncoder().encode(user)
                         defaults.set(data, forKey: key)
-                        print("🟢 [UserStorage] save:", user)
+                        print("[UserStorage] save:", user)
                     } catch {
-                        print("🟢 [UserStorage] save encode error:", error)
+                        print("[UserStorage] save encode error:", error)
                     }
                 } else {
                     defaults.removeObject(forKey: key)
-                    print("🟢 [UserStorage] save(nil) → removed")
+                    print("[UserStorage] save(nil) → removed")
                 }
             },
             clear: {
                 let defaults = UserDefaults.standard
                 defaults.removeObject(forKey: key)
-                print("🧹 [UserStorage] clear called")
+                print("[UserStorage] clear called")
             }
         )
     }
