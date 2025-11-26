@@ -9,6 +9,7 @@ import ComposableArchitecture
 import SwiftUI
 
 struct ProjectListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Bindable var store: StoreOf<ProjectListFeature>
     
     var body: some View {
@@ -61,7 +62,7 @@ struct ProjectListView: View {
                                 Spacer()
                                 
                                 Button(action: {
-                                    store.send(.favoriteButtonTapped(id: project.id))
+                                    store.send(.favoriteButtonTapped(id: project.id, modelContext))
                                 }) {
                                     Image(systemName: project.isFavorite ? "star.fill" : "star")
                                         .foregroundColor(.yellow)
@@ -107,22 +108,20 @@ struct ProjectListView: View {
                     if let store = store.scope(state: \.pdfDetail, action: \.pdfDetail) {
                         PdfDetailView(store: store)
                     }
-                default:
-                    EmptyView()
                 }
             }
         }
     }
 }
-
-#Preview {
-    ProjectListView(
-        store: Store(
-            initialState: ProjectListFeature.State(
-                projects: Project.mock
-            )
-        ) {
-            ProjectListFeature()
-        }
-    )
-}
+//
+//#Preview {
+//    ProjectListView(
+//        store: Store(
+//            initialState: ProjectListFeature.State(
+//                projects: Project.mock
+//            )
+//        ) {
+//            ProjectListFeature()
+//        }
+//    )
+//}
