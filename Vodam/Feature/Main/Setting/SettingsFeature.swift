@@ -51,6 +51,7 @@ struct SettingsFeature {
     @Dependency(\.googleAuthClient) var googleAuthClient
     @Dependency(\.kakaoAuthClient) var kakaoAuthClient
     @Dependency(\.appleAuthClient) var appleAuthClient
+    @Dependency(\.firebaseClient) var firebaseClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -145,6 +146,8 @@ struct SettingsFeature {
                 guard let user = state.user else {
                     return .send(.deleteAccountFinished(false))
                 }
+                
+                let ownerId = user.ownerId
 
                 switch user.provider {
                 case .kakao:
@@ -170,9 +173,9 @@ struct SettingsFeature {
                     }
 
                 case .apple:
-                    return .run { [appleAuthClient] send in
+                    return .run { send in
                         do {
-                            try await appleAuthClient.deleteAccount()
+                            try await firebaseClient.deleteAllForUser(ownerId)
                             await send(.deleteAccountFinished(true))
                         } catch {
                             print("애플 회원 탈퇴 실패: \(error)")
