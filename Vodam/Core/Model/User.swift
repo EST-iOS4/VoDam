@@ -7,22 +7,32 @@
 
 import Foundation
 
-enum AuthProvider: Equatable, Codable {
+enum AuthProvider: String, Equatable, Codable, Sendable {
     case apple
     case google
     case kakao
 }
 
-struct User: Equatable, Codable {
+struct User: Equatable, Codable, Identifiable, Sendable {
+    var appleUserId: String?
+    
+    var id:String
     var name: String
     var email: String?
     var provider: AuthProvider
     var profileImageURL: URL?
+    var localProfileImageData: Data?
+    
+    var ownerId: String {
+        "\(provider.rawValue):\(id)"
+    }
 
     static let placeholder = User(
+        id: "placeholder",
         name: "Vodam",
         email: nil,
         provider: .kakao,
-        profileImageURL: nil
+        profileImageURL: nil,
+        localProfileImageData: nil
     )
 }
