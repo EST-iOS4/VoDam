@@ -5,13 +5,12 @@
     //  Created by 이건준 on 11/19/25.
     //
 
-import SwiftUI
-
 import ComposableArchitecture
+import SwiftUI
 
 struct ChattingListView: View {
     let store: StoreOf<ChattingListFeature>
-    
+
     var body: some View {
         WithPerceptionTracking {
             List(store.chattingList) { chattingInfo in
@@ -32,10 +31,11 @@ struct ChattingListView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .listStyle(.plain)
-            .background(Color.white)
-            .background(ignoresSafeAreaEdges: .vertical)
-            .padding(.horizontal, 10)
+            .buttonStyle(.plain)
         }
+        .listStyle(.plain)
+        .background(Color.white)
+        .background(ignoresSafeAreaEdges: .vertical)
+        .padding(.horizontal, 10)
     }
 }
