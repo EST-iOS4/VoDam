@@ -11,7 +11,6 @@ struct RecordingFeature {
     @Dependency(\.audioRecorder) var recorder
     @Dependency(\.continuousClock) var clock
     @Dependency(\.speechService) var speechService
-    @Dependency(\.recordingRepository) var repository
     
     enum Status: Equatable {
         case ready
@@ -62,8 +61,14 @@ struct RecordingFeature {
                         }
                         speechService.startLiveTranscription()
                     }
-                        .cancellable(id: "stt_stream", cancelInFlight: true),
-                    // ... 타이머 동일
+                    .cancellable(id: "stt_stream", cancelInFlight: true),
+                    
+                    .run { send in
+                        for await _ in clock.timer(interval: .seconds(1)) {
+                            await send(.tick)
+                        }
+                    }
+                    .cancellable(id: "recording_timer", cancelInFlight: true)
                 )
                 
             case .pauseTapped:
@@ -76,29 +81,21 @@ struct RecordingFeature {
                     .run { _ in speechService.stopLiveTranscription() }
                 )
 
-                case .stopTapped:
-                    let url = recorder.stopRecording()
-                    let length = state.elapsedSeconds
-                    state.fileURL = url
-                    state.lastRecordedLength = length
-                    state.status = .ready
-                    state.elapsedSeconds = 0
+            case .stopTapped:
+                let url = recorder.stopRecording()
+                let length = state.elapsedSeconds
+                state.fileURL = url
+                state.lastRecordedLength = length
+                state.status = .ready
+                state.elapsedSeconds = 0
 
-                    return .merge(
-                        .cancel(id: "recording_timer"),
-                        .run { _ in
-                            speechService.stopLiveTranscription()
-                            
-                            if let url = url {
-                                let metadata = RecordingMetadata(
-                                    filename: url.lastPathComponent,
-                                    filePath: url.path,
-                                    length: length
-                                )
-                                try await repository.saveLocal(metadata)
-                            }
-                        }
-                    )
+                return .merge(
+                    .cancel(id: "recording_timer"),
+                    .run { _ in
+                        speechService.stopLiveTranscription()
+                    }
+                )
+                
             case .tick:
                 if state.status == .recording {
                     state.elapsedSeconds += 1

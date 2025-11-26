@@ -5,8 +5,6 @@
 //  Created by 강지원 on 11/20/25.
 //
 
-// RecordingRepository.swift
-
 import Foundation
 import ComposableArchitecture
 import SwiftData
@@ -51,7 +49,7 @@ enum RecordingRepositoryKey: DependencyKey {
         return RecordingRepository(
             saveLocal: { metadata in
                 let model = RecordingModel(
-                    id: UUID(uuidString: metadata.id) ?? UUID(),
+                    id: metadata.id,
                     filename: metadata.filename,
                     filePath: metadata.filePath,
                     length: metadata.length,
@@ -68,7 +66,7 @@ enum RecordingRepositoryKey: DependencyKey {
                 let models = try context.fetch(descriptor)
                 return models.map { model in
                     RecordingMetadata(
-                        id: model.id.uuidString,
+                        id: model.id,
                         filename: model.filename,
                         filePath: model.filePath,
                         length: model.length,
@@ -78,11 +76,9 @@ enum RecordingRepositoryKey: DependencyKey {
             },
             
             delete: { id in
-                guard let uuid = UUID(uuidString: id) else { return }
-                let descriptor = FetchDescriptor<RecordingModel>(
-                    predicate: #Predicate { $0.id == uuid }
-                )
-                if let model = try context.fetch(descriptor).first {
+                let descriptor = FetchDescriptor<RecordingModel>()
+                let models = try context.fetch(descriptor)
+                if let model = models.first(where: { $0.id == id }) {
                     context.delete(model)
                     try context.save()
                 }
