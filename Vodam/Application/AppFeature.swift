@@ -10,13 +10,13 @@ import Foundation
 
 @Reducer
 struct AppFeature {
-
+    
     @ObservableState
     struct State: Equatable {
         var startTab: State.Tab = .main
-
+        
         var user: User? = nil
-
+        
         var main = MainFeature.State()
         var list = ProjectListFeature.State()
         var chat = ChattingListFeature.State(
@@ -35,40 +35,40 @@ struct AppFeature {
                 ),
             ]
         )
-
+        
         enum Tab: Equatable {
             case main
             case list
             case chat
         }
     }
-
+    
     enum Action {
         case onAppear
-
+        
         case setUser(User?)
-
+        
         case startTab(State.Tab)
         case main(MainFeature.Action)
         case list(ProjectListFeature.Action)
         case chat(ChattingListFeature.Action)
-
+        
     }
     @Dependency(\.userStorageClient) var userStorageClient
-
+    
     var body: some Reducer<State, Action> {
         Scope(state: \.main, action: \.main) {
             MainFeature()
         }
-
+        
         Scope(state: \.list, action: \.list) {
             ProjectListFeature()
         }
-
+        
         Scope(state: \.chat, action: \.chat) {
             ChattingListFeature()
         }
-
+        
         Reduce { state, action in
             switch action {
             case .onAppear:
@@ -76,28 +76,28 @@ struct AppFeature {
                     let storedUser = await userStorageClient.load()
                     await send(.setUser(storedUser))
                 }
-
+                
             case .setUser(let user):
                 state.user = user
                 state.main.currentUser = user
                 state.list.currentUser = user
                 return .none
-
+                
             case .startTab(let tab):
                 state.startTab = tab
                 return .none
-
+                
             case .main(.userLoaded(let user)):
                 state.user = user
                 state.list.currentUser = user
                 return .none
-
+                
             case .main(.settings(.presented(.delegate(.logoutCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
                 return .none
-
+                
             case .main(
                 .settings(.presented(.delegate(.deleteAccountCompleted)))
             ):
@@ -105,13 +105,16 @@ struct AppFeature {
                 state.main.currentUser = nil
                 state.list.currentUser = nil
                 return .none
-
+                
             case .main:
                 return .none
-
+                
+            case .main(.delegate(.projectSaved)):
+                return .send(.list(.refreshProjects))
+                
             case .list:
                 return .none
-
+                
             case .chat:
                 return .none
             }

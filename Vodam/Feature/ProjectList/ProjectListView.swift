@@ -35,6 +35,11 @@ struct ProjectListView: View {
             .onAppear {
                 store.send(.loadProjects(modelContext))
             }
+            .onChange(of: store.needsRefresh) { _, needsRefresh in
+                if needsRefresh {
+                    store.send(.loadProjects(modelContext))
+                }
+            }
             .navigationDestination(
                 store: self.store.scope(state: \.$destination, action: \.destination)
             ) { store in
@@ -94,7 +99,7 @@ struct ProjectListView: View {
         }
     }
     
-
+    
     @ViewBuilder
     private func destinationView(for store: Store<ProjectListFeature.Destination.State, ProjectListFeature.Destination.Action>) -> some View {
         switch store.state {
@@ -102,10 +107,10 @@ struct ProjectListView: View {
             if let detailStore = store.scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailView(store: detailStore)
             }
-//        case .pdfDetail:
-//            if let detailStore = store.scope(state: \.pdfDetail, action: \.pdfDetail) {
-//                PdfDetailView(store: detailStore)
-//            }
+            //        case .pdfDetail:
+            //            if let detailStore = store.scope(state: \.pdfDetail, action: \.pdfDetail) {
+            //                PdfDetailView(store: detailStore)
+            //            }
         }
     }
 }

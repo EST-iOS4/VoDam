@@ -82,7 +82,9 @@ struct RecordingView: View {
                 ownerId
             )
             
-            print("프로젝트 저장 성공 → \(payload.name), id: \(payload.id)")
+            print("프로젝트 저장 성공 → \(payload.name), id: \(payload.id), ownerId: \(payload.ownerId ?? "nil")")
+            
+            store.send(.recordingSaved(payload.id))
             
             if let ownerId {
                 Task {
@@ -114,15 +116,26 @@ struct RecordingView: View {
                             [syncedPayload]
                         )
                         
-                        try projectLocalDataClient.updateSyncStatus(
-                            context,
-                            [payload.id],
-                            .synced,
-                            ownerId,
-                            remotePath
-                        )
-                        
-                        print("Firebase + Storage 업로드 성공 → \(remotePath)")
+                        await MainActor.run {
+                            print("🔍 updateSyncStatus 호출 직전 - id: \(payload.id), ownerId: \(ownerId)")
+                            
+                            do {
+                                try projectLocalDataClient.updateSyncStatus(
+                                    context,
+                                    [payload.id],
+                                    .synced,
+                                    ownerId,
+                                    remotePath
+                                )
+                                
+                                print("firebase + Storage 업로드 성공 → \(remotePath)")
+                                
+                                // 🔥 동기화 완료 후 다시 한번 알림 (동기화 상태 갱신)
+                                store.send(.recordingSaved(payload.id))
+                            } catch {
+                                print("syncStatus 업데이트 실패: \(error)")
+                            }
+                        }
                         
                     } catch {
                         print("Firebase/Storage 업로드 실패: \(error)")
@@ -131,8 +144,6 @@ struct RecordingView: View {
             } else {
                 print("비회원 모드: Firebase/Storage 업로드 생략 (ownerId = nil)")
             }
-
-            store.send(.recordingSaved(payload.id))
             
         } catch {
             print("프로젝트 저장 실패: \(error)")
