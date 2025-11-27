@@ -7,6 +7,7 @@ struct ProjectListFeature {
     
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
+    @Dependency(\.audioCloudClient) var audioCloudClient
     
     @ObservableState
     struct State: Equatable {
@@ -27,11 +28,15 @@ struct ProjectListFeature {
             var filtered = projects
             
             if let selectedProjectCategory = selectedCategory.projectCategory {
-                filtered = filtered.filter { $0.category == selectedProjectCategory }
+                filtered = filtered.filter {
+                    $0.category == selectedProjectCategory
+                }
             }
             
             if !searchText.isEmpty {
-                filtered = filtered.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+                filtered = filtered.filter {
+                    $0.name.localizedCaseInsensitiveContains(searchText)
+                }
             }
             
             filtered.sort { p1, p2 in
@@ -67,7 +72,7 @@ struct ProjectListFeature {
         // 사용자 변경 알림 (AppFeature에서 전달)
         case userChanged(User?)
     }
-
+    
     var body: some Reducer<State, Action> {
         BindingReducer()
         
@@ -77,32 +82,41 @@ struct ProjectListFeature {
                 // View에서 context와 함께 loadProjects 호출
                 return .none
                 
-            case let .loadProjects(context):
+            case .loadProjects(let context):
                 state.isLoading = true
                 let ownerId = state.currentUser?.ownerId
                 
                 return .run { [projectLocalDataClient] send in
                     do {
-                        let payloads = try projectLocalDataClient.fetchAll(context, ownerId)
+                        let payloads = try projectLocalDataClient.fetchAll(
+                            context,
+                            ownerId
+                        )
                         await send(._projectsResponse(.success(payloads)))
                     } catch {
                         await send(._projectsResponse(.failure(error)))
                     }
                 }
                 
-            case let .projectTapped(id: projectId):
+            case .projectTapped(id: let projectId):
                 if let project = state.projects[id: projectId] {
                     switch project.category {
                     case .pdf:
-                        state.destination = .pdfDetail(PdfDetailFeature.State(project: project))
+                        state.destination = .pdfDetail(
+                            PdfDetailFeature.State(project: project)
+                        )
                     case .file, .audio:
-                        state.destination = .audioDetail(AudioDetailFeature.State(project: project))
+                        state.destination = .audioDetail(
+                            AudioDetailFeature.State(project: project)
+                        )
                     }
                 }
                 return .none
                 
-            case let .favoriteButtonTapped(id: projectId, context):
-                guard var project = state.projects[id: projectId] else { return .none }
+            case .favoriteButtonTapped(id: let projectId, let context):
+                guard var project = state.projects[id: projectId] else {
+                    return .none
+                }
                 
                 let newFavorite = !project.isFavorite
                 project.isFavorite = newFavorite
@@ -117,50 +131,82 @@ struct ProjectListFeature {
                         try projectLocalDataClient.update(
                             context,
                             projectIdString,
-                            nil, // name
+                            nil,  // name
                             newFavorite,
-                            nil, // transcript
+                            nil,  // transcript
                             nil  // syncStatus
                         )
                         
                         // 로그인 사용자면 Firebase도 업데이트
                         if let ownerId {
-                            let payloads = try projectLocalDataClient.fetchAll(context, ownerId)
-                            if let payload = payloads.first(where: { $0.id == projectIdString }) {
-                                try await firebaseClient.updateProject(ownerId, payload)
+                            let payloads = try projectLocalDataClient.fetchAll(
+                                context,
+                                ownerId
+                            )
+                            if let payload = payloads.first(where: {
+                                $0.id == projectIdString
+                            }) {
+                                try await firebaseClient.updateProject(
+                                    ownerId,
+                                    payload
+                                )
                             }
                         }
                         
-                        await send(._favoriteUpdated(id: projectIdString, isFavorite: newFavorite))
+                        await send(
+                            ._favoriteUpdated(
+                                id: projectIdString,
+                                isFavorite: newFavorite
+                            )
+                        )
                     } catch {
                         print("❌ 즐겨찾기 업데이트 실패: \(error)")
                     }
                 }
                 
-            case let .deleteProject(id: projectId, context):
+            case .deleteProject(id: let projectId, let context):
                 let projectIdString = projectId.uuidString
                 let ownerId = state.currentUser?.ownerId
                 
                 // UI에서 먼저 제거
                 state.projects.remove(id: projectId)
                 
-                return .run { [projectLocalDataClient, firebaseClient] _ in
+                return .run { [projectLocalDataClient, firebaseClient, audioCloudClient] _ in
                     do {
                         // SwiftData에서 삭제
-                        try projectLocalDataClient.delete(context, projectIdString)
+                        try projectLocalDataClient.delete(
+                            context,
+                            projectIdString
+                        )
                         
-                        // 로그인 사용자면 Firebase에서도 삭제
                         if let ownerId {
-                            try await firebaseClient.deleteProject(ownerId, projectIdString)
+                            do {
+                                try await audioCloudClient.deleteAudio(
+                                    ownerId,
+                                    projectIdString
+                                )
+                                print(
+                                    "Storage 오디오 파일 삭제 완료: \(projectIdString)"
+                                )
+                            } catch {
+                                print(
+                                    "Storage 오디오 파일 삭제 실패 (계속 진행): \(error.localizedDescription)"
+                                )
+                                
+                            }
+                            // 로그인 사용자면 Firebase에서도 삭제
+                            try await firebaseClient.deleteProject(
+                                ownerId,
+                                projectIdString
+                            )
                         }
-                        
-                        print("✅ 프로젝트 삭제 완료: \(projectIdString)")
+                        print("프로젝트 삭제 완료: \(projectIdString)")
                     } catch {
-                        print("❌ 프로젝트 삭제 실패: \(error)")
+                        print("프로젝트 삭제 실패: \(error)")
                     }
                 }
                 
-            case let ._projectsResponse(.success(payloads)):
+            case ._projectsResponse(.success(let payloads)):
                 state.isLoading = false
                 
                 // ProjectPayload → Project 변환
@@ -182,17 +228,17 @@ struct ProjectListFeature {
                 
             case ._projectsResponse(.failure(let error)):
                 state.isLoading = false
-                print("❌ 프로젝트 조회 실패: \(error)")
+                print("프로젝트 조회 실패: \(error)")
                 return .none
                 
             case ._favoriteUpdated:
                 // 이미 State에서 업데이트됨
                 return .none
                 
-            case let .userChanged(user):
+            case .userChanged(let user):
                 state.currentUser = user
                 return .none
-                
+
             case .destination, .binding:
                 return .none
             }
@@ -213,12 +259,12 @@ extension ProjectListFeature {
             case audioDetail(AudioDetailFeature.State)
             case pdfDetail(PdfDetailFeature.State)
         }
-        
+
         enum Action {
             case audioDetail(AudioDetailFeature.Action)
             case pdfDetail(PdfDetailFeature.Action)
         }
-        
+
         var body: some Reducer<State, Action> {
             Scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailFeature()

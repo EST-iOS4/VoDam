@@ -15,6 +15,7 @@ struct FileButtonView: View {
     
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
+    @Dependency(\.audioCloudClient) var audioCloudClient
     
     init(store: StoreOf<FileButtonFeature>, ownerId: String? = nil) {
         self.store = store
@@ -157,6 +158,15 @@ struct FileButtonView: View {
             if let ownerId {
                 Task {
                     do {
+                        
+                        let localURL = URL(fileURLWithPath: copiedPath)
+                        let remotePath = try await audioCloudClient.uploadAudio(
+                            ownerId,
+                            payload.id,
+                            localURL
+                        )
+                        print("Storage에 파일 업로드 성공 → \(remotePath)")
+                        
                         let syncedPayload = ProjectPayload(
                             id: payload.id,
                             name: payload.name,
@@ -167,12 +177,14 @@ struct FileButtonView: View {
                             fileLength: payload.fileLength,
                             transcript: payload.transcript,
                             ownerId: ownerId,
-                            syncStatus: .synced
+                            syncStatus: .synced,
+                            remoteAudioPath: remotePath
                         )
                         
                         try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
+                        
                         try projectLocalDataClient.updateSyncStatus(
-                            context, [payload.id], .synced, ownerId
+                            context, [payload.id], .synced, ownerId, remotePath
                         )
                         
                         print("✅ Firebase 업로드 성공")

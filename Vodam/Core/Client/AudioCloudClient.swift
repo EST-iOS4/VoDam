@@ -12,9 +12,9 @@ import Foundation
 struct AudioCloudClient {
     /// 로컬 오디오 파일을 Firebase Storage에 업로드하고, Storage 경로(문자열)를 반환
     var uploadAudio: @Sendable (_ ownerId: String, _ projectId: String, _ fileURL: URL) async throws -> String
-
     /// remotePath를 보고, 이 기기에 파일이 없으면 다운로드 후 로컬 경로를 반환
     var downloadAudioIfNeeded: @Sendable (_ ownerId: String, _ projectId: String, _ remotePath: String, _ currentLocalPath: String?) async throws -> String
+    var deleteAudio: @Sendable (_ ownerId: String, _ projectId: String) async throws -> Void
 }
 
 extension AudioCloudClient: DependencyKey {
@@ -23,7 +23,7 @@ extension AudioCloudClient: DependencyKey {
             let storage = Storage.storage()
             let path = "users/\(ownerId)/projects/\(projectId).m4a"
             let ref = storage.reference(withPath: path)
-
+            
             _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
                 let uploadTask = ref.putFile(from: fileURL, metadata: nil) { metadata, error in
                     if let error = error {
@@ -49,13 +49,13 @@ extension AudioCloudClient: DependencyKey {
                     }
                 }
             }
-
+            
             print("[AudioCloud] upload 완료: \(path)")
             return path
         },
         downloadAudioIfNeeded: { ownerId, projectId, remotePath, currentLocalPath in
             let fileManager = FileManager.default
-
+            
             if
                 let currentLocalPath,
                 fileManager.fileExists(atPath: currentLocalPath)
@@ -63,16 +63,16 @@ extension AudioCloudClient: DependencyKey {
                 print("[AudioCloud] 로컬 파일 이미 존재: \(currentLocalPath)")
                 return currentLocalPath
             }
-
+            
             guard let docs = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
                 throw NSError(domain: "AudioCloud", code: -1, userInfo: [NSLocalizedDescriptionKey: "Documents 디렉토리 없음"])
             }
-
+            
             let localURL = docs.appendingPathComponent("\(projectId).m4a")
-
+            
             let storage = Storage.storage()
             let ref = storage.reference(withPath: remotePath)
-
+            
             let data = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
                 ref.getData(maxSize: 50 * 1024 * 1024) { data, error in
                     if let error {
@@ -84,11 +84,28 @@ extension AudioCloudClient: DependencyKey {
                     }
                 }
             }
-
+            
             try data.write(to: localURL, options: .atomic)
-
+            
             print("[AudioCloud] 다운로드 완료: \(remotePath) → \(localURL.path)")
             return localURL.path
+        },
+        deleteAudio: { ownerId, projectId in
+            let storage = Storage.storage()
+            let path = "users/\(ownerId)/projects/\(projectId).m4a"
+            let ref = storage.reference(withPath: path)
+            
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                ref.delete { error in
+                    if let error {
+                        print("[AudioCloud] 삭제 실패: \(path) - \(error.localizedDescription)")
+                        continuation.resume(throwing: error)
+                    } else {
+                        print("[AudioCloud] 삭제 완료: \(path)")
+                        continuation.resume()
+                    }
+                }
+            }
         }
     )
 }
