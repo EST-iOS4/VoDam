@@ -15,9 +15,9 @@ struct AISummaryFeature {
         var isLoading: Bool = false
         var transcript: String
         
-        init(transcript: String) {
+        init(transcript: String, savedSummary: String? = nil) {
             self.transcript = transcript
-            self.summary = nil
+            self.summary = savedSummary
         }
     }
     
@@ -36,10 +36,22 @@ struct AISummaryFeature {
                 
                 return .run { send in
                     do {
-                        // API 호출
-                        let summary = try await generateSummary(transcript: transcript)
-                        await send(.summaryResponse(summary))
+                        // 텍스트가 너무 길면 앞부분만 사용
+                        let maxLength = 2000
+                        let textToSummarize = transcript.count > maxLength
+                        ? String(transcript.prefix(maxLength)) + "...\n\n(문서의 일부입니다)"
+                        : transcript
+                        
+                        let question = AlanClient.Question(
+                            "다음 텍스트를 3개의 핵심 포인트로 3줄로 간결하게 요약해주세요:\n\n\(textToSummarize)"
+                        )
+                        
+                        let answer = try await AlanClient.shared.question(question)
+                        
+                        await send(.summaryResponse(answer.content))
+                        
                     } catch {
+                        print("AI 요약 실패: \(error)")
                         await send(.summaryFailed(error))
                     }
                 }
@@ -56,23 +68,5 @@ struct AISummaryFeature {
                 return .none
             }
         }
-    }
-    
-    private func generateSummary(transcript: String) async throws -> String {
-        
-        try await Task.sleep(for: .seconds(2))
-        
-        return """
-               📝 AI 요약
-               
-               이 문서의 주요 내용을 요약하면 다음과 같습니다:
-               
-               • 주요 주제 1
-               • 주요 주제 2
-               • 주요 주제 3
-               
-               전체 내용:
-               \(transcript.prefix(200))...
-               """
     }
 }
