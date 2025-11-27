@@ -37,6 +37,7 @@
 				Feature/Chatting/ChattingRoom/ChattingRoomFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
 				Feature/ProjectList/ProjectListFeatureTests.swift,
+				Feature/Record/RecordingFeatureTests.swift,
 				Resource/Info.plist,
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
@@ -49,6 +50,7 @@
 				Feature/Chatting/ChattingRoom/ChattingRoomFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
 				Feature/ProjectList/ProjectListFeatureTests.swift,
+				Feature/Record/RecordingFeatureTests.swift,
 			);
 			target = 70C1292E2ED5A2BA00D7BB2A /* VodamTests */;
 		};
