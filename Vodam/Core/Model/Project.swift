@@ -18,6 +18,7 @@ struct Project: Hashable, Equatable, Identifiable {
     var filePath: String? = nil
     var fileLength: Int? = nil
     var transcript: String?
+    var syncStatus: SyncStatus
     
     static let mock: IdentifiedArrayOf<Project> = [
         Project(
@@ -27,7 +28,8 @@ struct Project: Hashable, Equatable, Identifiable {
             category: .file,
             isFavorite: false,
             filePath: nil,
-            fileLength: nil
+            fileLength: nil,
+            syncStatus: .localOnly
         ),
     ]
 }
