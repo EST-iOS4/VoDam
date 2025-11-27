@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		70C12ABD2ED8803100D7BB2A /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 70C12ABC2ED8803100D7BB2A /* GoogleSignIn */; };
+		70C12AC02ED8814F00D7BB2A /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 70C12ABF2ED8814F00D7BB2A /* FirebaseAnalyticsCore */; };
+		70C12AC22ED8814F00D7BB2A /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 70C12AC12ED8814F00D7BB2A /* FirebaseFirestore */; };
 		7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */; };
 		7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */; };
 		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
@@ -42,18 +45,6 @@
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
 		};
-		70C1293C2ED5C2E600D7BB2A /* Exceptions for "Vodam" folder in "VodamTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Application/AppFeatureTests.swift,
-				Feature/Chatting/ChattingListFeatureTests.swift,
-				Feature/Chatting/ChattingRoom/ChattingRoomFeatureTests.swift,
-				Feature/Main/MainFeatureTests.swift,
-				Feature/ProjectList/ProjectListFeatureTests.swift,
-				Feature/Record/RecordingFeatureTests.swift,
-			);
-			target = 70C1292E2ED5A2BA00D7BB2A /* VodamTests */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -79,10 +70,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				70C12ABD2ED8803100D7BB2A /* GoogleSignIn in Frameworks */,
+				70C12AC02ED8814F00D7BB2A /* FirebaseAnalyticsCore in Frameworks */,
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
 				7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */,
+				70C12AC22ED8814F00D7BB2A /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -150,6 +144,9 @@
 				7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */,
 				7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */,
 				7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */,
+				70C12ABC2ED8803100D7BB2A /* GoogleSignIn */,
+				70C12ABF2ED8814F00D7BB2A /* FirebaseAnalyticsCore */,
+				70C12AC12ED8814F00D7BB2A /* FirebaseFirestore */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -186,6 +183,8 @@
 			packageReferences = (
 				7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
+				70C12ABB2ED8803100D7BB2A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B4C67C42EBC8481003C67F9 /* Products */;
@@ -519,6 +518,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		70C12ABB2ED8803100D7BB2A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+		70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.6.0;
+			};
+		};
 		7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kakao/kakao-ios-sdk";
@@ -538,6 +553,21 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		70C12ABC2ED8803100D7BB2A /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70C12ABB2ED8803100D7BB2A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		70C12ABF2ED8814F00D7BB2A /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		70C12AC12ED8814F00D7BB2A /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
 		7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
