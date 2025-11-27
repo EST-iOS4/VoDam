@@ -33,7 +33,7 @@ struct AudioDetailFeature {
             self.selectedTab = .aiSummary
             let transcriptText = project.transcript ?? "아직 받아온 스크립트가 없습니다."
             self.script = ScriptFeature.State(text: transcriptText)
-            self.aiSummary = AISummaryFeature.State(summary: "요약 준비 중입니다.\n\n원본:\n\(transcriptText)")
+            self.aiSummary = AISummaryFeature.State(transcript: transcriptText)
             self.isFavorite = project.isFavorite
         }
     }
