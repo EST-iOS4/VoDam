@@ -35,6 +35,15 @@ struct AudioDetailFeature {
             self.script = ScriptFeature.State(text: transcriptText)
             self.aiSummary = AISummaryFeature.State(transcript: transcriptText)
             self.isFavorite = project.isFavorite
+            
+            if let savedSummary = project.summary {
+                    self.aiSummary = AISummaryFeature.State(
+                        transcript: transcriptText,
+                        savedSummary: savedSummary
+                    )
+                } else {
+                    self.aiSummary = AISummaryFeature.State(transcript: transcriptText)
+                }
         }
     }
     

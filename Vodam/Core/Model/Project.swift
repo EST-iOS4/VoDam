@@ -18,7 +18,8 @@ struct Project: Hashable, Equatable, Identifiable {
     var filePath: String? = nil
     var fileLength: Int? = nil
     var transcript: String?
-    var syncStatus: SyncStatus
+    var syncStatus: SyncStatus = .localOnly
+    var summary: String? = nil
     
     static let mock: IdentifiedArrayOf<Project> = [
         Project(

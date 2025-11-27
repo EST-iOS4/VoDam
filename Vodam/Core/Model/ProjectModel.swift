@@ -20,6 +20,7 @@ final class ProjectModel {
     var fileLength: Int?
     
     var transcript: String?
+    var summary: String?
     
     var ownerId: String?
     var syncStatusRaw: String
@@ -44,6 +45,7 @@ final class ProjectModel {
         filePath: String? = nil,
         fileLength: Int? = nil,
         transcript: String? = nil,
+        summary: String? = nil,
         ownerId: String? = nil,
         syncStatus: SyncStatus = .localOnly,
         remoteAudioPath: String? = nil
@@ -56,6 +58,7 @@ final class ProjectModel {
         self.filePath = filePath
         self.fileLength = fileLength
         self.transcript = transcript
+        self.summary = summary
         self.ownerId = ownerId
         self.syncStatusRaw = syncStatus.rawValue
         self.remoteAudioPath = remoteAudioPath
@@ -73,7 +76,8 @@ extension ProjectModel {
             filePath: filePath,
             fileLength: fileLength,
             transcript: transcript,
-            syncStatus: syncStatus
+            syncStatus: syncStatus,
+            summary: summary
             
         )
     }
@@ -89,6 +93,7 @@ extension Project {
         self.filePath = model.filePath
         self.fileLength = model.fileLength
         self.transcript = model.transcript
+        self.summary = model.summary
         self.syncStatus = model.syncStatus
     }
 }
