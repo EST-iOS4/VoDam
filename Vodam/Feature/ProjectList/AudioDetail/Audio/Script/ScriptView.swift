@@ -15,5 +15,7 @@ struct ScriptView: View {
         Text(store.text)
             .font(.title)
             .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .textSelection(.enabled) 
     }
 }

@@ -32,6 +32,8 @@ struct RecordingFeature {
         var elapsedSeconds: Int = 0
         var fileURL: URL? = nil
         var lastRecordedLength: Int = 0
+
+        var savedProjectId: String? = nil
     }
     
     enum Action: Equatable {
@@ -39,6 +41,16 @@ struct RecordingFeature {
         case pauseTapped
         case stopTapped
         case tick
+
+        case saveRecording(URL, Int, String?)
+        case recordingSaved(String)
+        case recordingSaveFailed(String)
+
+        case delegate(Delegate)
+
+        enum Delegate: Equatable {
+            case projectSaved(String)
+        }
     }
     
     var body: some Reducer<State, Action> {
@@ -46,31 +58,54 @@ struct RecordingFeature {
             switch action {
                 
             case .startTapped:
-                let wasReady = state.status == .ready
-                if wasReady {
+                switch state.status {
+                case .ready:
                     state.elapsedSeconds = 0
-                }
-                state.status = .recording
-                
-                return .merge(
-                    .run { _ in
-                        if wasReady {
-                            try recorder.startRecording()
-                        } else {
+                    state.status = .recording
+
+                    return .merge(
+                        .run { _ in
+                            _ = try? recorder.startRecording()
+                        },
+
+                        .run { _ in
+                            speechService.startLiveTranscription()
+                        }
+                        .cancellable(id: "stt_stream", cancelInFlight: true),
+
+                        .run { send in
+                            for await _ in clock.timer(interval: .seconds(1)) {
+                                await send(.tick)
+                            }
+                        }
+                        .cancellable(id: "recording_timer", cancelInFlight: true)
+                    )
+
+                case .paused:
+                    state.status = .recording
+
+                    return .merge(
+                        .run { _ in
                             recorder.resumeRecording()
+                        },
+
+                        .run { _ in
+                            speechService.startLiveTranscription()
                         }
-                        speechService.startLiveTranscription()
-                    }
-                    .cancellable(id: "stt_stream", cancelInFlight: true),
-                    
-                    .run { send in
-                        for await _ in clock.timer(interval: .seconds(1)) {
-                            await send(.tick)
+                        .cancellable(id: "stt_stream", cancelInFlight: true),
+
+                        .run { send in
+                            for await _ in clock.timer(interval: .seconds(1)) {
+                                await send(.tick)
+                            }
                         }
-                    }
-                    .cancellable(id: "recording_timer", cancelInFlight: true)
-                )
-                
+                        .cancellable(id: "recording_timer", cancelInFlight: true)
+                    )
+
+                case .recording:
+                    return .none
+                }
+
             case .pauseTapped:
                 guard state.status == .recording else { return .none }
                 recorder.pauseRecording()
@@ -100,6 +135,21 @@ struct RecordingFeature {
                 if state.status == .recording {
                     state.elapsedSeconds += 1
                 }
+                return .none
+
+            case .saveRecording(let url, let length, let ownerId):
+                return .none
+
+            case .recordingSaved(let projectId):
+                state.savedProjectId = projectId
+                state.fileURL = nil
+                return .send(.delegate(.projectSaved(projectId)))
+
+            case .recordingSaveFailed(let error):
+                print("녹음 저장 실패: \(error)")
+                return .none
+
+            case .delegate:
                 return .none
             }
         }

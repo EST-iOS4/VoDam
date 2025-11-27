@@ -1,10 +1,3 @@
-//
-//  SettingView.swift
-//  Vodam
-//
-//  Created by 송영민 on 11/17/25.
-//
-
 import ComposableArchitecture
 import PhotosUI
 import SwiftData
@@ -13,16 +6,17 @@ import SwiftUI
 struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
     @State private var selectedItem: PhotosPickerItem?
+    @State private var showDeleteConfirmation = false
 
     @Environment(\.modelContext) private var modelContext
-    @Dependency(\.recordingLocalDataClient) private var recordingLocalDataClient
+    @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
+    @Dependency(\.audioCloudClient) private var audioCloudClient
 
     private var user: User? {
         store.user
     }
 
     var body: some View {
-
         List {
             profileSection
             userInfoSection
@@ -53,20 +47,43 @@ struct SettingView: View {
                 }
             )
         }
-        .onChange(of: store.lastDeletedOwnerId) { _, newValue in
-            guard let ownerId = newValue else { return }
+        .task(id: store.pendingDeleteOwnerId) {
+            // pendingDeleteOwnerId가 설정되면 로컬 데이터 삭제
+            if let ownerId = store.pendingDeleteOwnerId {
+                await deleteLocalData(ownerId: ownerId)
+            }
+        }
+    }
 
-            Task {
-                do {
-                    try recordingLocalDataClient.deleteAllForOwner(
-                        modelContext,
-                        ownerId
-                    )
-                    print("SettingView: ownerId=\(ownerId) 로컬 녹음 삭제 완료")
-                } catch {
-                    print("SettingView: 로컬 녹음 삭제 실패 \(error)")
+    // MARK: - 로컬 데이터 삭제
+    private func deleteLocalData(ownerId: String) async {
+        do {
+            let projects = try projectLocalDataClient.fetchAll(modelContext, ownerId)
+            
+            print("탈퇴 처리 시작: \(ownerId), 프로젝트 \(projects.count)개")
+            
+            //스토리지 삭제
+            for project in projects {
+                
+                if (project.category == .audio || project.category == .file || project.category == .pdf) {
+                    do {
+                        try await audioCloudClient.deleteAudio(ownerId, project.id)
+                        print("Storage 파일 삭제: \(project.name)")
+                    } catch {
+                        print("Storage 파일 삭제 실패: \(project.name) - \(error)")
+                        // 실패해도 계속 진행
+                    }
                 }
             }
+            
+            //로컬 삭제
+            try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
+            
+            store.send(.localDataDeleted(ownerId))
+            print("로컬 데이터 삭제 완료: \(ownerId)")
+            
+        } catch {
+            print("로컬 데이터 삭제 실패: \(error)")
         }
     }
 
@@ -120,7 +137,6 @@ struct SettingView: View {
                     Text(user != nil ? "이메일 없음" : "비로그인")
                         .foregroundColor(.secondary)
                 }
-
             }
             .foregroundColor(.primary)
 
@@ -146,9 +162,7 @@ struct SettingView: View {
                     store.send(.logoutTapped)
                 } label: {
                     HStack {
-                        Image(
-                            systemName: "rectangle.portrait.and.arrow.right"
-                        )
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
                         Text("로그아웃")
                         Spacer()
                         Text(providerText(user.provider))

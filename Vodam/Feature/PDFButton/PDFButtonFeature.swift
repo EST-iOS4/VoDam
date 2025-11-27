@@ -15,7 +15,8 @@ struct PDFButtonFeature {
     struct State: Equatable {
         var title: String = "PDF 가져오기"
         var selectedPDFURL: URL? = nil //선택한 PDF파일의 주소를 가짐
-        var isImporterPresented: Bool = false //파일 선택하는 창(UI)를 불러오는 Bool
+        var isImporterPresented: Bool = false //파일 선택하는 창(UI)를 불러오는 Bo
+        var isProcessing: Bool = false
     }
 
     // PDF 선택 에러
@@ -27,6 +28,8 @@ struct PDFButtonFeature {
         case tapped
         case importerPresented(Bool)
         case pdfImported(Result<URL, PDFImportError>)
+        case processingStarted
+        case processingFinished
     }
 
     var body: some Reducer<State, Action> {
@@ -41,6 +44,15 @@ struct PDFButtonFeature {
                 state.isImporterPresented = isPresented
                 return .none
 
+            case .processingStarted:
+                state.isProcessing = true
+                return .none
+
+            case .processingFinished:
+                state.isProcessing = false
+                state.selectedPDFURL = nil
+                return .none
+                
             case let .pdfImported(result):
                 switch result {
                 case .success(let url):
