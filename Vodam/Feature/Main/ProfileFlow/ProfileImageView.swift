@@ -8,6 +8,7 @@
 import SwiftUI
 import UIKit
 
+// 유저 변경 확인
 struct ProfileImageView: View {
     let user: User?
     let size: CGFloat
@@ -37,8 +38,14 @@ struct ProfileImageView: View {
                 editButton
             }
         }
+        .onChange(of: user?.id) { _, newValue in
+                if newValue == nil {
+                    loadedImage = nil
+                }
+            }
     }
 
+    //MARK : 확인 locad에 default 넣기
     @ViewBuilder
     private var imageContent: some View {
         Group {
@@ -58,7 +65,7 @@ struct ProfileImageView: View {
                 defaultProfileImage
             }
         }
-    }
+    } /// *
 
     private func loadRemoteImage() async {
         guard let url = user?.profileImageURL else { return }

@@ -8,7 +8,7 @@ import FirebaseCore
 
 @main
 struct VodamApp: App {
-
+    
     init() {
         FirebaseApp.configure()
         
@@ -24,7 +24,7 @@ struct VodamApp: App {
         }
         KakaoSDK.initSDK(appKey: token)
     }
-
+    
     var body: some Scene {
         WindowGroup {
             AppView(
@@ -35,16 +35,20 @@ struct VodamApp: App {
                     }
                 )
             )
-
+            
             .onOpenURL { url in
-                if AuthApi.isKakaoTalkLoginUrl(url) {
-                    _ = AuthController.handleOpenUrl(url: url)
-                }
-
-                _ = GIDSignIn.sharedInstance.handle(url)
+                handleOpenURL(url)
             }
-
+            
         }
-        .modelContainer(for: [ProjectModel.self])
     }
+}
+
+@MainActor
+private func handleOpenURL(_ url: URL) {
+    if AuthApi.isKakaoTalkLoginUrl(url) {
+        let handled = AuthController.handleOpenUrl(url: url)
+        return
+    }
+    _ = GIDSignIn.sharedInstance.handle(url)
 }
