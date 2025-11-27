@@ -13,6 +13,7 @@ struct ProjectListFeature {
     struct State: Equatable {
         var projects: IdentifiedArrayOf<Project> = []
         var isLoading = false
+        var needsRefresh = false
         var allCategories: [FilterCategory] = FilterCategory.allCases
         var selectedCategory: FilterCategory = .all
         var currentSort: SortFilter = .sortedDate
@@ -59,6 +60,7 @@ struct ProjectListFeature {
     enum Action: BindableAction {
         case onAppear
         case loadProjects(ModelContext)
+        case refreshProjects
         case projectTapped(id: Project.ID)
         case favoriteButtonTapped(id: Project.ID, ModelContext)
         case deleteProject(id: Project.ID, ModelContext)
@@ -82,8 +84,13 @@ struct ProjectListFeature {
                 // View에서 context와 함께 loadProjects 호출
                 return .none
                 
+            case .refreshProjects:
+                state.needsRefresh = true
+                return .none
+                
             case .loadProjects(let context):
                 state.isLoading = true
+                state.needsRefresh = false
                 let ownerId = state.currentUser?.ownerId
                 
                 return .run { [projectLocalDataClient] send in
@@ -100,16 +107,16 @@ struct ProjectListFeature {
                 
             case .projectTapped(id: let projectId):
                 if let project = state.projects[id: projectId] {
-//                    switch project.category {
-//                    case .pdf:
-//                        state.destination = .pdfDetail(
-//                            PdfDetailFeature.State(project: project)
-//                        )
-//                    case .file, .audio:
-                        state.destination = .audioDetail(
-                            AudioDetailFeature.State(project: project)
-                        )
-//                    }
+                    //                    switch project.category {
+                    //                    case .pdf:
+                    //                        state.destination = .pdfDetail(
+                    //                            PdfDetailFeature.State(project: project)
+                    //                        )
+                    //                    case .file, .audio:
+                    state.destination = .audioDetail(
+                        AudioDetailFeature.State(project: project)
+                    )
+                    //                    }
                 }
                 return .none
                 
@@ -239,7 +246,7 @@ struct ProjectListFeature {
             case .userChanged(let user):
                 state.currentUser = user
                 return .none
-
+                
             case .destination, .binding:
                 return .none
             }
@@ -258,21 +265,21 @@ extension ProjectListFeature {
         @ObservableState
         enum State: Equatable {
             case audioDetail(AudioDetailFeature.State)
-//            case pdfDetail(PdfDetailFeature.State)
+            //            case pdfDetail(PdfDetailFeature.State)
         }
-
+        
         enum Action {
             case audioDetail(AudioDetailFeature.Action)
-//            case pdfDetail(PdfDetailFeature.Action)
+            //            case pdfDetail(PdfDetailFeature.Action)
         }
-
+        
         var body: some Reducer<State, Action> {
             Scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailFeature()
             }
-//            Scope(state: \.pdfDetail, action: \.pdfDetail) {
-//                PdfDetailFeature()
-//            }
+            //            Scope(state: \.pdfDetail, action: \.pdfDetail) {
+            //                PdfDetailFeature()
+            //            }
         }
     }
 }
