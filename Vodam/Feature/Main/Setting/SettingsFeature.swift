@@ -22,6 +22,9 @@ struct SettingsFeature {
 
         var lastDeletedOwnerId: String? = nil
         var isShowingAppleDisconnectGuide: Bool = false
+        
+        // 삭제 요청 트리거
+        var pendingDeleteOwnerId: String? = nil
     }
 
     enum Action: Equatable {
@@ -33,6 +36,9 @@ struct SettingsFeature {
         case logoutConfirmed
         case logoutFinished(Bool)
         case deleteAccountFinished(Bool)
+        
+        // 로컬 데이터 삭제 완료 알림 (View에서 호출)
+        case localDataDeleted(String) // ownerId
 
         case appleDisconnectGuideOpenSettingsButtonTapped
         case appleDisconnectGuideCompletedButtonTapped
@@ -49,6 +55,9 @@ struct SettingsFeature {
             case userUpdated(User)
             case loggedOut(Bool)
             case accountDeleted(Bool)
+            case logoutCompleted
+            case deleteAccountCompleted
+            case requestLocalDataDeletion(String) // ownerId - View에서 처리
         }
 
         enum Alert: Equatable {
@@ -127,7 +136,10 @@ struct SettingsFeature {
             case .logoutFinished(let isSuccess):
                 if isSuccess {
                     state.user = nil
-                    return .send(.delegate(.loggedOut(true)))
+                    return .merge(
+                        .send(.delegate(.loggedOut(true))),
+                        .send(.delegate(.logoutCompleted))
+                    )
                 } else {
                     print("로그아웃 실패")
                     return .send(.delegate(.loggedOut(false)))
@@ -162,15 +174,21 @@ struct SettingsFeature {
                 }
 
                 let ownerId = user.ownerId
+                state.pendingDeleteOwnerId = ownerId
 
                 switch user.provider {
                 case .kakao:
-                    return .run { send in
+                    return .run { [firebaseClient, kakaoAuthClient] send in
                         do {
+                            // View에서 로컬 데이터 삭제 요청
+                            await send(.delegate(.requestLocalDataDeletion(ownerId)))
+                            
+                            // Firebase 데이터 삭제
+                            try await firebaseClient.deleteAllForUser(ownerId)
+                            
+                            // 카카오 계정 연결 해제
                             try await kakaoAuthClient.deleteAccount()
-                            try await firebaseClient.deleteAllForUser(
-                                user.ownerId
-                            )
+                            
                             await send(.deleteAccountFinished(true))
                         } catch {
                             print("카카오 회원 탈퇴 실패: \(error)")
@@ -179,12 +197,17 @@ struct SettingsFeature {
                     }
 
                 case .google:
-                    return .run { send in
+                    return .run { [firebaseClient, googleAuthClient] send in
                         do {
+                            // View에서 로컬 데이터 삭제 요청
+                            await send(.delegate(.requestLocalDataDeletion(ownerId)))
+                            
+                            // Firebase 데이터 삭제
+                            try await firebaseClient.deleteAllForUser(ownerId)
+                            
+                            // 구글 계정 연결 해제
                             try await googleAuthClient.disconnect()
-                            try await firebaseClient.deleteAllForUser(
-                                user.ownerId
-                            )
+                            
                             await send(.deleteAccountFinished(true))
                         } catch {
                             print("구글 계정 연결 해제 실패: \(error)")
@@ -212,10 +235,16 @@ struct SettingsFeature {
                     return .send(.deleteAccountFinished(false))
                 }
                 let ownerId = user.ownerId
+                state.pendingDeleteOwnerId = ownerId
 
-                return .run { send in
+                return .run { [firebaseClient] send in
                     do {
+                        // View에서 로컬 데이터 삭제 요청
+                        await send(.delegate(.requestLocalDataDeletion(ownerId)))
+                        
+                        // Firebase 데이터 삭제
                         try await firebaseClient.deleteAllForUser(ownerId)
+                        
                         await send(.deleteAccountFinished(true))
                     } catch {
                         print("애플 회원 탈퇴 실패: \(error)")
@@ -226,12 +255,20 @@ struct SettingsFeature {
             case .appleDisconnectGuideDismissed:
                 state.isShowingAppleDisconnectGuide = false
                 return .none
+                
+            case let .localDataDeleted(ownerId):
+                print("로컬 데이터 삭제 완료: \(ownerId)")
+                return .none
 
             case .deleteAccountFinished(let isSuccess):
+                state.pendingDeleteOwnerId = nil
                 if isSuccess {
                     state.user = nil
                     state.lastDeletedOwnerId = nil
-                    return .send(.delegate(.accountDeleted(true)))
+                    return .merge(
+                        .send(.delegate(.accountDeleted(true))),
+                        .send(.delegate(.deleteAccountCompleted))
+                    )
                 } else {
                     print("회원 탈퇴 실패")
                     state.lastDeletedOwnerId = nil
