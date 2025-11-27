@@ -37,18 +37,13 @@ struct VodamApp: App {
             )
             
             .onOpenURL { url in
-                handleOpenURL(url)
+                if AuthApi.isKakaoTalkLoginUrl(url) {
+                    _ = AuthController.handleOpenUrl(url: url)
+                    return
+                }
+                _ = GIDSignIn.sharedInstance.handle(url)
             }
             
         }
     }
-}
-
-@MainActor
-private func handleOpenURL(_ url: URL) {
-    if AuthApi.isKakaoTalkLoginUrl(url) {
-        let handled = AuthController.handleOpenUrl(url: url)
-        return
-    }
-    _ = GIDSignIn.sharedInstance.handle(url)
 }
