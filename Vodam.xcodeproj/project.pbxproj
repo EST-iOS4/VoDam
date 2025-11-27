@@ -15,6 +15,7 @@
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
 		7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F378E2ED694C6008961A3 /* FirebaseCore */; };
 		7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F37902ED694C6008961A3 /* FirebaseFirestore */; };
+		7D9F44D22ED7DA17008961A3 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F44D12ED7DA17008961A3 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +51,7 @@
 			files = (
 				7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */,
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
+				7D9F44D22ED7DA17008961A3 /* FirebaseStorage in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
 				7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */,
 				7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */,
@@ -62,10 +64,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7D9F44D02ED7DA17008961A3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		8B4C67BA2EBC8481003C67F9 = {
 			isa = PBXGroup;
 			children = (
 				8B4C67C52EBC8481003C67F9 /* Vodam */,
+				7D9F44D02ED7DA17008961A3 /* Frameworks */,
 				8B4C67C42EBC8481003C67F9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -106,6 +116,7 @@
 				7D522F392ED5344700EC191C /* GoogleSignInSwift */,
 				7D9F378E2ED694C6008961A3 /* FirebaseCore */,
 				7D9F37902ED694C6008961A3 /* FirebaseFirestore */,
+				7D9F44D12ED7DA17008961A3 /* FirebaseStorage */,
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -483,6 +494,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		7D9F44D12ED7DA17008961A3 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

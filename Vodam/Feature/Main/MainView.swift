@@ -15,6 +15,7 @@ struct MainView: View {
     @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
     @Dependency(\.firebaseClient) private var firebaseClient
+    @Dependency(\.audioCloudClient) private var audioCloudClient
     
     init(store: StoreOf<MainFeature>) {
         self.store = store
@@ -129,7 +130,6 @@ struct MainView: View {
         
         Task {
             do {
-                // 1) 게스트 프로젝트 → 로그인 사용자로 마이그레이션
                 let migratedProjects =
                 try projectLocalDataClient.migrateGuestProjects(
                     modelContext,
@@ -171,14 +171,12 @@ struct MainView: View {
                     )
                 }
                 
-                // 3) 항상 Firebase에서 최신 프로젝트 리스트 내려받기
                 let remoteProjects = try await firebaseClient.fetchProjects(ownerId)
                 print(
                     "Firebase에서 \(remoteProjects.count)개 프로젝트 가져옴 (ownerId: \(ownerId))"
                 )
                 
-                // 4) Firebase → SwiftData 동기화
-                try syncRemoteProjectsToLocal(remoteProjects, ownerId: ownerId)
+                try await syncRemoteProjectsToLocal(remoteProjects, ownerId: ownerId)
                 
             } catch {
                 print("로그인 후 Firebase 동기화 실패: \(error)")
@@ -189,30 +187,32 @@ struct MainView: View {
     private func syncRemoteProjectsToLocal(
         _ remoteProjects: [ProjectPayload],
         ownerId: String
-    ) throws {
+    ) async throws {
         let descriptor = FetchDescriptor<ProjectModel>(
             predicate: #Predicate { project in
                 project.ownerId == ownerId
             }
         )
-        
+
         let existingModels = try modelContext.fetch(descriptor)
-        let existingById = Dictionary(
+        var existingById = Dictionary(
             uniqueKeysWithValues: existingModels.map { ($0.id, $0) }
         )
-        
+
         for payload in remoteProjects {
+            let model: ProjectModel
             if let existing = existingById[payload.id] {
-                existing.name = payload.name
-                existing.creationDate = payload.creationDate
-                existing.category = payload.category
-                existing.isFavorite = payload.isFavorite
-                existing.filePath = payload.filePath
-                existing.fileLength = payload.fileLength
-                existing.transcript = payload.transcript
-                existing.syncStatus = .synced
+                model = existing
+                model.name = payload.name
+                model.creationDate = payload.creationDate
+                model.category = payload.category
+                model.isFavorite = payload.isFavorite
+                model.filePath = payload.filePath
+                model.fileLength = payload.fileLength
+                model.transcript = payload.transcript
+                model.syncStatus = .synced
             } else {
-                let model = ProjectModel(
+                model = ProjectModel(
                     id: payload.id,
                     name: payload.name,
                     creationDate: payload.creationDate,
@@ -222,16 +222,33 @@ struct MainView: View {
                     fileLength: payload.fileLength,
                     transcript: payload.transcript,
                     ownerId: ownerId,
-                    syncStatus: .synced
+                    syncStatus: .synced,
+                    remoteAudioPath: payload.remoteAudioPath
                 )
-                
                 modelContext.insert(model)
+                existingById[payload.id] = model
+            }
+
+            if
+                payload.category == .audio,
+                let remotePath = payload.remoteAudioPath
+            {
+                let currentLocalPath = model.filePath
+
+                let newLocalPath = try await audioCloudClient.downloadAudioIfNeeded(
+                    ownerId,
+                    payload.id,
+                    remotePath,
+                    currentLocalPath
+                )
+
+                model.filePath = newLocalPath
+                model.remoteAudioPath = remotePath
+                model.syncStatus = .synced
             }
         }
-        
+
         try modelContext.save()
-        print(
-            "[MainView] Firebase → SwiftData 동기화 완료: \(remoteProjects.count)개 upsert (ownerId: \(ownerId))"
-        )
+        print("[MainView] Firebase + Storage → SwiftData 동기화 완료: \(remoteProjects.count)개 upsert")
     }
 }

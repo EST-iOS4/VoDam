@@ -23,6 +23,7 @@ final class ProjectModel {
 
     var ownerId: String?
     var syncStatusRaw: String
+    var remoteAudioPath: String?
 
     var category: ProjectCategory {
         get { ProjectCategory(rawValue: categoryRaw) ?? .audio }
@@ -44,7 +45,8 @@ final class ProjectModel {
         fileLength: Int? = nil,
         transcript: String? = nil,
         ownerId: String? = nil,
-        syncStatus: SyncStatus = .localOnly
+        syncStatus: SyncStatus = .localOnly,
+        remoteAudioPath: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -56,6 +58,7 @@ final class ProjectModel {
         self.transcript = transcript
         self.ownerId = ownerId
         self.syncStatusRaw = syncStatus.rawValue
+        self.remoteAudioPath = remoteAudioPath
     }
 }
 
