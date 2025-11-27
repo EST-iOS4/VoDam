@@ -34,6 +34,7 @@
 			membershipExceptions = (
 				Application/AppFeatureTests.swift,
 				Feature/Chatting/ChattingListFeatureTests.swift,
+				Feature/Chatting/ChattingRoom/ChattingRoomFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
 				Feature/ProjectList/ProjectListFeatureTests.swift,
 				Resource/Info.plist,
@@ -45,6 +46,7 @@
 			membershipExceptions = (
 				Application/AppFeatureTests.swift,
 				Feature/Chatting/ChattingListFeatureTests.swift,
+				Feature/Chatting/ChattingRoom/ChattingRoomFeatureTests.swift,
 				Feature/Main/MainFeatureTests.swift,
 				Feature/ProjectList/ProjectListFeatureTests.swift,
 			);
