@@ -100,16 +100,16 @@ struct ProjectListFeature {
                 
             case .projectTapped(id: let projectId):
                 if let project = state.projects[id: projectId] {
-                    switch project.category {
-                    case .pdf:
-                        state.destination = .pdfDetail(
-                            PdfDetailFeature.State(project: project)
-                        )
-                    case .file, .audio:
+//                    switch project.category {
+//                    case .pdf:
+//                        state.destination = .pdfDetail(
+//                            PdfDetailFeature.State(project: project)
+//                        )
+//                    case .file, .audio:
                         state.destination = .audioDetail(
                             AudioDetailFeature.State(project: project)
                         )
-                    }
+//                    }
                 }
                 return .none
                 
@@ -219,7 +219,8 @@ struct ProjectListFeature {
                         isFavorite: payload.isFavorite,
                         filePath: payload.filePath,
                         fileLength: payload.fileLength,
-                        transcript: payload.transcript
+                        transcript: payload.transcript,
+                        syncStatus: payload.syncStatus ?? .localOnly
                     )
                 }
                 
@@ -257,21 +258,21 @@ extension ProjectListFeature {
         @ObservableState
         enum State: Equatable {
             case audioDetail(AudioDetailFeature.State)
-            case pdfDetail(PdfDetailFeature.State)
+//            case pdfDetail(PdfDetailFeature.State)
         }
 
         enum Action {
             case audioDetail(AudioDetailFeature.Action)
-            case pdfDetail(PdfDetailFeature.Action)
+//            case pdfDetail(PdfDetailFeature.Action)
         }
 
         var body: some Reducer<State, Action> {
             Scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailFeature()
             }
-            Scope(state: \.pdfDetail, action: \.pdfDetail) {
-                PdfDetailFeature()
-            }
+//            Scope(state: \.pdfDetail, action: \.pdfDetail) {
+//                PdfDetailFeature()
+//            }
         }
     }
 }

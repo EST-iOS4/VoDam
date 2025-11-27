@@ -15,26 +15,26 @@ final class ProjectModel {
     var creationDate: Date
     var categoryRaw: String
     var isFavorite: Bool
-
+    
     var filePath: String?
     var fileLength: Int?
-
+    
     var transcript: String?
-
+    
     var ownerId: String?
     var syncStatusRaw: String
     var remoteAudioPath: String?
-
+    
     var category: ProjectCategory {
         get { ProjectCategory(rawValue: categoryRaw) ?? .audio }
         set { categoryRaw = newValue.rawValue }
     }
-
+    
     var syncStatus: SyncStatus {
         get { SyncStatus(rawValue: syncStatusRaw) ?? .localOnly }
         set { syncStatusRaw = newValue.rawValue }
     }
-
+    
     init(
         id: String = UUID().uuidString,
         name: String,
@@ -69,7 +69,12 @@ extension ProjectModel {
             name: name,
             creationDate: creationDate,
             category: category,
-            isFavorite: isFavorite
+            isFavorite: isFavorite,
+            filePath: filePath,
+            fileLength: fileLength,
+            transcript: transcript,
+            syncStatus: syncStatus
+            
         )
     }
 }
@@ -81,5 +86,9 @@ extension Project {
         self.creationDate = model.creationDate
         self.category = model.category
         self.isFavorite = model.isFavorite
+        self.filePath = model.filePath
+        self.fileLength = model.fileLength
+        self.transcript = model.transcript
+        self.syncStatus = model.syncStatus
     }
 }
