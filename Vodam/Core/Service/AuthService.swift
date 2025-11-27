@@ -17,6 +17,7 @@ enum AuthServiceError: Error, Equatable {
     case authError(String)
     case noUser
     case scopeAgreementFailed
+    case cancelled
 }
 
 enum AuthService {
@@ -67,15 +68,14 @@ enum AuthService {
         )
     }
     
-    //MARK: 카카오 로그인
     static func loginWithKaKao() async throws -> User {
-        //로그인 해서 토큰 확보
+        // 토큰 확보
         _ = try await kakaoLogin()
         
         // 로그인된 계정 정보 조회
         var kakaoUser = try await fetchKakaoUser()
         
-        //필요한 권한 동의 확인 및 재요청 (닉네임, 이메일, 프로필 이미지 등)
+        // 필요한 권한 동의 확인 및 재요청
         kakaoUser = try await ensureKakaoScopesIfNeeded(kakaoUser)
         
         let account = kakaoUser.kakaoAccount
@@ -96,72 +96,63 @@ enum AuthService {
         )
     }
     
-    //MARK: - 실제 kakao 로그인
+    //MARK: 카카오 로그인
     @MainActor
     private static func kakaoLogin() async throws -> OAuthToken {
         return try await withCheckedThrowingContinuation { continuation in
+            
+            // 중복 resume 방지를 위한 래퍼
+            let safeContinuation = SafeContinuation(continuation)
+            
             if UserApi.isKakaoTalkLoginAvailable() {
-                //카카오톡 앱으로 로그인
                 print("[KakaoAuth] 카카오톡 앱으로 로그인 시도")
+                
                 UserApi.shared.loginWithKakaoTalk { token, error in
                     if let error = error {
                         print("[KakaoAuth] 카카오톡 로그인 실패: \(error)")
-
+                        
+                        // 사용자 취소 체크
                         if let sdkError = error as? SdkError {
-                            switch sdkError {
-                            case .ClientFailed(let reason, _):
-                                print("[KakaoAuth] ClientFailed reason: \(reason)")
-                                // 사용자 취소가 아닌 경우 웹 로그인 시도
+                            if case .ClientFailed(let reason, _) = sdkError {
                                 if case .Cancelled = reason {
-                                    continuation.resume(
-                                        throwing: AuthServiceError.authError("사용자가 로그인을 취소했습니다.")
-                                    )
+                                    safeContinuation.resume(throwing: AuthServiceError.cancelled)
                                     return
                                 }
-                            default:
-                                break
                             }
                         }
-                        // 다른 에러의 경우 웹 로그인 시도
-                        print("[KakaoAuth] 웹 로그인으로 fallback 시도")
+                        
+                        // 카카오톡 실패 시 웹 로그인 fallback
+                        print("[KakaoAuth] 웹 로그인으로 fallback")
                         UserApi.shared.loginWithKakaoAccount { token, error in
                             if let error = error {
                                 print("[KakaoAuth] 웹 로그인도 실패: \(error)")
-                                continuation.resume(
-                                    throwing: AuthServiceError.authError(
-                                        error.localizedDescription
-                                    )
-                                )
+                                safeContinuation.resume(throwing: AuthServiceError.authError(error.localizedDescription))
                             } else if let token = token {
                                 print("[KakaoAuth] 웹 로그인 성공")
-                                continuation.resume(returning: token)
+                                safeContinuation.resume(returning: token)
                             } else {
-                                continuation.resume(throwing: AuthServiceError.noUser)
+                                safeContinuation.resume(throwing: AuthServiceError.noUser)
                             }
                         }
                     } else if let token = token {
                         print("[KakaoAuth] 카카오톡 로그인 성공")
-                        continuation.resume(returning: token)
+                        safeContinuation.resume(returning: token)
                     } else {
-                        continuation.resume(throwing: AuthServiceError.noUser)
+                        safeContinuation.resume(throwing: AuthServiceError.noUser)
                     }
                 }
             } else {
-                //카카오 계정 (웹뷰)으로 로그인
                 print("[KakaoAuth] 카카오 계정(웹뷰)으로 로그인 시도")
+                
                 UserApi.shared.loginWithKakaoAccount { token, error in
                     if let error = error {
                         print("[KakaoAuth] 웹뷰 로그인 실패: \(error)")
-                        continuation.resume(
-                            throwing: AuthServiceError.authError(
-                                error.localizedDescription
-                            )
-                        )
+                        safeContinuation.resume(throwing: AuthServiceError.authError(error.localizedDescription))
                     } else if let token = token {
                         print("[KakaoAuth] 웹뷰 로그인 성공")
-                        continuation.resume(returning: token)
+                        safeContinuation.resume(returning: token)
                     } else {
-                        continuation.resume(throwing: AuthServiceError.noUser)
+                        safeContinuation.resume(throwing: AuthServiceError.noUser)
                     }
                 }
             }
@@ -275,6 +266,39 @@ enum AuthService {
         
         let updateUser = try await fetchKakaoUser()
         return updateUser
+    }
+}
+
+private final class SafeContinuation<T> {
+    private var continuation: CheckedContinuation<T, Error>?
+    private let lock = NSLock()
+    
+    init(_ continuation: CheckedContinuation<T, Error>) {
+        self.continuation = continuation
+    }
+    
+    func resume(returning value: T) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let cont = continuation else {
+            print("[SafeContinuation] ⚠️ 이미 resume됨 - 무시 (returning)")
+            return
+        }
+        continuation = nil
+        cont.resume(returning: value)
+    }
+    
+    func resume(throwing error: Error) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        guard let cont = continuation else {
+            print("[SafeContinuation] ⚠️ 이미 resume됨 - 무시 (throwing)")
+            return
+        }
+        continuation = nil
+        cont.resume(throwing: error)
     }
 }
 
