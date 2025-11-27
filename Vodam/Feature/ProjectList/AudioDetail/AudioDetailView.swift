@@ -11,9 +11,19 @@ import SwiftUI
 struct AudioDetailView: View {
     @Bindable var store: StoreOf<AudioDetailFeature>
     
+    // PDF 확인
+    private var isPDF: Bool {
+        store.project.category == .pdf
+    }
+    
     var body: some View {
         VStack {
-            AudioDetailTabBar(selectedTab: $store.selectedTab)
+            AudioDetailTabBar(
+                selectedTab: Binding(
+                    get: { store.selectedTab },
+                    set: { store.selectedTab = $0 }
+                )
+            )
             
             switch store.selectedTab {
             case .aiSummary:
@@ -31,50 +41,13 @@ struct AudioDetailView: View {
             }
             
             Spacer()
-
-            VStack(spacing: 20) {
-                Slider(value: $store.progress.sending(\.seek))
-                    .padding(.horizontal)
-                
-                HStack {
-                    Text(store.currentTime)
-                    Spacer()
-                    Text(store.totalTime)
-                }
-                .padding(.horizontal)
-                
-                HStack(spacing: 40) {
-                    Menu {
-                        Button("1.0x", action: { store.send(.setPlaybackRate(1.0)) })
-                        Button("1.5x", action: { store.send(.setPlaybackRate(1.5)) })
-                        Button("2.0x", action: { store.send(.setPlaybackRate(2.0)) })
-                    } label: {
-                        Text("\(String(format: "%.1f", store.playbackRate))x") .font(.headline)
-                    }
-                    
-                    Button (action:{ store.send(.backwardButtonTapped) }) {
-                        Image(systemName: "gobackward.10")
-                            .font(.title)
-                    }
-                    
-                    Button(action: { store.send(.playButtonTapped) }) {
-                        Image(systemName: store.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.largeTitle)
-                    }
-                    
-                    Button(action: { store.send(.forwardButtonTapped) }) {
-                        Image(systemName: "goforward.10")
-                            .font(.title)
-                    }
-                    
-                    Button(action: { store.send(.favoriteButtonTapped) }) {
-                        Image(systemName: store.isFavorite ? "star.fill" : "star")
-                            .font(.title)
-                    }
-                }
-                .padding(.bottom)
+            
+            // PDF가 아닐 때만 재생 컨트롤 표시
+            if !isPDF {
+                audioPlayerControls
+            } else {
+                pdfInfoSection
             }
-            .padding()
         }
         .navigationTitle(store.project.name)
         .toolbar {
@@ -105,22 +78,81 @@ struct AudioDetailView: View {
         .onAppear {
             store.send(.onAppear)
         }
+        .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
     }
-}
-
-#Preview {
-    AudioDetailView(
-        store: Store(
-            initialState:
-                AudioDetailFeature.State(
-                project:  Project(
-                    id: UUID(), name: "10", creationDate: Calendar.current.date(
-                        from: DateComponents(
-                            year: 2025, month: 10, day: 16)
-                    ) ?? Date(), category: .audio, isFavorite: false)
-            )
-        ) {
-            AudioDetailFeature()
+    
+    // MARK: 오디오만 컨트롤
+    @ViewBuilder
+    private var audioPlayerControls: some View {
+        VStack(spacing: 20) {
+            Slider(value: $store.progress.sending(\.seek))
+                .padding(.horizontal)
+            
+            HStack {
+                Text(store.currentTime)
+                Spacer()
+                Text(store.totalTime)
+            }
+            .padding(.horizontal)
+            
+            HStack(spacing: 40) {
+                Menu {
+                    Button("1.0x", action: { store.send(.setPlaybackRate(1.0)) })
+                    Button("1.5x", action: { store.send(.setPlaybackRate(1.5)) })
+                    Button("2.0x", action: { store.send(.setPlaybackRate(2.0)) })
+                } label: {
+                    Text("\(String(format: "%.1f", store.playbackRate))x")
+                        .font(.headline)
+                }
+                
+                Button(action: { store.send(.backwardButtonTapped) }) {
+                    Image(systemName: "gobackward.10")
+                        .font(.title)
+                }
+                
+                Button(action: { store.send(.playButtonTapped) }) {
+                    Image(systemName: store.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.largeTitle)
+                }
+                
+                Button(action: { store.send(.forwardButtonTapped) }) {
+                    Image(systemName: "goforward.10")
+                        .font(.title)
+                }
+                
+                Button(action: { store.send(.favoriteButtonTapped) }) {
+                    Image(systemName: store.isFavorite ? "star.fill" : "star")
+                        .font(.title)
+                }
+            }
+            .padding(.bottom)
         }
-    )
+        .padding()
+    }
+    
+    //pdf 만
+    @ViewBuilder
+    private var pdfInfoSection: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "doc.richtext.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.red)
+            
+            Text("PDF 문서")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            Button(action: { store.send(.favoriteButtonTapped) }) {
+                HStack {
+                    Image(systemName: store.isFavorite ? "star.fill" : "star")
+                        .font(.title2)
+                    Text(store.isFavorite ? "즐겨찾기에서 제거" : "즐겨찾기에 추가")
+                }
+                .foregroundColor(.blue)
+            }
+            .padding(.bottom, 20)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+    }
 }
