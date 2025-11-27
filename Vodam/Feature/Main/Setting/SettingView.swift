@@ -10,6 +10,7 @@ struct SettingView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
+    @Dependency(\.audioCloudClient) private var audioCloudClient
 
     private var user: User? {
         store.user
@@ -49,19 +50,40 @@ struct SettingView: View {
         .task(id: store.pendingDeleteOwnerId) {
             // pendingDeleteOwnerId가 설정되면 로컬 데이터 삭제
             if let ownerId = store.pendingDeleteOwnerId {
-                deleteLocalData(ownerId: ownerId)
+                await deleteLocalData(ownerId: ownerId)
             }
         }
     }
 
     // MARK: - 로컬 데이터 삭제
-    private func deleteLocalData(ownerId: String) {
+    private func deleteLocalData(ownerId: String) async {
         do {
+            let projects = try projectLocalDataClient.fetchAll(modelContext, ownerId)
+            
+            print("탈퇴 처리 시작: \(ownerId), 프로젝트 \(projects.count)개")
+            
+            //스토리지 삭제
+            for project in projects {
+                
+                if (project.category == .audio || project.category == .file || project.category == .pdf) {
+                    do {
+                        try await audioCloudClient.deleteAudio(ownerId, project.id)
+                        print("Storage 파일 삭제: \(project.name)")
+                    } catch {
+                        print("Storage 파일 삭제 실패: \(project.name) - \(error)")
+                        // 실패해도 계속 진행
+                    }
+                }
+            }
+            
+            //로컬 삭제
             try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
+            
             store.send(.localDataDeleted(ownerId))
-            print("로컬 프로젝트 데이터 삭제 완료: \(ownerId)")
+            print("로컬 데이터 삭제 완료: \(ownerId)")
+            
         } catch {
-            print("로컬 프로젝트 데이터 삭제 실패: \(error)")
+            print("로컬 데이터 삭제 실패: \(error)")
         }
     }
 

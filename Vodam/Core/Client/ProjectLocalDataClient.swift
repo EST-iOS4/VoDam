@@ -57,7 +57,8 @@ struct ProjectLocalDataClient {
             _ context: ModelContext,
             _ ids: [String],
             _ status: SyncStatus,
-            _ ownerId: String
+            _ ownerId: String,
+            _ remoteAudioPath: String?
         ) throws -> Void
 }
 
@@ -192,35 +193,36 @@ extension ProjectLocalDataClient: DependencyKey {
                     "[ProjectLocalDataClient] \(models.count)개 프로젝트 삭제 완료 (ownerId: \(ownerId))"
                 )
             },
-
+            
             migrateGuestProjects: { context, newOwnerId in
-                let descriptor = FetchDescriptor<ProjectModel>(
-                    predicate: #Predicate { project in
-                        project.ownerId == nil
-                            && project.syncStatusRaw == "localOnly"
-                    }
-                )
+                           let descriptor = FetchDescriptor<ProjectModel>(
+                               predicate: #Predicate { project in
+                                   project.ownerId == nil
+                                       && project.syncStatusRaw == "localOnly"
+                               }
+                           )
 
-                let guestProjects = try context.fetch(descriptor)
+                           let guestProjects = try context.fetch(descriptor)
 
-                guard !guestProjects.isEmpty else {
-                    print("[ProjectLocalDataClient] 마이그레이션 대상 게스트 프로젝트 없음")
-                    return []
-                }
+                           guard !guestProjects.isEmpty else {
+                               print("[ProjectLocalDataClient] 마이그레이션 대상 게스트 프로젝트 없음")
+                               return []
+                           }
 
-                for project in guestProjects {
-                    project.ownerId = newOwnerId
-                }
+                           for project in guestProjects {
+                               project.ownerId = newOwnerId
+                           }
 
-                try context.save()
-                print(
-                    "[ProjectLocalDataClient] \(guestProjects.count)개 게스트 프로젝트 마이그레이션 완료 → ownerId: \(newOwnerId)"
-                )
+                           try context.save()
+                           print(
+                               "[ProjectLocalDataClient] \(guestProjects.count)개 게스트 프로젝트 마이그레이션 완료 → ownerId: \(newOwnerId)"
+                           )
 
-                return guestProjects.map(ProjectPayload.init(model:))
-            },
+                           return guestProjects.map(ProjectPayload.init(model:))
+                       },
 
-            updateSyncStatus: { context, ids, status, ownerId in
+
+            updateSyncStatus: { context, ids, status, ownerId, remoteAudioPath in
                 let descriptor = FetchDescriptor<ProjectModel>(
                     predicate: #Predicate { project in
                         ids.contains(project.id)
@@ -232,6 +234,9 @@ extension ProjectLocalDataClient: DependencyKey {
                 for model in models {
                     model.syncStatus = status
                     model.ownerId = ownerId
+                    if let remoteAudioPath {
+                        model.remoteAudioPath = remoteAudioPath
+                    }
                 }
 
                 try context.save()
@@ -263,7 +268,7 @@ extension ProjectLocalDataClient: DependencyKey {
             delete: { _, _ in },
             deleteAllForOwner: { _, _ in },
             migrateGuestProjects: { _, _ in [] },
-            updateSyncStatus: { _, _, _, _ in }
+            updateSyncStatus: { _, _, _, _, _ in }
         )
     }
 }

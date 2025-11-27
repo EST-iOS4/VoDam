@@ -118,7 +118,8 @@ struct RecordingView: View {
                             context,
                             [payload.id],
                             .synced,
-                            ownerId
+                            ownerId,
+                            remotePath
                         )
                         
                         print("Firebase + Storage 업로드 성공 → \(remotePath)")
