@@ -19,6 +19,7 @@ struct ProjectPayload: Codable, Sendable, Equatable {
     let ownerId: String?
     let syncStatus: SyncStatus
     
+    let remoteAudioPath: String?
     init(
         id: String,
         name: String,
@@ -29,7 +30,8 @@ struct ProjectPayload: Codable, Sendable, Equatable {
         fileLength: Int?,
         transcript: String?,
         ownerId: String?,
-        syncStatus: SyncStatus
+        syncStatus: SyncStatus,
+        remoteAudioPath: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -41,6 +43,7 @@ struct ProjectPayload: Codable, Sendable, Equatable {
         self.transcript = transcript
         self.ownerId = ownerId
         self.syncStatus = syncStatus
+        self.remoteAudioPath = remoteAudioPath
     }
     
     init(model: ProjectModel) {
@@ -54,5 +57,6 @@ struct ProjectPayload: Codable, Sendable, Equatable {
         self.transcript = model.transcript
         self.ownerId = model.ownerId
         self.syncStatus = model.syncStatus
+        self.remoteAudioPath = model.remoteAudioPath
     }
 }
