@@ -91,11 +91,6 @@ struct AudioDetailFeature {
                     return .none
                 }
                 
-                guard let filePath = state.project.filePath else {
-                    print("[AudioDetail] project.filePath 가 없음")
-                    return .none
-                }
-                
                 let url = URL(fileURLWithPath: filePath)
                 print("[AudioDetail] 시도할 파일 경로: \(url.path)")
                 
