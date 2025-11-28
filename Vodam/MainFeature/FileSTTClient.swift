@@ -9,24 +9,26 @@ import Foundation
 import Speech
 
 struct AudioFileSTTClient {
-    var transcribe:
-        @Sendable (URL) async -> Result<String, FileButtonFeature.STTError>
+    var transcribe: @Sendable (URL) async -> Result<String, FileButtonFeature.STTError>
+    var transcribeInternal: @Sendable (URL) async -> Result<String, FileButtonFeature.STTError>
 }
 
 extension AudioFileSTTClient {
-    static let live = AudioFileSTTClient { url in
-        return await transcribeAudioFile(url: url)
-    }
+    static let live = AudioFileSTTClient(
+        transcribe: { url in
+            return await transcribeAudioFile(url: url)
+        },
+        transcribeInternal: { url in
+            return await transcribeInternalAudioFile(url: url)
+        }
+    )
 }
 
-// 수정된 STTError 타입 반영
-func transcribeAudioFile(url: URL) async -> Result<
-    String, FileButtonFeature.STTError
-> {
-
+// MARK: - 외부 파일용 (파일 가져오기)
+func transcribeAudioFile(url: URL) async -> Result<String, FileButtonFeature.STTError> {
+    
     return await withCheckedContinuation { continuation in
-
-        // 1. 보안 스코프 열기
+        
         let allowed = url.startAccessingSecurityScopedResource()
         if !allowed {
             continuation.resume(
@@ -34,34 +36,30 @@ func transcribeAudioFile(url: URL) async -> Result<
             )
             return
         }
-
+        
         defer {
             url.stopAccessingSecurityScopedResource()
         }
-
-        // 2. iCloud 파일이면 로컬로 먼저 다운로드
+        
         if !FileManager.default.fileExists(atPath: url.path) {
             do {
                 try FileManager.default.startDownloadingUbiquitousItem(at: url)
             } catch {
                 continuation.resume(
                     returning: .failure(
-                        .failed(
-                            "iCloud에서 파일 다운로드 실패: \(error.localizedDescription)"
-                        )
+                        .failed("iCloud에서 파일 다운로드 실패: \(error.localizedDescription)")
                     )
                 )
                 return
             }
         }
-
-        // 3. temp 디렉토리로 파일 복사
+        
         let fileManager = FileManager.default
         let ext = url.pathExtension
         let localURL = fileManager.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension(ext)
-
+        
         do {
             if fileManager.fileExists(atPath: localURL.path) {
                 try fileManager.removeItem(at: localURL)
@@ -75,8 +73,7 @@ func transcribeAudioFile(url: URL) async -> Result<
             )
             return
         }
-
-        // 4. Speech 권한 확인
+        
         SFSpeechRecognizer.requestAuthorization { status in
             guard status == .authorized else {
                 continuation.resume(
@@ -84,7 +81,7 @@ func transcribeAudioFile(url: URL) async -> Result<
                 )
                 return
             }
-
+            
             guard
                 let recognizer = SFSpeechRecognizer(
                     locale: Locale(identifier: "ko-KR")
@@ -96,23 +93,77 @@ func transcribeAudioFile(url: URL) async -> Result<
                 )
                 return
             }
-
-            // 5. 실제 STT
+        
             let request = SFSpeechURLRecognitionRequest(url: localURL)
             var finalText = ""
-
+            
             _ = recognizer.recognitionTask(with: request) { result, error in
-
+                
                 if let error {
                     continuation.resume(
                         returning: .failure(.failed(error.localizedDescription))
                     )
                     return
                 }
-
+                
                 if let result {
                     finalText = result.bestTranscription.formattedString
+                    
+                    if result.isFinal {
+                        continuation.resume(returning: .success(finalText))
+                    }
+                }
+            }
+        }
+    }
+}
 
+// MARK: - 앱 내부 파일용 (녹음 파일)
+func transcribeInternalAudioFile(url: URL) async -> Result<String, FileButtonFeature.STTError> {
+    
+    return await withCheckedContinuation { continuation in
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            continuation.resume(
+                returning: .failure(.failed("파일이 존재하지 않습니다: \(url.path)"))
+            )
+            return
+        }
+        
+        SFSpeechRecognizer.requestAuthorization { status in
+            guard status == .authorized else {
+                continuation.resume(
+                    returning: .failure(.failed("STT 권한이 없습니다."))
+                )
+                return
+            }
+            
+            guard
+                let recognizer = SFSpeechRecognizer(
+                    locale: Locale(identifier: "ko-KR")
+                ),
+                recognizer.isAvailable
+            else {
+                continuation.resume(
+                    returning: .failure(.failed("SpeechRecognizer 사용 불가"))
+                )
+                return
+            }
+            
+            let request = SFSpeechURLRecognitionRequest(url: url)
+            var finalText = ""
+            
+            _ = recognizer.recognitionTask(with: request) { result, error in
+                
+                if let error {
+                    continuation.resume(
+                        returning: .failure(.failed(error.localizedDescription))
+                    )
+                    return
+                }
+                
+                if let result {
+                    finalText = result.bestTranscription.formattedString
+                    
                     if result.isFinal {
                         continuation.resume(returning: .success(finalText))
                     }

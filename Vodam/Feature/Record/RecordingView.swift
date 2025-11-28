@@ -8,95 +8,111 @@ import SwiftData
 import SwiftUI
 
 struct RecordingView: View {
-    @Environment(\.modelContext) var context  // SwiftData ModelContext
+    @Environment(\.modelContext) var context
     let store: StoreOf<RecordingFeature>
-    
+
     let ownerId: String?
     
+    let showLiveTranscript: Bool
+
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.audioCloudClient) private var audioCloudClient
-    
+
     init(
         store: StoreOf<RecordingFeature>,
-        ownerId: String?
+        ownerId: String?,
+        showLiveTranscript: Bool = false
     ) {
         self.store = store
         self.ownerId = ownerId
+        self.showLiveTranscript = showLiveTranscript
     }
-    
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color.white)
                 .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
-            
+
             VStack(spacing: 24) {
-                
-                // 상태별 버튼
                 controls(
                     status: store.status,
                     onStart: { store.send(.startTapped) },
                     onPause: { store.send(.pauseTapped) },
                     onStop: { store.send(.stopTapped) }
                 )
-                
-                // 상태 텍스트
+
                 Text(store.status.localizedText)
                     .font(.headline)
-                
-                // 녹음 시간 표시
+
                 Text(store.elapsedSeconds.formattedTime)
                     .font(.system(size: 32, weight: .medium))
                     .monospacedDigit()
+                
+                if showLiveTranscript,
+                   (store.status == .recording || store.status == .finishing),
+                   !store.liveTranscript.isEmpty {
+                    Text(store.liveTranscript)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(3)
+                        .padding(.horizontal)
+                }
+                
+                if store.status == .finishing {
+                    ProgressView()
+                }
             }
             .padding(.vertical, 40)
         }
         .frame(height: 240)
         .padding(.horizontal, 20)
         
-        // MARK: - 🔥 fileURL 변경 감지 → SwiftData 저장
-        .onChange(of: store.fileURL) { _, newValue in
-            guard let url = newValue else { return }
-            saveToSwiftData(url: url, length: store.lastRecordedLength)
+        .onChange(of: store.finalTranscript) { _, newTranscript in
+            guard let url = store.fileURL,
+                  store.status == .ready else { return }
+            saveRecording(url: url, length: store.lastRecordedLength, transcript: newTranscript)
+        }
+        .onChange(of: store.status) { oldStatus, newStatus in
+            guard oldStatus == .finishing,
+                  newStatus == .ready,
+                  let url = store.fileURL else { return }
+            
+            if store.finalTranscript == nil {
+                saveRecording(url: url, length: store.lastRecordedLength, transcript: nil)
+            }
         }
     }
-    
-    // MARK: - SwiftData 저장
-    private func saveToSwiftData(url: URL, length: Int) {
+
+    // MARK: - 녹음 저장
+    private func saveRecording(url: URL, length: Int, transcript: String?) {
         do {
             guard let storedPath = copyRecordedFileToDocuments(url: url) else {
-                print("녹음 파일 복사 실패 – 프로젝트 저장 중단")
+                print("녹음 파일 복사 실패")
                 return
             }
-            
+
             let projectName = generateProjectName(from: url)
             
-            var payload = try projectLocalDataClient.save(
+            // ProjectLocalDataClient로 저장 (ProjectModel 사용)
+            let payload = try projectLocalDataClient.save(
                 context,
                 projectName,
                 .audio,
                 storedPath,
                 length,
-                nil,
+                transcript,
                 ownerId
             )
-            
-            print("프로젝트 저장 성공 → \(payload.name), id: \(payload.id), ownerId: \(payload.ownerId ?? "nil")")
+
+            print("✅ 녹음 저장 성공 → \(payload.name), id: \(payload.id), ownerId: \(payload.ownerId ?? "nil")")
             
             store.send(.recordingSaved(payload.id))
             
+            // Firebase 업로드 (로그인 상태일 때만)
             if let ownerId {
                 Task {
                     do {
-                        let localURL = URL(fileURLWithPath: storedPath)
-                        
-                        let remotePath = try await audioCloudClient.uploadAudio(
-                            ownerId,
-                            payload.id,
-                            localURL
-                        )
-                        
                         let syncedPayload = ProjectPayload(
                             id: payload.id,
                             name: payload.name,
@@ -107,53 +123,27 @@ struct RecordingView: View {
                             fileLength: payload.fileLength,
                             transcript: payload.transcript,
                             ownerId: ownerId,
-                            syncStatus: .synced,
-                            remoteAudioPath: remotePath
+                            syncStatus: .synced
                         )
                         
-                        try await firebaseClient.uploadProjects(
-                            ownerId,
-                            [syncedPayload]
-                        )
-                        
-                        await MainActor.run {
-                            print("🔍 updateSyncStatus 호출 직전 - id: \(payload.id), ownerId: \(ownerId)")
-                            
-                            do {
-                                try projectLocalDataClient.updateSyncStatus(
-                                    context,
-                                    [payload.id],
-                                    .synced,
-                                    ownerId,
-                                    remotePath
-                                )
-                                
-                                print("firebase + Storage 업로드 성공 → \(remotePath)")
-                                
-                                // 🔥 동기화 완료 후 다시 한번 알림 (동기화 상태 갱신)
-                                store.send(.recordingSaved(payload.id))
-                            } catch {
-                                print("syncStatus 업데이트 실패: \(error)")
-                            }
-                        }
-                        
+                        try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
+                        print("✅ Firebase 업로드 성공")
                     } catch {
-                        print("Firebase/Storage 업로드 실패: \(error)")
+                        print("❌ Firebase 업로드 실패: \(error)")
                     }
                 }
-            } else {
-                print("비회원 모드: Firebase/Storage 업로드 생략 (ownerId = nil)")
             }
             
         } catch {
-            print("프로젝트 저장 실패: \(error)")
+            print("❌ 녹음 저장 실패: \(error)")
             store.send(.recordingSaveFailed(error.localizedDescription))
         }
     }
-    
+
+    // MARK: - 파일 복사
     private func copyRecordedFileToDocuments(url: URL) -> String? {
         let fileManager = FileManager.default
-        
+
         guard
             let documentsDir = fileManager.urls(
                 for: .documentDirectory,
@@ -163,15 +153,15 @@ struct RecordingView: View {
             print("Documents 디렉토리 조회 실패")
             return nil
         }
-        
+
         let destinationURL = documentsDir.appendingPathComponent(
             url.lastPathComponent
         )
-        
+
         if fileManager.fileExists(atPath: destinationURL.path) {
             try? fileManager.removeItem(at: destinationURL)
         }
-        
+
         do {
             try fileManager.copyItem(at: url, to: destinationURL)
             print("녹음 파일 복사 성공 → \(destinationURL.path)")
@@ -181,13 +171,14 @@ struct RecordingView: View {
             return nil
         }
     }
-    
+
+    // MARK: - 프로젝트 이름 생성
     private func generateProjectName(from url: URL) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy.MM.dd HH:mm"
         return "녹음 \(formatter.string(from: Date()))"
     }
-    
+
     // MARK: - 버튼 UI
     @ViewBuilder
     private func controls(
@@ -204,7 +195,7 @@ struct RecordingView: View {
                     .frame(width: 56, height: 56)
                     .background(Circle().fill(Color.black))
             }
-            
+
         case .recording:
             HStack(spacing: 32) {
                 Button(action: onPause) {
@@ -220,7 +211,7 @@ struct RecordingView: View {
                         .background(Circle().fill(Color.red))
                 }
             }
-            
+
         case .paused:
             HStack(spacing: 32) {
                 Button(action: onStart) {
@@ -236,14 +227,15 @@ struct RecordingView: View {
                         .background(Circle().fill(Color.red))
                 }
             }
+            
+        case .finishing:
+            Button(action: {}) {
+                Image(systemName: "mic.fill")
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Circle().fill(Color.gray))
+            }
+            .disabled(true)
         }
-    }
-    
-    // MARK: - 시간 포맷
-    private func formatTime(_ seconds: Int) -> String {
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        return String(format: "%02d:%02d:%02d", h, m, s)
     }
 }

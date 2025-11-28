@@ -43,40 +43,47 @@ struct RecordingRepository {
 enum RecordingRepositoryKey: DependencyKey {
     
     static let liveValue: RecordingRepository = {
-        let container = try! ModelContainer(for: RecordingModel.self)
+        let container = try! ModelContainer(for: ProjectModel.self)
         let context = ModelContext(container)
         
         return RecordingRepository(
             saveLocal: { metadata in
-                let model = RecordingModel(
+                let model = ProjectModel(
                     id: metadata.id,
-                    filename: metadata.filename,
+                    name: metadata.filename,
+                    creationDate: metadata.createdAt,
+                    category: .audio,
+                    isFavorite: false,
                     filePath: metadata.filePath,
-                    length: metadata.length,
-                    createdAt: metadata.createdAt
+                    fileLength: metadata.length,
+                    transcript: nil,
+                    summary: nil,
+                    ownerId: nil,
+                    syncStatus: .localOnly,
+                    remoteAudioPath: nil
                 )
                 context.insert(model)
                 try context.save()
             },
             
             fetchAll: {
-                let descriptor = FetchDescriptor<RecordingModel>(
-                    sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+                let descriptor = FetchDescriptor<ProjectModel>(
+                    sortBy: [SortDescriptor(\.creationDate, order: .reverse)]
                 )
                 let models = try context.fetch(descriptor)
                 return models.map { model in
                     RecordingMetadata(
                         id: model.id,
-                        filename: model.filename,
-                        filePath: model.filePath,
-                        length: model.length,
-                        createdAt: model.createdAt
+                        filename: model.name,
+                        filePath: model.filePath ?? "",
+                        length: model.fileLength ?? 0,
+                        createdAt: model.creationDate
                     )
                 }
             },
             
             delete: { id in
-                let descriptor = FetchDescriptor<RecordingModel>()
+                let descriptor = FetchDescriptor<ProjectModel>()
                 let models = try context.fetch(descriptor)
                 if let model = models.first(where: { $0.id == id }) {
                     context.delete(model)
