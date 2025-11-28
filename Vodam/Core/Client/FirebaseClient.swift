@@ -7,6 +7,7 @@
 
 import Dependencies
 import FirebaseFirestore
+import FirebaseStorage
 import Foundation
 
 struct FirebaseClient {
@@ -36,13 +37,29 @@ extension FirebaseClient: DependencyKey {
                let db = Firestore.firestore()
              let userRef = db.collection("users").document(ownerId)
                 
-                // recordings 삭제
-                let recordingsRef = userRef.collection("recordings")
-                let recordingsSnapshot = try await recordingsRef.getDocuments()
-                
-                // projects 삭제
+                // 1. projects에서 remoteAudioPath 가져오기
                 let projectsRef = userRef.collection("projects")
                 let projectsSnapshot = try await projectsRef.getDocuments()
+                
+                
+                // 2. Storage 파일 삭제
+                let storage = Storage.storage()
+                for doc in projectsSnapshot.documents {
+                    if let remotePath = doc.data()["remoteAudioPath"] as? String,
+                       !remotePath.isEmpty {
+                        do {
+                            let fileRef = storage.reference(withPath: remotePath)
+                            try await fileRef.delete()
+                            print("[FirebaseClient] Storage 파일 삭제: \(remotePath)")
+                        } catch {
+                            print("[FirebaseClient] Storage 파일 삭제 실패 (계속 진행): \(remotePath) - \(error)")
+                        }
+                    }
+                }
+                
+                // 3. Firestore 문서 삭제 (batch)
+                let recordingsRef = userRef.collection("recordings")
+                let recordingsSnapshot = try await recordingsRef.getDocuments()
                 
                 let batch = db.batch()
 
