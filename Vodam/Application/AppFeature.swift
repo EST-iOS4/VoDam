@@ -106,11 +106,11 @@ struct AppFeature {
                 state.list.currentUser = nil
                 return .none
                 
-            case .main:
-                return .none
-                
             case .main(.delegate(.projectSaved)):
                 return .send(.list(.refreshProjects))
+            
+            case .main:
+                return .none
                 
             case .list:
                 return .none
