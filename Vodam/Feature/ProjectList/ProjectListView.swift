@@ -1,12 +1,13 @@
 //
-//  ProjectListView.swift
-//  Vodam
+// ProjectListView.swift
+// Vodam
 //
-//  Created by 서정원 on 11/17/25.
+// Created by 서정원 on 11/17/25.
 //
 
 import ComposableArchitecture
 import SwiftUI
+import SwiftData // <-- 이 줄을 추가하여 FetchDescriptor, ProjectModel 접근 가능하게 함
 
 struct ProjectListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -35,8 +36,9 @@ struct ProjectListView: View {
             .onAppear {
                 store.send(.loadProjects(modelContext))
             }
-            .onChange(of: store.needsRefresh) { _, needsRefresh in
-                if needsRefresh {
+            .onChange(of: store.refreshTrigger) { oldValue, newValue in
+                if newValue != nil {
+                    print("Refresh triggeren: \(newValue?.uuidString ?? "nil")")
                     store.send(.loadProjects(modelContext))
                 }
             }
@@ -99,6 +101,37 @@ struct ProjectListView: View {
         }
     }
     
+    // 이 함수는 디버깅 목적으로, 실제 앱에서는 제거하거나 주석 처리하는 것이 좋습니다.
+    private func debugPrintAllProjects() {
+        print(String(repeating: "=", count: 60))
+        print("SwiftData 전체 데이터베이스 조회")
+        print(String(repeating: "=", count: 60))
+        
+        // ProjectModel이 정의되어 있다고 가정하고 FetchDescriptor를 사용합니다.
+        // SwiftData를 import 했기 때문에 이제 ProjectModel의 key path를 찾을 수 있습니다.
+        let allDescriptor = FetchDescriptor<ProjectModel>(
+            sortBy: [SortDescriptor(\.creationDate, order: .reverse)]
+        )
+        
+        do {
+            let allModels = try modelContext.fetch(allDescriptor)
+            print("전체 프로젝트 수: \(allModels.count)개")
+            
+            for (index, model) in allModels.enumerated() {
+                print("[\(index)] id: \(model.id)")
+                print("     name: \(model.name)")
+                print("     ownerId: \(model.ownerId ?? "nil")")
+                print("     syncStatus: \(model.syncStatusRaw)")
+                print("     category: \(model.categoryRaw)")
+                print("     creationDate: \(model.creationDate)")
+                print("     ---")
+            }
+        } catch {
+            print("전체 조회 실패: \(error)")
+        }
+        
+        print(String(repeating: "=", count: 60))
+    }
     
     @ViewBuilder
     private func destinationView(for store: Store<ProjectListFeature.Destination.State, ProjectListFeature.Destination.Action>) -> some View {
@@ -107,10 +140,6 @@ struct ProjectListView: View {
             if let detailStore = store.scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailView(store: detailStore)
             }
-            //        case .pdfDetail:
-            //            if let detailStore = store.scope(state: \.pdfDetail, action: \.pdfDetail) {
-            //                PdfDetailView(store: detailStore)
-            //            }
         }
     }
 }
