@@ -107,8 +107,9 @@ struct AppFeature {
                 return .none
                 
             case .main(.delegate(.projectSaved)):
+                print("프로젝트 저장 완료 - ProjectList 새로고침")
                 return .send(.list(.refreshProjects))
-            
+                
             case .main:
                 return .none
                 
