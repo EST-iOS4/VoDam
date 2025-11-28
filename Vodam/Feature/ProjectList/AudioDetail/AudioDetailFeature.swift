@@ -57,6 +57,7 @@ struct AudioDetailFeature {
         case binding(BindingAction<State>)
         
         case onAppear
+        case onDisappear
         case playButtonTapped
         case backwardButtonTapped
         case forwardButtonTapped
@@ -137,6 +138,20 @@ struct AudioDetailFeature {
                         print("[AudioDetail] Firebase 다운로드 실패: \(error)")
                     }
                 }
+                
+            case .onDisappear:
+                print("[AudioDetail] onDisappear - 플레이어 정리")
+                
+                // 플레이어 중지
+                if let player = state.player {
+                    player.pause()
+                    player.replaceCurrentItem(with: nil)
+                }
+                state.player = nil
+                state.isPlaying = false
+                
+                // Observer 취소
+                return .cancel(id: CancelID.playerObserver)
                 
             case ._setupPlayerWithURL(let url):
                 return setupPlayer(state: &state, fileURL: url)
