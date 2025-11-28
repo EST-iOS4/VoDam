@@ -42,62 +42,27 @@ struct RecordingRepository {
 // MARK: - DependencyKey 등록
 enum RecordingRepositoryKey: DependencyKey {
     
-    static let liveValue: RecordingRepository = {
-        let container = try! ModelContainer(for: ProjectModel.self)
-        let context = ModelContext(container)
-        
-        return RecordingRepository(
-            saveLocal: { metadata in
-                let model = ProjectModel(
-                    id: metadata.id,
-                    name: metadata.filename,
-                    creationDate: metadata.createdAt,
-                    category: .audio,
-                    isFavorite: false,
-                    filePath: metadata.filePath,
-                    fileLength: metadata.length,
-                    transcript: nil,
-                    summary: nil,
-                    ownerId: nil,
-                    syncStatus: .localOnly,
-                    remoteAudioPath: nil
-                )
-                context.insert(model)
-                try context.save()
-            },
-            
-            fetchAll: {
-                let descriptor = FetchDescriptor<ProjectModel>(
-                    sortBy: [SortDescriptor(\.creationDate, order: .reverse)]
-                )
-                let models = try context.fetch(descriptor)
-                return models.map { model in
-                    RecordingMetadata(
-                        id: model.id,
-                        filename: model.name,
-                        filePath: model.filePath ?? "",
-                        length: model.fileLength ?? 0,
-                        createdAt: model.creationDate
-                    )
-                }
-            },
-            
-            delete: { id in
-                let descriptor = FetchDescriptor<ProjectModel>()
-                let models = try context.fetch(descriptor)
-                if let model = models.first(where: { $0.id == id }) {
-                    context.delete(model)
-                    try context.save()
-                }
-            },
-            
-            saveRemote: { metadata in
-                print("🌐 Firebase 준비 예정: \(metadata.filename)")
-            },
-            
-            isLoggedIn: { false }
-        )
-    }()
+    // ✅ ModelContainer 제거 - VodamApp에서 설정한 container 사용
+    // ✅ 실제 저장은 projectLocalDataClient 사용 권장
+    static let liveValue: RecordingRepository = RecordingRepository(
+        saveLocal: { metadata in
+            // projectLocalDataClient를 사용하세요
+            print("⚠️ RecordingRepository.saveLocal 호출됨 - projectLocalDataClient 사용 권장")
+        },
+        fetchAll: {
+            // projectLocalDataClient를 사용하세요
+            print("⚠️ RecordingRepository.fetchAll 호출됨 - projectLocalDataClient 사용 권장")
+            return []
+        },
+        delete: { id in
+            // projectLocalDataClient를 사용하세요
+            print("⚠️ RecordingRepository.delete 호출됨 - projectLocalDataClient 사용 권장")
+        },
+        saveRemote: { metadata in
+            print("🌐 Firebase 준비 예정: \(metadata.filename)")
+        },
+        isLoggedIn: { false }
+    )
 }
 
 // MARK: - DependencyValues 확장
