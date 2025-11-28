@@ -92,6 +92,13 @@ struct AppFeature {
                 state.list.currentUser = user
                 return .send(.list(.userChanged(user)))
                 
+            case .main(.delegate(.userLoggedIn(let user))):
+                // MainFeature에서 로그인 완료 시 전파
+                state.user = user
+                state.list.currentUser = user
+                print("[AppFeature] 로그인 완료: \(user.name), ownerId: \(user.ownerId)")
+                return .none
+                
             case .main(.settings(.presented(.delegate(.logoutCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
