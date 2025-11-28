@@ -77,8 +77,8 @@ extension ProjectModel {
             fileLength: fileLength,
             transcript: transcript,
             syncStatus: syncStatus,
-            summary: summary
-            
+            summary: summary,
+            remoteAudioPath: remoteAudioPath  // 추가됨
         )
     }
 }
@@ -95,5 +95,6 @@ extension Project {
         self.transcript = model.transcript
         self.summary = model.summary
         self.syncStatus = model.syncStatus
+        self.remoteAudioPath = model.remoteAudioPath  // 추가됨
     }
 }
