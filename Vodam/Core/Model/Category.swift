@@ -27,11 +27,10 @@ enum FilterCategory: Hashable, CaseIterable {
     case all
     case project(ProjectCategory)
     
-    @MainActor
     var title: String {
         switch self {
         case .all:
-            return "전체"
+            return "전체" // <-- 문제의 레이블 제거
         case .project(let category):
             return category.title
         }

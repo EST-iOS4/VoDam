@@ -8,33 +8,25 @@
 import SwiftUI
 
 struct AudioDetailTabBar: View {
-    @Binding var selectedTab: Tab
+    @Binding var selectedTab: AudioDetailFeature.Tab
     
     var body: some View {
-        HStack {
-            ForEach(Tab.allCases, id: \.self) { tab in
+        HStack(spacing: 0){
+            ForEach(AudioDetailFeature.Tab.allCases, id: \.self) { tab in
                 Button(action: {
                     selectedTab = tab
                 }) {
-                    VStack {
-                        Text(tab.title)
-                            .font(.headline)
-                            .foregroundColor(selectedTab == tab ? .primary : .secondary)
-                        
-                        if selectedTab == tab {
-                            Rectangle()
-                                .frame(height: 2)
-                                .foregroundColor(.primary)
-                        } else {
-                            Rectangle()
-                                .frame(height: 2)
-                                .foregroundColor(.clear)
-                        }
-                    }
+                    Text(tab.rawValue)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(selectedTab == tab ? Color.blue : Color.clear)
+                        .foregroundColor(selectedTab == tab ? .white : .primary)
                 }
-                .padding(.horizontal)
             }
         }
-        .padding(.top)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
+        .padding()
     }
 }
