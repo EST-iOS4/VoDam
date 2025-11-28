@@ -7,9 +7,13 @@
 
 import AVFoundation
 import ComposableArchitecture
+import SwiftData
 
 @Reducer
 struct AudioDetailFeature {
+    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
+    @Dependency(\.firebaseClient) var firebaseClient
+    
     @ObservableState
     struct State: Equatable {
         let project: Project
@@ -20,6 +24,9 @@ struct AudioDetailFeature {
         
         @Presents var destination: Destination.State?
         
+        // 유저 정보
+        var currentUser: User?
+        
         @ObservationStateIgnored var player: AVPlayer?
         var isPlaying = false
         var totalTime: String = "00:00"
@@ -28,8 +35,9 @@ struct AudioDetailFeature {
         var playbackRate: Float = 1.0
         var isFavorite: Bool = false
         
-        init(project: Project) {
+        init(project: Project, currentUser: User? = nil) {
             self.project = project
+            self.currentUser = currentUser
             self.selectedTab = .aiSummary
             let transcriptText = project.transcript ?? "아직 받아온 스크립트가 없습니다."
             self.script = ScriptFeature.State(text: transcriptText)
@@ -58,7 +66,7 @@ struct AudioDetailFeature {
         case backwardButtonTapped
         case forwardButtonTapped
         case setPlaybackRate(Float)
-        case favoriteButtonTapped
+        case favoriteButtonTapped(ModelContext)
         case updateProgress(Double)
         case playerFinishedPlaying
         case seek(Double)
@@ -232,10 +240,46 @@ struct AudioDetailFeature {
                 }
                 return .none
                 
-            case .favoriteButtonTapped:
+            case .favoriteButtonTapped(let context):
                 state.isFavorite.toggle()
-                // TODO: 즐겨찾기 상태를 저장하는 API 호출 또는 로컬 DB 업데이트 로직 추가
-                return .none
+                let ownerId = state.currentUser?.ownerId
+                let project = state.project
+                let newIsFavorite = state.isFavorite
+                
+                return .run { send in
+                    // 1. Local SwiftData 업데이트
+                    try await MainActor.run {
+                        try projectLocalDataClient.update(
+                            context,
+                            project.id.uuidString,
+                            nil,
+                            newIsFavorite,
+                            nil,
+                            nil
+                        )
+                    }
+                    
+                    // 2. Firebase 업데이트 (로그인 상태일 때)
+                    if let ownerId {
+                        let payload = ProjectPayload(
+                            id: project.id.uuidString,
+                            name: project.name,
+                            creationDate: project.creationDate,
+                            category: project.category,
+                            isFavorite: newIsFavorite, // 변경된 값 사용
+                            filePath: project.filePath,
+                            fileLength: project.fileLength,
+                            transcript: project.transcript,
+                            ownerId: ownerId,
+                            syncStatus: project.syncStatus
+                        )
+                        try await firebaseClient.updateProject(ownerId, payload)
+                    }
+                } catch: { error, send in
+                    print("즐겨찾기 업데이트 실패: \(error)")
+                    // 실패 시 UI 롤백 (선택적)
+                    // state.isFavorite.toggle()
+                }
                 
             case .updateProgress(let progress):
                 state.progress = progress
