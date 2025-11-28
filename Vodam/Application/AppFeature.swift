@@ -90,13 +90,14 @@ struct AppFeature {
             case .main(.userLoaded(let user)):
                 state.user = user
                 state.list.currentUser = user
-                return .none
+                return .send(.list(.userChanged(user)))
                 
             case .main(.settings(.presented(.delegate(.logoutCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
-                return .none
+                // 로그아웃 후 ProjectList를 비회원 상태로 새로고침
+                return .send(.list(.refreshProjects))
                 
             case .main(
                 .settings(.presented(.delegate(.deleteAccountCompleted)))
@@ -104,7 +105,8 @@ struct AppFeature {
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
-                return .none
+                // 회원 탈퇴 후 ProjectList를 비회원 상태로 새로고침
+                return .send(.list(.refreshProjects))
                 
             case .main(.delegate(.projectSaved)):
                 print("프로젝트 저장 완료 - ProjectList 새로고침")

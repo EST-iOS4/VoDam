@@ -247,7 +247,7 @@ struct ProjectListFeature {
                 
             case .userChanged(let user):
                 state.currentUser = user
-                return .none
+                return .send(.refreshProjects)
                 
             case .destination, .binding:
                 return .none
