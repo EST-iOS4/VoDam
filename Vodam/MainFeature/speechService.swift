@@ -1,6 +1,5 @@
 //
 //  SpeechService.swift
-//  Vodam
 //
 
 import Speech
@@ -15,6 +14,8 @@ class SpeechService: NSObject {
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "ko-KR"))
     
     private var transcriptContinuation: AsyncStream<String>.Continuation?
+    
+    private var isStarted = false
 
     override init() {
         super.init()
@@ -31,16 +32,19 @@ class SpeechService: NSObject {
             }
         }
     }
-    
+
+    // MARK: - START
     func startLiveTranscription() -> AsyncStream<String> {
-        stopLiveTranscription()
+        if isStarted, let continuation = transcriptContinuation {
+            return AsyncStream { continuation in
+                continuation.onTermination = { _ in }
+            }
+        }
+
+        isStarted = true
         
         return AsyncStream { continuation in
             self.transcriptContinuation = continuation
-            
-            continuation.onTermination = { @Sendable _ in
-                self.stopLiveTranscription()
-            }
             
             self.recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
             self.recognitionRequest?.shouldReportPartialResults = true
@@ -50,7 +54,7 @@ class SpeechService: NSObject {
                 try audioSession.setCategory(.record, mode: .measurement)
                 try audioSession.setActive(true)
             } catch {
-                print("🎧 AudioSession 오류: \(error)")
+                print("🎧 AudioSession 오류:", error)
                 continuation.finish()
                 return
             }
@@ -58,6 +62,7 @@ class SpeechService: NSObject {
             let inputNode = self.audioEngine.inputNode
             let recordingFormat = inputNode.outputFormat(forBus: 0)
             
+            inputNode.removeTap(onBus: 0)
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
                 self.recognitionRequest?.append(buffer)
             }
@@ -65,8 +70,7 @@ class SpeechService: NSObject {
             self.recognitionTask = self.recognizer?.recognitionTask(with: self.recognitionRequest!) { result, error in
                 if let result {
                     let transcript = result.bestTranscription.formattedString
-                    print("📝 실시간 변환:", transcript)
-                    continuation.yield(transcript)  // ✅ 결과 전달
+                    continuation.yield(transcript)
                 }
                 
                 if let error {
@@ -74,18 +78,42 @@ class SpeechService: NSObject {
                 }
             }
 
-            self.audioEngine.prepare()
             do {
+                self.audioEngine.prepare()
                 try self.audioEngine.start()
                 print("🎧 실시간 STT 시작됨")
             } catch {
-                print("❌ STT Start 오류:", error.localizedDescription)
+                print("❌ STT Start 오류:", error)
                 continuation.finish()
             }
         }
     }
 
+    // MARK: - PAUSE
+    func pauseTranscription() {
+        if audioEngine.isRunning {
+            audioEngine.pause()
+            print("⏸️ STT 일시정지됨")
+        }
+    }
+
+    // MARK: - RESUME
+    func resumeTranscription() {
+        if !audioEngine.isRunning {
+            do {
+                try audioEngine.start()
+                print("▶️ STT 재개됨")
+            } catch {
+                print("❌ STT 재개 오류:", error.localizedDescription)
+            }
+        }
+    }
+
+    // MARK: - STOP (완전 종료)
     func stopLiveTranscription() {
+        isStarted = false
+
+        recognitionTask?.finish()
         recognitionTask?.cancel()
         recognitionTask = nil
 
@@ -94,12 +122,12 @@ class SpeechService: NSObject {
 
         if audioEngine.isRunning {
             audioEngine.stop()
-            audioEngine.inputNode.removeTap(onBus: 0)
         }
+        audioEngine.inputNode.removeTap(onBus: 0)
         
         transcriptContinuation?.finish()
         transcriptContinuation = nil
-
-        print("🛑 실시간 STT 정지됨")
+        
+        print("🛑 STT 완전 종료됨")
     }
 }
