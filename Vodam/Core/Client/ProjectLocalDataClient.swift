@@ -34,7 +34,8 @@ struct ProjectLocalDataClient {
         _ name: String?,
         _ isFavorite: Bool?,
         _ transcript: String?,
-        _ syncStatus: SyncStatus?
+        _ syncStatus: SyncStatus?,
+        _ summary: String?
     ) throws -> Void
     
     var delete:
@@ -152,7 +153,7 @@ extension ProjectLocalDataClient: DependencyKey {
                 return models.map(ProjectPayload.init(model:))
             },
             
-            update: { context, id, name, isFavorite, transcript, syncStatus in
+            update: { context, id, name, isFavorite, transcript, syncStatus, summary in
                 let targetId = id
                 let descriptor = FetchDescriptor<ProjectModel>(
                     predicate: #Predicate { project in
@@ -171,6 +172,10 @@ extension ProjectLocalDataClient: DependencyKey {
                 if let isFavorite { model.isFavorite = isFavorite }
                 if let transcript { model.transcript = transcript }
                 if let syncStatus { model.syncStatus = syncStatus }
+                if let summary {
+                    model.summary = summary
+                    print("[ProjectLocalDataClient] summary 업데이트: \(summary.prefix(50))")
+                }
                 
                 try context.save()
                 print("[ProjectLocalDataClient] update 성공 → id: \(id)")
@@ -328,7 +333,7 @@ extension ProjectLocalDataClient: DependencyKey {
                 )
             },
             fetchAll: { _, _ in [] },
-            update: { _, _, _, _, _, _ in },
+            update: { _, _, _, _, _, _, _ in },
             delete: { _, _ in },
             deleteAllForOwner: { _, _ in },
             insert: { _, _ in },

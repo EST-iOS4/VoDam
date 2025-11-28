@@ -196,12 +196,16 @@ extension ProjectPayload {
         if let transcript { data["transcript"] = transcript }
         if let ownerId { data["ownerId"] = ownerId }
         
-        // ✅ 핵심: remoteAudioPath 저장 추가
         if let remoteAudioPath {
             data["remoteAudioPath"] = remoteAudioPath
-            print("✅ [ProjectPayload] remoteAudioPath 포함: \(remoteAudioPath)")
+            print("[ProjectPayload] remoteAudioPath 포함: \(remoteAudioPath)")
         } else {
-            print("⚠️ [ProjectPayload] remoteAudioPath가 nil입니다!")
+            print("[ProjectPayload] remoteAudioPath가 nil입니다!")
+        }
+        
+        if let summary {
+                    data["summary"] = summary
+                    print("✅ [ProjectPayload] summary 포함: \(summary.prefix(50))...")
         }
         
         return data
@@ -223,7 +227,14 @@ extension ProjectPayload {
         }
         
         let remoteAudioPath = data["remoteAudioPath"] as? String
-        print("📖 [ProjectPayload] remoteAudioPath 읽기: \(remoteAudioPath ?? "nil")")
+        print("[ProjectPayload] remoteAudioPath 읽기: \(remoteAudioPath ?? "nil")")
+        
+        let summary = data["summary"] as? String
+        if let summary = summary {
+            print("📖 [ProjectPayload] summary 읽기: \(summary.prefix(50))...")
+        } else {
+            print("📖 [ProjectPayload] summary 없음")
+        }
         
         return ProjectPayload(
             id: id,
@@ -234,6 +245,7 @@ extension ProjectPayload {
             filePath: data["filePath"] as? String,
             fileLength: data["fileLength"] as? Int,
             transcript: data["transcript"] as? String,
+            summary: summary,
             ownerId: data["ownerId"] as? String,
             syncStatus: syncStatus,
             remoteAudioPath: remoteAudioPath  // ✅ 읽기 추가

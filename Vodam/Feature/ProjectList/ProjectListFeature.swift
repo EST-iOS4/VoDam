@@ -150,7 +150,8 @@ struct ProjectListFeature {
                                                 remoteProject.name,
                                                 remoteProject.isFavorite,
                                                 remoteProject.transcript,
-                                                .synced
+                                                .synced,
+                                                remoteProject.summary
                                             )
                                         } else {
                                             // 새로 추가
@@ -241,7 +242,8 @@ struct ProjectListFeature {
                                 nil,  // name
                                 newFavorite,
                                 nil,  // transcript
-                                nil  // syncStatus
+                                nil,  // syncStatus
+                                nil   // summary
                             )
                         }
                         
@@ -333,6 +335,7 @@ struct ProjectListFeature {
                         fileLength: payload.fileLength,
                         transcript: payload.transcript,
                         syncStatus: payload.syncStatus,
+                        summary: payload.summary,
                         remoteAudioPath: payload.remoteAudioPath
                     )
                 }
