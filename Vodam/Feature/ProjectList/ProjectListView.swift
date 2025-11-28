@@ -34,13 +34,23 @@ struct ProjectListView: View {
                 }
             }
             .task {
+                // 최초 로드만 실행
                 if !store.hasLoadedOnce {
+                    print("[ProjectListView] 최초 로드 시작")
+                    store.send(.loadProjects(modelContext))
+                }
+            }
+            .task(id: store.currentUser?.ownerId) {
+                // 사용자 변경 시에만 재로드 (로그인/로그아웃)
+                if store.hasLoadedOnce {
+                    print("[ProjectListView] 사용자 변경 감지 - 재로드")
                     store.send(.loadProjects(modelContext))
                 }
             }
             .onChange(of: store.refreshTrigger) { oldValue, newValue in
+                // refreshTrigger 변경 시에만 재로드 (projectSaved 이벤트)
                 if newValue != nil && oldValue != newValue {
-                    print("Refresh triggered: \(newValue?.uuidString ?? "nil")")
+                    print("[ProjectListView] Refresh triggered: \(newValue?.uuidString ?? "nil")")
                     store.send(.loadProjects(modelContext))
                 }
             }
@@ -71,9 +81,17 @@ struct ProjectListView: View {
     }
     
     private var emptyView: some View {
-        Text("저장된 프로젝트가 없습니다.")
-            .foregroundColor(.secondary)
-            .frame(maxHeight: .infinity)
+        VStack(spacing: 16) {
+            Text("저장된 프로젝트가 없습니다.")
+                .foregroundColor(.secondary)
+            
+            if store.currentUser != nil {
+                Text("아래로 당겨서 동기화할 수 있습니다.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxHeight: .infinity)
     }
     
     private var projectsList: some View {
@@ -83,9 +101,26 @@ struct ProjectListView: View {
                 onTap: { store.send(.projectTapped(id: project.id)) },
                 onFavoriteTap: { store.send(.favoriteButtonTapped(id: project.id, modelContext)) }
             )
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) {
+                    store.send(.deleteProject(id: project.id, modelContext))
+                } label: {
+                    Label("삭제", systemImage: "trash")
+                }
+            }
         }
         .listStyle(.plain)
         .animation(.default, value: store.projectState)
+        .refreshable {
+            // Pull-to-refresh: 수동으로 Firebase 재동기화
+            print("[ProjectListView] Pull-to-refresh 트리거")
+            await withCheckedContinuation { continuation in
+                store.send(.loadProjects(modelContext))
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    continuation.resume()
+                }
+            }
+        }
     }
     
     private var sortMenu: some View {

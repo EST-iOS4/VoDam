@@ -13,7 +13,7 @@ import Foundation
 struct FirebaseClient {
     var deleteAllForUser: @Sendable (_ ownerId: String) async throws -> Void
     
-    // MARK: - Project Functions (신규)
+    // MARK: - Project Functions
     var uploadProjects:
         @Sendable (_ ownerId: String, _ projects: [ProjectPayload])
             async throws -> Void
@@ -90,10 +90,15 @@ extension FirebaseClient: DependencyKey {
                         .collection("projects")
                         .document(project.id)
                     
-                    await batch.setData(
-                        project.toFirestoreData(),
-                        forDocument: docRef
-                    )
+                    let data = project.toFirestoreData()
+                    
+                    // ✅ 디버깅: 저장할 데이터 출력
+                    print("📝 [FirebaseClient] Firestore 저장 데이터:")
+                    print("   - id: \(project.id)")
+                    print("   - name: \(project.name)")
+                    print("   - remoteAudioPath: \(data["remoteAudioPath"] ?? "nil")")
+                    
+                    await batch.setData(data, forDocument: docRef)
                 }
                 
                 try await batch.commit()
@@ -111,6 +116,12 @@ extension FirebaseClient: DependencyKey {
                 
                 let projects = snapshot.documents.compactMap { doc -> ProjectPayload? in
                     let data = doc.data()
+                    
+                    // ✅ 디버깅: Firestore에서 읽은 데이터 출력
+                    print("📖 [FirebaseClient] Firestore 읽기:")
+                    print("   - id: \(doc.documentID)")
+                    print("   - remoteAudioPath: \(data["remoteAudioPath"] ?? "nil")")
+                    
                     return ProjectPayload.fromFirestoreData(data)
                 }
                 
@@ -120,12 +131,18 @@ extension FirebaseClient: DependencyKey {
             
             updateProject: { ownerId, project in
                 let db = Firestore.firestore()
+                let data = project.toFirestoreData()
+                
+                print("📝 [FirebaseClient] updateProject:")
+                print("   - id: \(project.id)")
+                print("   - remoteAudioPath: \(data["remoteAudioPath"] ?? "nil")")
+                
                 try await db
                     .collection("users")
                     .document(ownerId)
                     .collection("projects")
                     .document(project.id)
-                    .setData(project.toFirestoreData(), merge: true)
+                    .setData(data, merge: true)
                 
                 print("[FirebaseClient] project 업데이트 완료: ownerId=\(ownerId), id=\(project.id)")
             },
@@ -179,6 +196,14 @@ extension ProjectPayload {
         if let transcript { data["transcript"] = transcript }
         if let ownerId { data["ownerId"] = ownerId }
         
+        // ✅ 핵심: remoteAudioPath 저장 추가
+        if let remoteAudioPath {
+            data["remoteAudioPath"] = remoteAudioPath
+            print("✅ [ProjectPayload] remoteAudioPath 포함: \(remoteAudioPath)")
+        } else {
+            print("⚠️ [ProjectPayload] remoteAudioPath가 nil입니다!")
+        }
+        
         return data
     }
     
@@ -193,8 +218,12 @@ extension ProjectPayload {
             let syncStatusRaw = data["syncStatus"] as? String,
             let syncStatus = SyncStatus(rawValue: syncStatusRaw)
         else {
+            print("❌ [ProjectPayload] fromFirestoreData 실패 - 필수 필드 누락")
             return nil
         }
+        
+        let remoteAudioPath = data["remoteAudioPath"] as? String
+        print("📖 [ProjectPayload] remoteAudioPath 읽기: \(remoteAudioPath ?? "nil")")
         
         return ProjectPayload(
             id: id,
@@ -206,7 +235,8 @@ extension ProjectPayload {
             fileLength: data["fileLength"] as? Int,
             transcript: data["transcript"] as? String,
             ownerId: data["ownerId"] as? String,
-            syncStatus: syncStatus
+            syncStatus: syncStatus,
+            remoteAudioPath: remoteAudioPath  // ✅ 읽기 추가
         )
     }
 }
