@@ -14,7 +14,7 @@ struct RecordingFeature {
     @Dependency(\.speechService) var speechService
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.audioCloudClient) var audioCloudClient
+    @Dependency(\.fileCloudClient) var fileCloudClient
     
     enum Status: Equatable {
         case ready
@@ -61,6 +61,7 @@ struct RecordingFeature {
         
         enum Delegate: Equatable {
             case projectSaved(String)
+            case syncCompleted(String)
         }
     }
     
@@ -106,9 +107,7 @@ struct RecordingFeature {
                     )
                     
                 case .paused:
-                    // ✅ 일시정지 → 재시작:
-                    //    - 녹음 resume
-                    //    - STT는 새로 시작 ❌, 기존 세션 resume ✅
+                    // ✅ 일시정지 → 재시작
                     state.status = .recording
                     
                     let resumeTranscription = speechService.resumeTranscription
@@ -140,8 +139,6 @@ struct RecordingFeature {
                 
                 let pauseTranscription = speechService.pauseTranscription
                 
-                // ✅ STT 스트림(liveSTT)은 cancel 하지 않음
-                //    -> 같은 AsyncStream 안에서 audioEngine 만 pause
                 return .merge(
                     .cancel(id: CancelID.timer),
                     .run { _ in
@@ -163,9 +160,6 @@ struct RecordingFeature {
                 
                 return .merge(
                     .cancel(id: CancelID.timer),
-                    // 필요하면 여기서 liveSTT 취소도 추가 가능하지만,
-                    // stopLiveTranscription() 에서 continuation.finish() 해주면
-                    // stream 종료 → .liveTranscriptFinished 액션까지 흐름 이어짐
                     .run { _ in
                         stopLiveTranscription()
                     }
@@ -194,8 +188,12 @@ struct RecordingFeature {
             // MARK: - Save
             case .saveRecording(let tempUrl, let length, let ownerId, let context):
                 let transcript = state.finalTranscript
+                let saveProject = projectLocalDataClient.save
+                let uploadAudio = fileCloudClient.uploadFile
+                let uploadProjects = firebaseClient.uploadProjects
+                let updateSyncStatus = projectLocalDataClient.updateSyncStatus
                 
-                return .run { [projectLocalDataClient, audioCloudClient, firebaseClient] send in
+                return .run { send in
                     do {
                         guard let storedPath = copyFileToDocuments(from: tempUrl) else {
                             await send(.recordingSaveFailed("파일 저장 실패"))
@@ -206,7 +204,7 @@ struct RecordingFeature {
                         dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
                         let fileName = "녹음 \(dateFormatter.string(from: Date()))"
                         
-                        let payload = try projectLocalDataClient.save(
+                        let payload = try saveProject(
                             context,
                             fileName,
                             .audio,
@@ -222,7 +220,7 @@ struct RecordingFeature {
                         if let ownerId {
                             let localURL = URL(fileURLWithPath: storedPath)
                             
-                            let remotePath = try await audioCloudClient.uploadAudio(
+                            let remotePath = try await uploadAudio(
                                 ownerId,
                                 payload.id,
                                 localURL
@@ -242,10 +240,10 @@ struct RecordingFeature {
                                 remoteAudioPath: remotePath
                             )
                             
-                            try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
+                            try await uploadProjects(ownerId, [syncedPayload])
                             
                             await MainActor.run {
-                                try? projectLocalDataClient.updateSyncStatus(
+                                try? updateSyncStatus(
                                     context,
                                     [payload.id],
                                     .synced,
