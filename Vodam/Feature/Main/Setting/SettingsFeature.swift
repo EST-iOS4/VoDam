@@ -13,25 +13,27 @@ import UIKit
 
 @Reducer
 struct SettingsFeature {
-
+    
     @ObservableState
     struct State: Equatable {
         var user: User?
-
+        
         @Presents var alert: AlertState<Action.Alert>?
-
+        
         var lastDeletedOwnerId: String? = nil
         var isShowingAppleDisconnectGuide: Bool = false
         
         // 삭제 요청 트리거
         var pendingDeleteOwnerId: String? = nil
+        // 로그아웃 시 로컬 데이터 삭제 트리거
+        var pendingLogoutOwnerId: String? = nil
     }
-
+    
     enum Action: Equatable {
         case loginButtonTapped
         case logoutTapped
         case deleteAccountTapped
-
+        
         case deleteAccountConfirmed
         case logoutConfirmed
         case logoutFinished(Bool)
@@ -39,45 +41,44 @@ struct SettingsFeature {
         
         // 로컬 데이터 삭제 완료 알림 (View에서 호출)
         case localDataDeleted(String) // ownerId
-
+        
         case appleDisconnectGuideOpenSettingsButtonTapped
         case appleDisconnectGuideCompletedButtonTapped
         case appleDisconnectGuideDismissed
-
+        
         case profileImagePicked(Data)
         case photoPickerItemChanged(PhotosPickerItem?)
-
+        
         case alert(PresentationAction<Alert>)
-
+        
         case delegate(Delegate)
-
+        
         enum Delegate: Equatable {
             case userUpdated(User)
             case loggedOut(Bool)
             case accountDeleted(Bool)
             case logoutCompleted
             case deleteAccountCompleted
-            case requestLocalDataDeletion(String) // ownerId - View에서 처리
         }
-
+        
         enum Alert: Equatable {
             case deleteAccountConfirmed
             case logoutConfirmed
         }
     }
-
+    
     @Dependency(\.googleAuthClient) var googleAuthClient
     @Dependency(\.kakaoAuthClient) var kakaoAuthClient
     @Dependency(\.appleAuthClient) var appleAuthClient
     @Dependency(\.firebaseClient) var firebaseClient
-
+    
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-
+                
             case .loginButtonTapped:
                 return .none
-
+                
             case .logoutTapped:
                 state.alert = AlertState {
                     TextState("로그아웃")
@@ -95,12 +96,15 @@ struct SettingsFeature {
                     TextState("정말 로그아웃 하시겠습니까?")
                 }
                 return .none
-
+                
             case .logoutConfirmed:
                 guard let user = state.user else {
                     return .send(.logoutFinished(false))
                 }
-
+                
+                // 로그아웃 시 로컬 데이터 삭제를 위한 트리거 설정
+                state.pendingLogoutOwnerId = user.ownerId
+                
                 switch user.provider {
                 case .kakao:
                     return .run { send in
@@ -112,7 +116,7 @@ struct SettingsFeature {
                             await send(.logoutFinished(false))
                         }
                     }
-
+                    
                 case .google:
                     return .run { [googleAuthClient] send in
                         await MainActor.run {
@@ -120,7 +124,7 @@ struct SettingsFeature {
                         }
                         await send(.logoutFinished(true))
                     }
-
+                    
                 case .apple:
                     return .run { [appleAuthClient] send in
                         do {
@@ -132,19 +136,21 @@ struct SettingsFeature {
                         }
                     }
                 }
-
+                
             case .logoutFinished(let isSuccess):
                 if isSuccess {
                     state.user = nil
+                    state.pendingLogoutOwnerId = nil
                     return .merge(
                         .send(.delegate(.loggedOut(true))),
                         .send(.delegate(.logoutCompleted))
                     )
                 } else {
                     print("로그아웃 실패")
+                    state.pendingLogoutOwnerId = nil
                     return .send(.delegate(.loggedOut(false)))
                 }
-
+                
             case .deleteAccountTapped:
                 state.alert = AlertState {
                     TextState("회원 탈퇴")
@@ -162,32 +168,31 @@ struct SettingsFeature {
                     TextState("정말로 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다.")
                 }
                 return .none
-
+                
             case .deleteAccountConfirmed:
                 guard let user = state.user else {
                     return .send(.deleteAccountFinished(false))
                 }
-
+                
                 if user.provider == .apple {
                     state.isShowingAppleDisconnectGuide = true
                     return .none
                 }
-
+                
                 let ownerId = user.ownerId
                 state.pendingDeleteOwnerId = ownerId
-
+                
                 switch user.provider {
                 case .kakao:
                     return .run { [firebaseClient, kakaoAuthClient] send in
                         do {
-                            // View에서 로컬 데이터 삭제 요청
-                            await send(.delegate(.requestLocalDataDeletion(ownerId)))
-                            
                             // Firebase 데이터 삭제
                             try await firebaseClient.deleteAllForUser(ownerId)
+                            print("Firebase 데이터 삭제 완료")
                             
                             // 카카오 계정 연결 해제
                             try await kakaoAuthClient.deleteAccount()
+                            print("카카오 계정 연결 해제 완료")
                             
                             await send(.deleteAccountFinished(true))
                         } catch {
@@ -195,55 +200,59 @@ struct SettingsFeature {
                             await send(.deleteAccountFinished(false))
                         }
                     }
-
+                    
                 case .google:
                     return .run { [firebaseClient, googleAuthClient] send in
                         do {
-                            // View에서 로컬 데이터 삭제 요청
-                            await send(.delegate(.requestLocalDataDeletion(ownerId)))
-                            
                             // Firebase 데이터 삭제
                             try await firebaseClient.deleteAllForUser(ownerId)
+                            print("Firebase 데이터 삭제 완료")
                             
-                            // 구글 계정 연결 해제
-                            try await googleAuthClient.disconnect()
+                            // 구글 계정 연결 해제 시도 (실패해도 계속 진행)
+                            do {
+                                try await googleAuthClient.disconnect()
+                                print("구글 계정 연결 해제 완료")
+                            } catch {
+                                print("구글 계정 연결 해제 실패 (계속 진행): \(error)")
+                                // 구글 disconnect 실패는 무시하고 계속 진행
+                            }
                             
                             await send(.deleteAccountFinished(true))
                         } catch {
-                            print("구글 계정 연결 해제 실패: \(error)")
+                            print("Firebase 데이터 삭제 실패: \(error)")
                             await send(.deleteAccountFinished(false))
                         }
                     }
-
+                    
                 case .apple:
                     return .none
                 }
-
+                
             case .appleDisconnectGuideOpenSettingsButtonTapped:
                 return .run { _ in
                     if let url = URL(
                         string: UIApplication.openSettingsURLString
                     ) {
-                        UIApplication.shared.open(url)
+                        await MainActor.run {
+                            UIApplication.shared.open(url)
+                        }
                     }
                 }
-
+                
             case .appleDisconnectGuideCompletedButtonTapped:
                 state.isShowingAppleDisconnectGuide = false
-
+                
                 guard let user = state.user else {
                     return .send(.deleteAccountFinished(false))
                 }
                 let ownerId = user.ownerId
                 state.pendingDeleteOwnerId = ownerId
-
+                
                 return .run { [firebaseClient] send in
                     do {
-                        // View에서 로컬 데이터 삭제 요청
-                        await send(.delegate(.requestLocalDataDeletion(ownerId)))
-                        
                         // Firebase 데이터 삭제
                         try await firebaseClient.deleteAllForUser(ownerId)
+                        print("Firebase 데이터 삭제 완료")
                         
                         await send(.deleteAccountFinished(true))
                     } catch {
@@ -251,7 +260,7 @@ struct SettingsFeature {
                         await send(.deleteAccountFinished(false))
                     }
                 }
-
+                
             case .appleDisconnectGuideDismissed:
                 state.isShowingAppleDisconnectGuide = false
                 return .none
@@ -259,7 +268,7 @@ struct SettingsFeature {
             case let .localDataDeleted(ownerId):
                 print("로컬 데이터 삭제 완료: \(ownerId)")
                 return .none
-
+                
             case .deleteAccountFinished(let isSuccess):
                 state.pendingDeleteOwnerId = nil
                 if isSuccess {
@@ -274,12 +283,12 @@ struct SettingsFeature {
                     state.lastDeletedOwnerId = nil
                     return .send(.delegate(.accountDeleted(false)))
                 }
-
+                
             case .photoPickerItemChanged(let item):
                 guard let item, state.user != nil else {
                     return .none
                 }
-
+                
                 return .run { send in
                     do {
                         guard
@@ -289,11 +298,11 @@ struct SettingsFeature {
                         else {
                             return
                         }
-
+                        
                         guard let uiImage = UIImage(data: data) else {
                             return
                         }
-
+                        
                         guard
                             let resizedImage = await uiImage.resized(
                                 toWidth: 200
@@ -301,7 +310,7 @@ struct SettingsFeature {
                         else {
                             return
                         }
-
+                        
                         guard
                             let compressedData = resizedImage.jpegData(
                                 compressionQuality: 0.5
@@ -309,32 +318,32 @@ struct SettingsFeature {
                         else {
                             return
                         }
-
+                        
                         await send(.profileImagePicked(compressedData))
                     } catch {
                         print("프로필 이미지 변경 실패: \(error)")
                     }
                 }
-
+                
             case .profileImagePicked(let data):
                 guard var user = state.user else {
                     return .none
                 }
-
+                
                 user.localProfileImageData = data
                 state.user = user
-
+                
                 return .send(.delegate(.userUpdated(user)))
-
+                
             case .delegate:
                 return .none
-
+                
             case .alert(.presented(.deleteAccountConfirmed)):
                 return .send(.deleteAccountConfirmed)
-
+                
             case .alert(.presented(.logoutConfirmed)):
                 return .send(.logoutConfirmed)
-
+                
             case .alert:
                 return .none
             }

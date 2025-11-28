@@ -13,10 +13,6 @@ struct FileButtonView: View {
     let store: StoreOf<FileButtonFeature>
     let ownerId: String?
     
-    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
-    @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.audioCloudClient) var audioCloudClient
-    
     init(store: StoreOf<FileButtonFeature>, ownerId: String? = nil) {
         self.store = store
         self.ownerId = ownerId
@@ -40,7 +36,8 @@ struct FileButtonView: View {
                    let url = viewStore.selectedFileURL,
                    viewStore.errorMessage == nil {
                     let transcript = viewStore.transcript.isEmpty ? nil : viewStore.transcript
-                    saveProject(url: url, transcript: transcript)
+                    // Feature의 saveFile 액션 호출
+                    viewStore.send(.saveFile(url, transcript, context, ownerId))
                 }
             }
         }
@@ -128,104 +125,6 @@ struct FileButtonView: View {
                     .font(.caption)
                     .foregroundColor(.gray)
             }
-        }
-    }
-    
-    // MARK: - SwiftData 저장
-    private func saveProject(url: URL, transcript: String?) {
-        do {
-            let projectName = url.deletingPathExtension().lastPathComponent
-            
-            // 파일을 앱의 Documents 디렉토리로 복사
-            guard let copiedPath = copyFileToDocuments(url: url) else {
-                print("❌ 파일 복사 실패")
-                return
-            }
-            
-            let payload = try projectLocalDataClient.save(
-                context,
-                projectName,
-                .file,
-                copiedPath,
-                nil, // fileLength - 오디오 파일은 나중에 계산
-                transcript,
-                ownerId
-            )
-            
-            print("✅ 파일 프로젝트 저장 성공 → \(payload.name)")
-            
-            // 로그인 사용자면 Firebase 업로드
-            if let ownerId {
-                Task {
-                    do {
-                        
-                        let localURL = URL(fileURLWithPath: copiedPath)
-                        let remotePath = try await audioCloudClient.uploadAudio(
-                            ownerId,
-                            payload.id,
-                            localURL
-                        )
-                        print("Storage에 파일 업로드 성공 → \(remotePath)")
-                        
-                        let syncedPayload = ProjectPayload(
-                            id: payload.id,
-                            name: payload.name,
-                            creationDate: payload.creationDate,
-                            category: payload.category,
-                            isFavorite: payload.isFavorite,
-                            filePath: payload.filePath,
-                            fileLength: payload.fileLength,
-                            transcript: payload.transcript,
-                            ownerId: ownerId,
-                            syncStatus: .synced,
-                            remoteAudioPath: remotePath
-                        )
-                        
-                        try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
-                        
-                        try projectLocalDataClient.updateSyncStatus(
-                            context, [payload.id], .synced, ownerId, remotePath
-                        )
-                        
-                        print("✅ Firebase 업로드 성공")
-                    } catch {
-                        print("❌ Firebase 업로드 실패: \(error)")
-                    }
-                }
-            }
-            
-        } catch {
-            print("❌ 파일 프로젝트 저장 실패: \(error)")
-        }
-    }
-    
-    // MARK: - 파일 복사
-    private func copyFileToDocuments(url: URL) -> String? {
-        let fileManager = FileManager.default
-        guard let documentsDir = fileManager.urls(
-            for: .documentDirectory,
-            in: .userDomainMask
-        ).first else { return nil }
-        
-        let destinationURL = documentsDir.appendingPathComponent(url.lastPathComponent)
-        
-        // 이미 존재하면 삭제
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            try? fileManager.removeItem(at: destinationURL)
-        }
-        
-        // Security scoped access
-        guard url.startAccessingSecurityScopedResource() else {
-            return nil
-        }
-        defer { url.stopAccessingSecurityScopedResource() }
-        
-        do {
-            try fileManager.copyItem(at: url, to: destinationURL)
-            return destinationURL.path
-        } catch {
-            print("파일 복사 실패: \(error)")
-            return url.path
         }
     }
 }

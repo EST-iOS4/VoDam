@@ -43,7 +43,26 @@ extension GoogleAuthClient: DependencyKey {
                 )
             },
             signOut: {},
-            disconnect: {}
+            disconnect: {
+                do {
+                    try await GIDSignIn.sharedInstance.disconnect()
+                    print("Google disconnect 성공")
+                } catch let error as NSError {
+                    print("Google disconnect 실패")
+                    print("Error Domain: \(error.domain)")
+                    print("Error Code: \(error.code)")
+                    print("Error Description: \(error.localizedDescription)")
+                    print("User Info: \(error.userInfo)")
+                    
+                    // HTTP 응답 데이터가 있다면 출력
+                    if let data = error.userInfo["data"] as? Data,
+                       let jsonString = String(data: data, encoding: .utf8) {
+                        print("  - Response Data: \(jsonString)")
+                    }
+                    
+                    throw error
+                }
+            }
         )
     }
 }

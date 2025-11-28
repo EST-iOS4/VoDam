@@ -7,7 +7,7 @@
 
 import ComposableArchitecture
 import SwiftUI
-import SwiftData // <-- 이 줄을 추가하여 FetchDescriptor, ProjectModel 접근 가능하게 함
+import SwiftData
 
 struct ProjectListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -33,12 +33,14 @@ struct ProjectListView: View {
                     sortMenu
                 }
             }
-            .onAppear {
-                store.send(.loadProjects(modelContext))
+            .task {
+                if !store.hasLoadedOnce {
+                    store.send(.loadProjects(modelContext))
+                }
             }
             .onChange(of: store.refreshTrigger) { oldValue, newValue in
-                if newValue != nil {
-                    print("Refresh triggeren: \(newValue?.uuidString ?? "nil")")
+                if newValue != nil && oldValue != newValue {
+                    print("Refresh triggered: \(newValue?.uuidString ?? "nil")")
                     store.send(.loadProjects(modelContext))
                 }
             }
@@ -89,7 +91,7 @@ struct ProjectListView: View {
     private var sortMenu: some View {
         Menu {
             Picker(
-                "정렬 방식을 선택하세요. ",
+                "정렬 방식을 선택하세요.",
                 selection: $store.currentSort.animation()
             ) {
                 ForEach(SortFilter.allCases, id: \.self) { sort in
@@ -99,38 +101,6 @@ struct ProjectListView: View {
         } label: {
             Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
         }
-    }
-    
-    // 이 함수는 디버깅 목적으로, 실제 앱에서는 제거하거나 주석 처리하는 것이 좋습니다.
-    private func debugPrintAllProjects() {
-        print(String(repeating: "=", count: 60))
-        print("SwiftData 전체 데이터베이스 조회")
-        print(String(repeating: "=", count: 60))
-        
-        // ProjectModel이 정의되어 있다고 가정하고 FetchDescriptor를 사용합니다.
-        // SwiftData를 import 했기 때문에 이제 ProjectModel의 key path를 찾을 수 있습니다.
-        let allDescriptor = FetchDescriptor<ProjectModel>(
-            sortBy: [SortDescriptor(\.creationDate, order: .reverse)]
-        )
-        
-        do {
-            let allModels = try modelContext.fetch(allDescriptor)
-            print("전체 프로젝트 수: \(allModels.count)개")
-            
-            for (index, model) in allModels.enumerated() {
-                print("[\(index)] id: \(model.id)")
-                print("     name: \(model.name)")
-                print("     ownerId: \(model.ownerId ?? "nil")")
-                print("     syncStatus: \(model.syncStatusRaw)")
-                print("     category: \(model.categoryRaw)")
-                print("     creationDate: \(model.creationDate)")
-                print("     ---")
-            }
-        } catch {
-            print("전체 조회 실패: \(error)")
-        }
-        
-        print(String(repeating: "=", count: 60))
     }
     
     @ViewBuilder
@@ -143,6 +113,8 @@ struct ProjectListView: View {
         }
     }
 }
+
+// MARK: - ProjectRow
 
 struct ProjectRow: View {
     let project: Project
@@ -206,6 +178,7 @@ struct ProjectRow: View {
     }
     
     // MARK: - Project Info
+    
     private var projectInfo: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(project.name)
@@ -235,6 +208,7 @@ struct ProjectRow: View {
     }
     
     // MARK: - Favorite Button
+    
     private var favoriteButton: some View {
         Button(action: onFavoriteTap) {
             Image(systemName: project.isFavorite ? "star.fill" : "star")
