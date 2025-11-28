@@ -14,6 +14,9 @@
 		7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */; };
 		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
+		7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F378E2ED694C6008961A3 /* FirebaseCore */; };
+		7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F37902ED694C6008961A3 /* FirebaseFirestore */; };
+		7D9F44D22ED7DA17008961A3 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F44D12ED7DA17008961A3 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +76,7 @@
 				70C12ABD2ED8803100D7BB2A /* GoogleSignIn in Frameworks */,
 				70C12AC02ED8814F00D7BB2A /* FirebaseAnalyticsCore in Frameworks */,
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
+				7D9F44D22ED7DA17008961A3 /* FirebaseStorage in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
 				7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */,
@@ -83,10 +87,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		7D9F44D02ED7DA17008961A3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		8B4C67BA2EBC8481003C67F9 = {
 			isa = PBXGroup;
 			children = (
 				8B4C67C52EBC8481003C67F9 /* Vodam */,
+				7D9F44D02ED7DA17008961A3 /* Frameworks */,
 				8B4C67C42EBC8481003C67F9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -144,9 +156,13 @@
 				7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */,
 				7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */,
 				7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */,
-				70C12ABC2ED8803100D7BB2A /* GoogleSignIn */,
+				7D522F372ED5344700EC191C /* GoogleSignIn */,
+				7D522F392ED5344700EC191C /* GoogleSignInSwift */,
+				7D9F378E2ED694C6008961A3 /* FirebaseCore */,
+				7D9F37902ED694C6008961A3 /* FirebaseFirestore */,
+				7D9F44D12ED7DA17008961A3 /* FirebaseStorage */,
 				70C12ABF2ED8814F00D7BB2A /* FirebaseAnalyticsCore */,
-				70C12AC12ED8814F00D7BB2A /* FirebaseFirestore */,
+
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -587,6 +603,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
 			productName = ComposableArchitecture;
+		};
+		7D9F378E2ED694C6008961A3 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		7D9F37902ED694C6008961A3 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		7D9F44D12ED7DA17008961A3 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

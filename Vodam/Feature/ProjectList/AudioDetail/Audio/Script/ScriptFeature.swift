@@ -11,19 +11,24 @@ import ComposableArchitecture
 struct ScriptFeature {
     @ObservableState
     struct State: Equatable {
-        var text: String = "This is the script content."
+        var text: String
+        
+        init(text: String = "This is the script content.") {
+                    self.text = text
+                }
     }
 
     enum Action {
-        
+        case setText(String)
     }
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-                
+            case .setText(let text):
+                state.text = text
+                return .none
             }
-            return .none
         }
     }
 }

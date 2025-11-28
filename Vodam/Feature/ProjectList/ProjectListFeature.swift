@@ -1,17 +1,28 @@
 import ComposableArchitecture
 import Foundation
+import SwiftData
 
 @Reducer
 struct ProjectListFeature {
+    
+    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
+    @Dependency(\.firebaseClient) var firebaseClient
+    @Dependency(\.fileCloudClient) var fileCloudClient
+    
     @ObservableState
     struct State: Equatable {
-        var projects: IdentifiedArrayOf<Project> = Project.mock
+        var projects: IdentifiedArrayOf<Project> = []
         var isLoading = false
-        var allCategories: [FilterCategory] =  FilterCategory.allCases
+        var hasLoadedOnce = false
+        var refreshTrigger: UUID? = nil
+        var allCategories: [FilterCategory] = FilterCategory.allCases
         var selectedCategory: FilterCategory = .all
         var currentSort: SortFilter = .sortedDate
         var searchText: String = ""
         var isFavorite = false
+        
+        // 현재 사용자 (AppFeature에서 전달)
+        var currentUser: User? = nil
         
         @Presents var destination: Destination.State?
         
@@ -19,11 +30,15 @@ struct ProjectListFeature {
             var filtered = projects
             
             if let selectedProjectCategory = selectedCategory.projectCategory {
-                filtered = filtered.filter { $0.category == selectedProjectCategory }
+                filtered = filtered.filter {
+                    $0.category == selectedProjectCategory
+                }
             }
             
             if !searchText.isEmpty {
-                filtered = filtered.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+                filtered = filtered.filter {
+                    $0.name.localizedCaseInsensitiveContains(searchText)
+                }
             }
             
             filtered.sort { p1, p2 in
@@ -35,7 +50,7 @@ struct ProjectListFeature {
                 case .sortedName:
                     return p1.name < p2.name
                 case .sortedDate:
-                    return p1.creationDate < p2.creationDate
+                    return p1.creationDate > p2.creationDate
                 }
             }
             
@@ -45,62 +60,194 @@ struct ProjectListFeature {
     
     enum Action: BindableAction {
         case onAppear
+        case loadProjects(ModelContext)
+        case refreshProjects
         case projectTapped(id: Project.ID)
-        case favoriteButtonTapped(id: Project.ID)
+        case favoriteButtonTapped(id: Project.ID, ModelContext)
+        case deleteProject(id: Project.ID, ModelContext)
         
-        case _projectsResponse(Result<IdentifiedArrayOf<Project>, Error>)
+        case _projectsResponse(Result<[ProjectPayload], Error>)
+        case _favoriteUpdated(id: String, isFavorite: Bool)
         case binding(BindingAction<State>)
         
         case destination(PresentationAction<Destination.Action>)
+        
+        // 사용자 변경 알림 (AppFeature에서 전달)
+        case userChanged(User?)
     }
-
+    
     var body: some Reducer<State, Action> {
         BindingReducer()
         
         Reduce { state, action in
             switch action {
             case .onAppear:
-                state.isLoading = true
-                // TODO: 실제 파이어베이스에 저장된 데이터를 불러오는 로직으로 교체해야함.
-                return .run { send in
-
-                    await send(._projectsResponse(
-                        Result { try await Task.sleep(for: .seconds(1))
-                            return Project.mock
-                        }
-                    ))
-                }
+                // View에서 context와 함께 loadProjects 호출
+                return .none
                 
-            case let .projectTapped(id: projectId):
-                if let project = state.projects[id: projectId] {
-                    switch project.category {
-                    case .pdf:
-                        state.destination = .pdfDetail(PdfDetailFeature.State(project: project))
-                    case .file, .audio:
-                        state.destination = .audioDetail(AudioDetailFeature.State(project: project))
-                    @unknown default:
-                        return .none
+            case .refreshProjects:
+                state.refreshTrigger = UUID()
+                return .none
+                
+            case .loadProjects(let context):
+                state.isLoading = true
+                state.hasLoadedOnce = true
+                state.refreshTrigger = nil
+                let ownerId = state.currentUser?.ownerId
+                
+                return .run { [projectLocalDataClient] send in
+                    do {
+                        let payloads = try await MainActor.run {
+                            try projectLocalDataClient.fetchAll(
+                                context,
+                                ownerId
+                            )
+                        }
+                        await send(._projectsResponse(.success(payloads)))
+                    } catch {
+                        await send(._projectsResponse(.failure(error)))
                     }
                 }
-                return .none
                 
-            case let .favoriteButtonTapped(id: projectId):
-                //TODO: 파이어베이스에 저장된 상태도 변경이 되어야해서 .run 으로 변경해야 한다.
-                if var project = state.projects[id: projectId] {
-                    project.isFavorite.toggle()
-                    state.projects[id: projectId] = project
+            case .projectTapped(id: let projectId):
+                if let project = state.projects[id: projectId] {
+                    state.destination = .audioDetail(
+                        AudioDetailFeature.State(project: project)
+                    )
                 }
                 return .none
                 
-            case let ._projectsResponse(.success(projects)):
+            case .favoriteButtonTapped(id: let projectId, let context):
+                guard var project = state.projects[id: projectId] else {
+                    return .none
+                }
+                
+                let newFavorite = !project.isFavorite
+                project.isFavorite = newFavorite
+                state.projects[id: projectId] = project
+                
+                let projectIdString = projectId.uuidString
+                let ownerId = state.currentUser?.ownerId
+                
+                return .run { [projectLocalDataClient, firebaseClient] send in
+                    do {
+                        // SwiftData 업데이트 - MainActor에서 실행
+                        try await MainActor.run {
+                            try projectLocalDataClient.update(
+                                context,
+                                projectIdString,
+                                nil,  // name
+                                newFavorite,
+                                nil,  // transcript
+                                nil  // syncStatus
+                            )
+                        }
+                        
+                        // 로그인 사용자면 Firebase도 업데이트
+                        if let ownerId {
+                            let payloads = try await MainActor.run {
+                                try projectLocalDataClient.fetchAll(
+                                    context,
+                                    ownerId
+                                )
+                            }
+                            if let payload = payloads.first(where: {
+                                $0.id == projectIdString
+                            }) {
+                                try await firebaseClient.updateProject(
+                                    ownerId,
+                                    payload
+                                )
+                            }
+                        }
+                        
+                        await send(
+                            ._favoriteUpdated(
+                                id: projectIdString,
+                                isFavorite: newFavorite
+                            )
+                        )
+                    } catch {
+                        print("즐겨찾기 업데이트 실패: \(error)")
+                    }
+                }
+                
+            case .deleteProject(id: let projectId, let context):
+                guard let project = state.projects[id: projectId] else {
+                    return .none
+                }
+                let projectIdString = projectId.uuidString
+                let ownerId = state.currentUser?.ownerId
+                let remotePath = project.filePath
+                
+                // UI에서 먼저 제거
+                state.projects.remove(id: projectId)
+                
+                return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] _ in
+                    do {
+                        // SwiftData에서 삭제 - MainActor에서 실행
+                        try await MainActor.run {
+                            try projectLocalDataClient.delete(
+                                context,
+                                projectIdString
+                            )
+                        }
+                        
+                        if let ownerId {
+                            if let remotePath, !remotePath.isEmpty {
+                                do {
+                                    try await fileCloudClient.deleteFile(remotePath)
+                                    print("Storage 오디오 파일 삭제 완료: \(remotePath)")
+                                } catch {
+                                    print("Storage 오디오 파일 삭제 실패 (계속 진행): \(error.localizedDescription)")
+                                }
+                            }
+                            // 로그인 사용자면 Firebase에서도 삭제
+                            try await firebaseClient.deleteProject(
+                                ownerId,
+                                projectIdString
+                            )
+                        }
+                        print("프로젝트 삭제 완료: \(projectIdString)")
+                    } catch {
+                        print("프로젝트 삭제 실패: \(error)")
+                    }
+                }
+                
+            case ._projectsResponse(.success(let payloads)):
                 state.isLoading = false
-                state.projects = projects
+                
+                // ProjectPayload → Project 변환
+                let projects = payloads.map { payload -> Project in
+                    Project(
+                        id: UUID(uuidString: payload.id) ?? UUID(),
+                        name: payload.name,
+                        creationDate: payload.creationDate,
+                        category: payload.category,
+                        isFavorite: payload.isFavorite,
+                        filePath: payload.filePath,
+                        fileLength: payload.fileLength,
+                        transcript: payload.transcript,
+                        syncStatus: payload.syncStatus ?? .localOnly
+                    )
+                }
+                
+                state.projects = IdentifiedArrayOf(uniqueElements: projects)
                 return .none
                 
-            case ._projectsResponse(.failure):
+            case ._projectsResponse(.failure(let error)):
                 state.isLoading = false
-                // TODO: 에러 처리 (예: 에러 알림 표시)
+                state.refreshTrigger = nil
+                print("프로젝트 조회 실패: \(error)")
                 return .none
+                
+            case ._favoriteUpdated:
+                // 이미 State에서 업데이트됨
+                return .none
+                
+            case .userChanged(let user):
+                state.currentUser = user
+                return .send(.refreshProjects)
                 
             case .destination, .binding:
                 return .none
@@ -120,20 +267,15 @@ extension ProjectListFeature {
         @ObservableState
         enum State: Equatable {
             case audioDetail(AudioDetailFeature.State)
-            case pdfDetail(PdfDetailFeature.State)
         }
         
         enum Action {
             case audioDetail(AudioDetailFeature.Action)
-            case pdfDetail(PdfDetailFeature.Action)
         }
         
         var body: some Reducer<State, Action> {
             Scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailFeature()
-            }
-            Scope(state: \.pdfDetail, action: \.pdfDetail) {
-                PdfDetailFeature()
             }
         }
     }
