@@ -43,7 +43,7 @@ struct VodamApp: App {
                 }
                 _ = GIDSignIn.sharedInstance.handle(url)
             }
-            
         }
+        .modelContainer(for: ProjectModel.self)
     }
 }
