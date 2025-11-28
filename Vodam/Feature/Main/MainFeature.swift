@@ -150,6 +150,9 @@ struct MainFeature {
                 state.settings = nil
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
+            
+            case .recording(.delegate(.projectSaved(let projectId))):
+                return .send(.delegate(.projectSaved(projectId)))
                 
             case .loginProviders:
                 return .none
@@ -162,9 +165,6 @@ struct MainFeature {
                 
             case .recording, .fileButton, .pdfButton:
                 return .none
-                
-            case .recording(.delegate(.projectSaved(let projectId))):
-                return .send(.delegate(.projectSaved(projectId)))
                 
             case .delegate:
                 return .none
