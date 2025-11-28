@@ -13,6 +13,7 @@ struct ProjectListFeature {
     struct State: Equatable {
         var projects: IdentifiedArrayOf<Project> = []
         var isLoading = false
+        var hasLoadedOnce = false
         var refreshTrigger: UUID? = nil
         var allCategories: [FilterCategory] = FilterCategory.allCases
         var selectedCategory: FilterCategory = .all
@@ -90,6 +91,7 @@ struct ProjectListFeature {
                 
             case .loadProjects(let context):
                 state.isLoading = true
+                state.hasLoadedOnce = true 
                 state.refreshTrigger = nil
                 let ownerId = state.currentUser?.ownerId
                 
@@ -109,16 +111,9 @@ struct ProjectListFeature {
                 
             case .projectTapped(id: let projectId):
                 if let project = state.projects[id: projectId] {
-                    //                    switch project.category {
-                    //                    case .pdf:
-                    //                        state.destination = .pdfDetail(
-                    //                            PdfDetailFeature.State(project: project)
-                    //                        )
-                    //                    case .file, .audio:
                     state.destination = .audioDetail(
                         AudioDetailFeature.State(project: project)
                     )
-                    //                    }
                 }
                 return .none
                 
@@ -244,6 +239,7 @@ struct ProjectListFeature {
                 
             case ._projectsResponse(.failure(let error)):
                 state.isLoading = false
+                state.refreshTrigger = nil
                 print("프로젝트 조회 실패: \(error)")
                 return .none
                 
@@ -273,21 +269,16 @@ extension ProjectListFeature {
         @ObservableState
         enum State: Equatable {
             case audioDetail(AudioDetailFeature.State)
-            //            case pdfDetail(PdfDetailFeature.State)
         }
         
         enum Action {
             case audioDetail(AudioDetailFeature.Action)
-            //            case pdfDetail(PdfDetailFeature.Action)
         }
         
         var body: some Reducer<State, Action> {
             Scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailFeature()
             }
-            //            Scope(state: \.pdfDetail, action: \.pdfDetail) {
-            //                PdfDetailFeature()
-            //            }
         }
     }
 }
