@@ -45,5 +45,7 @@ struct VodamApp: App {
             }
             
         }
+        
+        .modelContainer(for: ProjectModel.self)
     }
 }

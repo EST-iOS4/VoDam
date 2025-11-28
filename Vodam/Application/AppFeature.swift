@@ -106,11 +106,13 @@ struct AppFeature {
                 state.list.currentUser = nil
                 return .none
                 
-            case .main:
-                return .none
-                
+            // ✅ 구체적인 case를 먼저 배치
             case .main(.delegate(.projectSaved)):
                 return .send(.list(.refreshProjects))
+                
+            // ✅ 일반적인 case를 나중에 배치
+            case .main:
+                return .none
                 
             case .list:
                 return .none
