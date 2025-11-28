@@ -82,7 +82,8 @@ struct MainView: View {
                 store: store.scope(
                     state: \.pdfButton,
                     action: \.pdfButton
-                )
+                ),
+                ownerId: store.currentUser?.ownerId
             )
             
             Spacer()
