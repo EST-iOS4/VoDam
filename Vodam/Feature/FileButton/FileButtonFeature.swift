@@ -134,16 +134,18 @@ struct FileButtonFeature {
                             fileLength = Int(duration)
                         }
                         
-                        // 4. SwiftData에 저장
-                        let payload = try projectLocalDataClient.save(
-                            context,
-                            fileName,
-                            .file,
-                            storedPath,
-                            fileLength,
-                            transcript,
-                            ownerId
-                        )
+                        // 4. SwiftData에 저장 - MainActor에서 실행
+                        let payload = try await MainActor.run {
+                            try projectLocalDataClient.save(
+                                context,
+                                fileName,
+                                .file,
+                                storedPath,
+                                fileLength,
+                                transcript,
+                                ownerId
+                            )
+                        }
                         print("📁 파일 로컬 저장 완료: \(payload.id)")
                         
                         await send(.fileSaved(payload.id))
@@ -174,8 +176,9 @@ struct FileButtonFeature {
                             
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
                             
-                            await MainActor.run {
-                                try? projectLocalDataClient.updateSyncStatus(
+                            // MainActor에서 실행
+                            try await MainActor.run {
+                                try projectLocalDataClient.updateSyncStatus(
                                     context,
                                     [payload.id],
                                     .synced,

@@ -94,10 +94,12 @@ struct ProjectListFeature {
                 
                 return .run { [projectLocalDataClient] send in
                     do {
-                        let payloads = try projectLocalDataClient.fetchAll(
-                            context,
-                            ownerId
-                        )
+                        let payloads = try await MainActor.run {
+                            try projectLocalDataClient.fetchAll(
+                                context,
+                                ownerId
+                            )
+                        }
                         await send(._projectsResponse(.success(payloads)))
                     } catch {
                         await send(._projectsResponse(.failure(error)))
@@ -133,22 +135,26 @@ struct ProjectListFeature {
                 
                 return .run { [projectLocalDataClient, firebaseClient] send in
                     do {
-                        // SwiftData 업데이트
-                        try projectLocalDataClient.update(
-                            context,
-                            projectIdString,
-                            nil,  // name
-                            newFavorite,
-                            nil,  // transcript
-                            nil  // syncStatus
-                        )
+                        // SwiftData 업데이트 - MainActor에서 실행
+                        try await MainActor.run {
+                            try projectLocalDataClient.update(
+                                context,
+                                projectIdString,
+                                nil,  // name
+                                newFavorite,
+                                nil,  // transcript
+                                nil  // syncStatus
+                            )
+                        }
                         
                         // 로그인 사용자면 Firebase도 업데이트
                         if let ownerId {
-                            let payloads = try projectLocalDataClient.fetchAll(
-                                context,
-                                ownerId
-                            )
+                            let payloads = try await MainActor.run {
+                                try projectLocalDataClient.fetchAll(
+                                    context,
+                                    ownerId
+                                )
+                            }
                             if let payload = payloads.first(where: {
                                 $0.id == projectIdString
                             }) {
@@ -179,11 +185,13 @@ struct ProjectListFeature {
                 
                 return .run { [projectLocalDataClient, firebaseClient, audioCloudClient] _ in
                     do {
-                        // SwiftData에서 삭제
-                        try projectLocalDataClient.delete(
-                            context,
-                            projectIdString
-                        )
+                        // SwiftData에서 삭제 - MainActor에서 실행
+                        try await MainActor.run {
+                            try projectLocalDataClient.delete(
+                                context,
+                                projectIdString
+                            )
+                        }
                         
                         if let ownerId {
                             do {

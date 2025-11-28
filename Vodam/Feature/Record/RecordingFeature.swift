@@ -131,16 +131,18 @@ struct RecordingFeature {
                         dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
                         let fileName = "녹음 \(dateFormatter.string(from: Date()))"
                         
-                        // 3. SwiftData에 저장 (Local)
-                        let payload = try projectLocalDataClient.save(
-                            context,
-                            fileName,
-                            .audio,
-                            storedPath,
-                            length,
-                            nil,
-                            ownerId // 비회원이면 nil
-                        )
+                        // 3. SwiftData에 저장 (Local) - MainActor에서 실행
+                        let payload = try await MainActor.run {
+                            try projectLocalDataClient.save(
+                                context,
+                                fileName,
+                                .audio,
+                                storedPath,
+                                length,
+                                nil,
+                                ownerId
+                            )
+                        }
                         print("로컬 저장 완료: \(payload.id)")
                         
                         // 성공 알림 (UI 갱신용)
@@ -168,16 +170,16 @@ struct RecordingFeature {
                                 fileLength: payload.fileLength,
                                 transcript: payload.transcript,
                                 ownerId: ownerId,
-                                syncStatus: .synced, // 동기화됨 상태
+                                syncStatus: .synced,
                                 remoteAudioPath: remotePath
                             )
                             
                             // 4-3. Firebase DB 업로드
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
                             
-                            // 4-4. 로컬 DB 상태 업데이트
-                            await MainActor.run {
-                                try? projectLocalDataClient.updateSyncStatus(
+                            // 4-4. 로컬 DB 상태 업데이트 - MainActor에서 실행
+                            try await MainActor.run {
+                                try projectLocalDataClient.updateSyncStatus(
                                     context,
                                     [payload.id],
                                     .synced,
