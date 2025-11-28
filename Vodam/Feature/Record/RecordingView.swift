@@ -40,11 +40,13 @@ struct RecordingView: View {
                 // 상태 텍스트
                 Text(store.status.localizedText)
                     .font(.headline)
+                    .foregroundColor(.black)
                 
                 // 녹음 시간 표시
                 Text(formatTime(store.elapsedSeconds))
                     .font(.system(size: 32, weight: .medium))
                     .monospacedDigit()
+                    .foregroundColor(.black)
             }
             .padding(.vertical, 40)
         }
