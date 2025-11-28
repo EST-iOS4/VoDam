@@ -73,7 +73,7 @@ extension FirebaseClient: DependencyKey {
                         .collection("projects")
                         .document(project.id)
                     
-                    batch.setData(
+                    await batch.setData(
                         project.toFirestoreData(),
                         forDocument: docRef
                     )

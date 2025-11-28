@@ -90,6 +90,7 @@ struct ProjectListFeature {
                 
             case .loadProjects(let context):
                 state.isLoading = true
+                state.refreshTrigger = nil
                 let ownerId = state.currentUser?.ownerId
                 
                 return .run { [projectLocalDataClient] send in
