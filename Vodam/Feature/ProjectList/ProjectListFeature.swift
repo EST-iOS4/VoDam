@@ -1,3 +1,10 @@
+//
+// ProjectListView.swift
+// Vodam
+//
+// Created by 서정원 on 11/17/25.
+//
+
 import ComposableArchitecture
 import Foundation
 import SwiftData
@@ -95,15 +102,61 @@ struct ProjectListFeature {
                 state.refreshTrigger = nil
                 let ownerId = state.currentUser?.ownerId
                 
-                return .run { [projectLocalDataClient] send in
+                return .run { [projectLocalDataClient, firebaseClient] send in
                     do {
-                        let payloads = try await MainActor.run {
-                            try projectLocalDataClient.fetchAll(
-                                context,
-                                ownerId
-                            )
+                        if let ownerId = ownerId {
+                            // ✅ 로그인 상태: Firebase 기준
+                            print("[ProjectList] 로그인 상태 - Firebase에서 프로젝트 로드: \(ownerId)")
+                            
+                            // 1. Firebase에서 프로젝트 가져오기
+                            let remoteProjects = try await firebaseClient.fetchProjects(ownerId)
+                            print("[ProjectList] Firebase에서 \(remoteProjects.count)개 프로젝트 가져옴")
+                            
+                            // 2. 로컬 SwiftData와 동기화
+                            await MainActor.run {
+                                do {
+                                    // 기존 로컬 데이터 가져오기
+                                    let localProjects = try projectLocalDataClient.fetchAll(context, ownerId)
+                                    let localIds = Set(localProjects.map { $0.id })
+                                    
+                                    // Firebase 프로젝트 upsert
+                                    for remoteProject in remoteProjects {
+                                        if localIds.contains(remoteProject.id) {
+                                            // 업데이트
+                                            try projectLocalDataClient.update(
+                                                context,
+                                                remoteProject.id,
+                                                remoteProject.name,
+                                                remoteProject.isFavorite,
+                                                remoteProject.transcript,
+                                                .synced
+                                            )
+                                        } else {
+                                            // 새로 추가
+                                            try projectLocalDataClient.insert(context, remoteProject)
+                                        }
+                                    }
+                                    
+                                    print("[ProjectList] 로컬 SwiftData 동기화 완료")
+                                } catch {
+                                    print("[ProjectList] 로컬 동기화 실패: \(error)")
+                                }
+                            }
+                            
+                            // 3. 최종적으로 로컬에서 읽어서 표시 (동기화 완료된 데이터)
+                            let payloads = try await MainActor.run {
+                                try projectLocalDataClient.fetchAll(context, ownerId)
+                            }
+                            await send(._projectsResponse(.success(payloads)))
+                            
+                        } else {
+                            // ✅ 비회원 상태: 로컬만 사용
+                            print("[ProjectList] 비회원 상태 - 로컬에서 프로젝트 로드")
+                            let payloads = try await MainActor.run {
+                                try projectLocalDataClient.fetchAll(context, nil)
+                            }
+                            await send(._projectsResponse(.success(payloads)))
                         }
-                        await send(._projectsResponse(.success(payloads)))
                     } catch {
                         await send(._projectsResponse(.failure(error)))
                     }

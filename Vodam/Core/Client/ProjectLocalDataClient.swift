@@ -46,6 +46,12 @@ struct ProjectLocalDataClient {
     var deleteAllForOwner:
     @Sendable (_ context: ModelContext, _ ownerId: String) throws -> Void
     
+    var insert:
+    @Sendable (
+        _ context: ModelContext,
+        _ payload: ProjectPayload
+    ) throws -> Void
+    
     var migrateGuestProjects:
     @Sendable (
         _ context: ModelContext,
@@ -216,6 +222,26 @@ extension ProjectLocalDataClient: DependencyKey {
                 )
             },
             
+            insert: { context, payload in
+                // ProjectPayload → ProjectModel 변환
+                let model = ProjectModel(
+                    id: payload.id,
+                    name: payload.name,
+                    creationDate: payload.creationDate,
+                    category: payload.category,
+                    isFavorite: payload.isFavorite,
+                    filePath: payload.filePath,
+                    fileLength: payload.fileLength,
+                    transcript: payload.transcript,
+                    ownerId: payload.ownerId,
+                    syncStatus: payload.syncStatus ?? .synced
+                )
+                
+                context.insert(model)
+                try context.save()
+                print("[ProjectLocalDataClient] insert 성공 → id: \(payload.id), name: \(payload.name)")
+            },
+            
             migrateGuestProjects: { context, newOwnerId in
                 let localOnlyRaw = SyncStatus.localOnly.rawValue
                 
@@ -304,6 +330,7 @@ extension ProjectLocalDataClient: DependencyKey {
             update: { _, _, _, _, _, _ in },
             delete: { _, _ in },
             deleteAllForOwner: { _, _ in },
+            insert: { _, _ in },
             migrateGuestProjects: { _, _ in [] },
             updateSyncStatus: { _, _, _, _, _ in }
         )
