@@ -83,6 +83,8 @@ struct ProjectListFeature {
         case userChanged(User?)
     }
     
+    nonisolated enum ProjectListCancelID{ case loadProjects }
+
     var body: some Reducer<State, Action> {
         BindingReducer()
         
@@ -97,6 +99,12 @@ struct ProjectListFeature {
                 return .none
                 
             case .loadProjects(let context):
+                
+                guard !state.isLoading else {
+                    print("[ProjectList] 이미 로딩 중 - 중복 호출 무시")
+                    return .none
+                }
+                
                 state.isLoading = true
                 state.hasLoadedOnce = true
                 state.refreshTrigger = nil
@@ -178,14 +186,15 @@ struct ProjectListFeature {
                                 fileCloudClient: fileCloudClient
                             )
                             
-                            // 4. 최종적으로 로컬에서 읽어서 표시 (동기화 완료된 데이터)
+                            
+                            // 최종적으로 로컬에서 읽어서 표시 (동기화 완료된 데이터)
                             let payloads = try await MainActor.run {
                                 try projectLocalDataClient.fetchAll(context, ownerId)
                             }
                             await send(._projectsResponse(.success(payloads)))
                             
                         } else {
-                            // ✅ 비회원 상태: 로컬만 사용
+                            // 비회원 상태: 로컬만 사용
                             print("[ProjectList] 비회원 상태 - 로컬에서 프로젝트 로드")
                             let payloads = try await MainActor.run {
                                 try projectLocalDataClient.fetchAll(context, nil)
@@ -196,6 +205,7 @@ struct ProjectListFeature {
                         await send(._projectsResponse(.failure(error)))
                     }
                 }
+                .cancellable(id: ProjectListCancelID.loadProjects, cancelInFlight: true)
                 
             case .projectTapped(id: let projectId):
                 if let project = state.projects[id: projectId] {
