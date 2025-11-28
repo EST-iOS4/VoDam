@@ -43,6 +43,7 @@ struct MainFeature {
         enum Delegate: Equatable {
             case projectSaved(String)      // 프로젝트 저장 완료
             case syncCompleted(String)     // 동기화 완료
+            case userLoggedIn(User)        // 로그인 완료
         }
     }
     
@@ -140,11 +141,12 @@ struct MainFeature {
                     state.settings = SettingsFeature.State(user: user)
                     state.loginProviders = nil
                     
-                    return .run { _ in
+                    return .run { send in
                         await userStorageClient.save(user)
+                        await send(.delegate(.userLoggedIn(user)))
                     }
                 } else {
-                    print("로그인 실패")
+                    // 로그인 실패 또는 취소 (이미 LoginProvidersFeature에서 로그 출력)
                 }
                 return .none
                 
@@ -152,7 +154,7 @@ struct MainFeature {
                 state.settings = nil
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
-                
+
             case .recording(.delegate(let delegateAction)):
                 switch delegateAction {
                 case .projectSaved(let projectId):
@@ -160,13 +162,13 @@ struct MainFeature {
                 case .syncCompleted(let projectId):
                     return .send(.delegate(.syncCompleted(projectId)))
                 }
-                
+
             case .fileButton(.delegate(let delegateAction)):
                 switch delegateAction {
                 case .projectSaved(let projectId):
                     return .send(.delegate(.projectSaved(projectId)))
                 }
-                
+
             case .pdfButton(.delegate(let delegateAction)):
                 switch delegateAction {
                 case .projectSaved(let projectId):
