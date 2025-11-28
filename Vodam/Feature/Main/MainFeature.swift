@@ -154,6 +154,12 @@ struct MainFeature {
             case .recording(.delegate(.projectSaved(let projectId))):
                 return .send(.delegate(.projectSaved(projectId)))
                 
+            case .fileButton(.delegate(.projectSaved(let projectId))):
+                return .send(.delegate(.projectSaved(projectId)))
+                
+            case .pdfButton(.delegate(.projectSaved(let projectId))):
+                return .send(.delegate(.projectSaved(projectId)))
+                
             case .loginProviders:
                 return .none
                 
