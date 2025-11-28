@@ -269,12 +269,16 @@ struct AudioDetailFeature {
             case .setTotalTime(let timeString):
                 state.totalTime = timeString
                 return .none
+            
+            case .chatButtonTapped:
+                state.destination = .chattingRoom(
+                    ChattingRoomFeature.State(projectName: state.project.name)
+                )
+                return .none
                 
             case .script, .aiSummary, .binding, .destination:
                 return .none
             case .searchButtonTapped:
-                return .none
-            case .chatButtonTapped:
                 return .none
             case .editTitleButtonTapped:
                 return .none
@@ -315,10 +319,12 @@ extension AudioDetailFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
+            case chattingRoom(ChattingRoomFeature.State)
         }
         
         enum Action {
             case alert(Alert)
+            case chattingRoom(ChattingRoomFeature.Action)
             
             enum Alert {
                 case confirmDelete
@@ -326,9 +332,14 @@ extension AudioDetailFeature {
         }
         
         var body: some Reducer<State, Action> {
+            Scope(state: \.chattingRoom, action: \.chattingRoom) {
+                ChattingRoomFeature()
+            }
             Reduce { state, action in
                 switch action {
                 case .alert:
+                    return .none
+                case .chattingRoom:
                     return .none
                 }
             }

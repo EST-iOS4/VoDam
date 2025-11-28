@@ -79,6 +79,9 @@ struct AudioDetailView: View {
             store.send(.onAppear)
         }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+        .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
+            ChattingRoomView(store: $0)
+        }
     }
     
     // MARK: 오디오만 컨트롤
