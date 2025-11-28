@@ -73,9 +73,11 @@ struct RecordingFeature {
         Reduce { state, action in
             switch action {
                 
+            // MARK: - Start
             case .startTapped:
                 switch state.status {
                 case .ready:
+                    // ✅ 최초 시작: 녹음 + STT + 타이머 모두 시작
                     state.elapsedSeconds = 0
                     state.liveTranscript = ""
                     state.finalTranscript = nil
@@ -104,22 +106,20 @@ struct RecordingFeature {
                     )
                     
                 case .paused:
+                    // ✅ 일시정지 → 재시작:
+                    //    - 녹음 resume
+                    //    - STT는 새로 시작 ❌, 기존 세션 resume ✅
                     state.status = .recording
                     
-                    let startLiveTranscription = speechService.startLiveTranscription
+                    let resumeTranscription = speechService.resumeTranscription
                     
                     return .merge(
                         .run { _ in
                             recorder.resumeRecording()
                         },
-                        .run { send in
-                            let stream = startLiveTranscription()
-                            for await transcript in stream {
-                                await send(.liveTranscriptUpdated(transcript))
-                            }
-                            await send(.liveTranscriptFinished)
-                        }
-                        .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
+                        .run { _ in
+                            resumeTranscription()
+                        },
                         .run { send in
                             for await _ in clock.timer(interval: .seconds(1)) {
                                 await send(.tick)
@@ -132,21 +132,24 @@ struct RecordingFeature {
                     return .none
                 }
                 
+            // MARK: - Pause
             case .pauseTapped:
                 guard state.status == .recording else { return .none }
                 recorder.pauseRecording()
                 state.status = .paused
                 
-                let stopLiveTranscription = speechService.stopLiveTranscription
+                let pauseTranscription = speechService.pauseTranscription
                 
+                // ✅ STT 스트림(liveSTT)은 cancel 하지 않음
+                //    -> 같은 AsyncStream 안에서 audioEngine 만 pause
                 return .merge(
                     .cancel(id: CancelID.timer),
-                    .cancel(id: CancelID.liveSTT),
                     .run { _ in
-                        stopLiveTranscription()
+                        pauseTranscription()
                     }
                 )
                 
+            // MARK: - Stop
             case .stopTapped:
                 guard state.status == .recording || state.status == .paused else { return .none }
                 
@@ -160,17 +163,22 @@ struct RecordingFeature {
                 
                 return .merge(
                     .cancel(id: CancelID.timer),
+                    // 필요하면 여기서 liveSTT 취소도 추가 가능하지만,
+                    // stopLiveTranscription() 에서 continuation.finish() 해주면
+                    // stream 종료 → .liveTranscriptFinished 액션까지 흐름 이어짐
                     .run { _ in
                         stopLiveTranscription()
                     }
                 )
                 
+            // MARK: - Tick
             case .tick:
                 if state.status == .recording {
                     state.elapsedSeconds += 1
                 }
                 return .none
                 
+            // MARK: - STT Updates
             case .liveTranscriptUpdated(let transcript):
                 guard !transcript.isEmpty else { return .none }
                 state.liveTranscript = transcript
@@ -183,6 +191,7 @@ struct RecordingFeature {
                 print("🏁 STT 완료, 최종 transcript: \(state.finalTranscript ?? "없음")")
                 return .none
                 
+            // MARK: - Save
             case .saveRecording(let tempUrl, let length, let ownerId, let context):
                 let transcript = state.finalTranscript
                 
