@@ -41,7 +41,8 @@ struct MainFeature {
         case delegate(Delegate)
         
         enum Delegate: Equatable {
-            case projectSaved(String)
+            case projectSaved(String)      // 프로젝트 저장 완료
+            case syncCompleted(String)     // 동기화 완료
         }
     }
     
@@ -91,7 +92,6 @@ struct MainFeature {
             ):
                 if isSuccess {
                     state.currentUser = nil
-                    //                    state.settings = nil
                     return .run { _ in
                         await userStorageClient.clear()
                     }
@@ -129,7 +129,7 @@ struct MainFeature {
                 state.profileFlow = nil
                 return .none
                 
-                //MARK: 통합 로그인 (카카오/애플/구글 통합)
+            // 통합 로그인 (카카오/애플/구글 통합)
             case .loginProviders(
                 .presented(.delegate(.login(let isSuccess, let user)))
             ):
@@ -150,15 +150,31 @@ struct MainFeature {
                 state.settings = nil
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
+       
+            // RecordingFeature delegate 처리
+            case .recording(.delegate(let delegateAction)):
+                switch delegateAction {
+                case .projectSaved(let projectId):
+                    return .send(.delegate(.projectSaved(projectId)))
+                case .syncCompleted(let projectId):
+                    return .send(.delegate(.syncCompleted(projectId)))
+                }
             
-            case .recording(.delegate(.projectSaved(let projectId))):
-                return .send(.delegate(.projectSaved(projectId)))
-                
-            case .fileButton(.delegate(.projectSaved(let projectId))):
-                return .send(.delegate(.projectSaved(projectId)))
-                
-            case .pdfButton(.delegate(.projectSaved(let projectId))):
-                return .send(.delegate(.projectSaved(projectId)))
+            // FileButtonFeature delegate 처리
+            case .fileButton(.delegate(let delegateAction)):
+                switch delegateAction {
+                case .projectSaved(let projectId):
+                    return .send(.delegate(.projectSaved(projectId)))
+                }
+            
+            // PDFButtonFeature delegate 처리
+            case .pdfButton(.delegate(let delegateAction)):
+                switch delegateAction {
+                case .projectSaved(let projectId):
+                    return .send(.delegate(.projectSaved(projectId)))
+                case .syncCompleted(let projectId):
+                    return .send(.delegate(.syncCompleted(projectId)))
+                }
                 
             case .loginProviders:
                 return .none

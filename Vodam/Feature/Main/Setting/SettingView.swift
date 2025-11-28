@@ -10,7 +10,7 @@ struct SettingView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
-    @Dependency(\.audioCloudClient) private var audioCloudClient
+    @Dependency(\.fileCloudClient) private var fileCloudClient
 
     private var user: User? {
         store.user
@@ -62,12 +62,13 @@ struct SettingView: View {
             
             print("탈퇴 처리 시작: \(ownerId), 프로젝트 \(projects.count)개")
             
-            //스토리지 삭제
+            // Storage 삭제
             for project in projects {
-                
-                if (project.category == .audio || project.category == .file || project.category == .pdf) {
+                if let remotePath = project.remoteAudioPath,
+                   !remotePath.isEmpty,
+                   (project.category == .audio || project.category == .file || project.category == .pdf) {
                     do {
-                        try await audioCloudClient.deleteAudio(ownerId, project.id)
+                        try await fileCloudClient.deleteFile(remotePath)
                         print("Storage 파일 삭제: \(project.name)")
                     } catch {
                         print("Storage 파일 삭제 실패: \(project.name) - \(error)")
@@ -76,7 +77,7 @@ struct SettingView: View {
                 }
             }
             
-            //로컬 삭제
+            // 로컬 삭제
             try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
             
             store.send(.localDataDeleted(ownerId))

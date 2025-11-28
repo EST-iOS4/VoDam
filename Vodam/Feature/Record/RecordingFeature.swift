@@ -4,7 +4,7 @@
 
 import ComposableArchitecture
 import Foundation
-import SwiftData // ModelContext 사용을 위해 필요
+import SwiftData
 
 @Reducer
 struct RecordingFeature {
@@ -13,10 +13,9 @@ struct RecordingFeature {
     @Dependency(\.continuousClock) var clock
     @Dependency(\.speechService) var speechService
     
-    // 저장/업로드에 필요한 클라이언트 모두 추가
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.audioCloudClient) var audioCloudClient
+    @Dependency(\.fileCloudClient) var fileCloudClient
     
     enum Status: Equatable {
         case ready
@@ -38,7 +37,6 @@ struct RecordingFeature {
         var elapsedSeconds: Int = 0
         var fileURL: URL? = nil
         var lastRecordedLength: Int = 0
-        
         var savedProjectId: String? = nil
     }
     
@@ -48,15 +46,16 @@ struct RecordingFeature {
         case stopTapped
         case tick
         
-        // ModelContext를 받아서 저장 처리
         case saveRecording(URL, Int, String?, ModelContext)
         case recordingSaved(String)
         case recordingSaveFailed(String)
+        case syncCompleted(String)  //추가: 동기화 완료
         
         case delegate(Delegate)
         
         enum Delegate: Equatable {
             case projectSaved(String)
+            case syncCompleted(String)  //추가: 동기화 완료 알림
         }
     }
     
@@ -116,22 +115,19 @@ struct RecordingFeature {
                 if state.status == .recording { state.elapsedSeconds += 1 }
                 return .none
                 
-            // 저장 로직 통합 구현
             case .saveRecording(let tempUrl, let length, let ownerId, let context):
-                return .run { [projectLocalDataClient, audioCloudClient, firebaseClient] send in
+                return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
-                        // 1. 파일 이동 (Temp -> Documents)
                         guard let storedPath = copyFileToDocuments(from: tempUrl) else {
                             await send(.recordingSaveFailed("파일 저장 실패"))
                             return
                         }
                         
-                        // 2. 파일 이름 생성
                         let dateFormatter = DateFormatter()
                         dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
                         let fileName = "녹음 \(dateFormatter.string(from: Date()))"
                         
-                        // 3. SwiftData에 저장 (Local) - MainActor에서 실행
+                        // SwiftData에 저장 (Local)
                         let payload = try await MainActor.run {
                             try projectLocalDataClient.save(
                                 context,
@@ -145,21 +141,22 @@ struct RecordingFeature {
                         }
                         print("로컬 저장 완료: \(payload.id)")
                         
-                        // 성공 알림 (UI 갱신용)
+                        // 저장 완료 알림 (리프레시 트리거)
                         await send(.recordingSaved(payload.id))
                         
-                        // 4. 로그인 유저라면 클라우드 업로드 진행
+                        // 로그인 유저라면 클라우드 동기화
                         if let ownerId {
                             let localURL = URL(fileURLWithPath: storedPath)
                             
-                            // 4-1. Audio Storage 업로드
-                            let remotePath = try await audioCloudClient.uploadAudio(
+                            // Storage 업로드
+                            let remotePath = try await fileCloudClient.uploadFile(
                                 ownerId,
                                 payload.id,
                                 localURL
                             )
+                            print("Storage 업로드 완료: \(remotePath)")
                             
-                            // 4-2. Firebase DB 업로드용 페이로드 생성
+                            // Firebase DB 업로드
                             let syncedPayload = ProjectPayload(
                                 id: payload.id,
                                 name: payload.name,
@@ -174,10 +171,10 @@ struct RecordingFeature {
                                 remoteAudioPath: remotePath
                             )
                             
-                            // 4-3. Firebase DB 업로드
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
+                            print("☁️ Firebase DB 업로드 완료")
                             
-                            // 4-4. 로컬 DB 상태 업데이트 - MainActor에서 실행
+                            // 로컬 상태 업데이트
                             try await MainActor.run {
                                 try projectLocalDataClient.updateSyncStatus(
                                     context,
@@ -187,9 +184,10 @@ struct RecordingFeature {
                                     remotePath
                                 )
                             }
-                            print("클라우드 동기화 완료")
-                        } else {
-                            print("비회원 모드: 클라우드 업로드 생략")
+                            print("동기화 상태 업데이트 완료")
+                            
+                            // 동기화 완료 알림 (리프레시 트리거)
+                            await send(.syncCompleted(payload.id))
                         }
                         
                     } catch {
@@ -203,8 +201,12 @@ struct RecordingFeature {
                 state.fileURL = nil
                 return .send(.delegate(.projectSaved(projectId)))
                 
+            case .syncCompleted(let projectId):
+                // 동기화 완료 시 delegate로 전달
+                return .send(.delegate(.syncCompleted(projectId)))
+                
             case .recordingSaveFailed(let error):
-                print("녹음 저장 실패 에러: \(error)")
+                print("녹음 저장 실패: \(error)")
                 return .none
                 
             case .delegate:
@@ -213,7 +215,6 @@ struct RecordingFeature {
         }
     }
     
-    // MARK: - Helper (파일 이동 로직)
     private func copyFileToDocuments(from url: URL) -> String? {
         let fileManager = FileManager.default
         guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
