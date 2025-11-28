@@ -20,6 +20,7 @@ struct Project: Hashable, Equatable, Identifiable {
     var transcript: String?
     var syncStatus: SyncStatus = .localOnly
     var summary: String? = nil
+    var remoteAudioPath: String? = nil   
     
     static let mock: IdentifiedArrayOf<Project> = [
         Project(

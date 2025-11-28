@@ -7,12 +7,14 @@
 
 import AVFoundation
 import ComposableArchitecture
+import SwiftUI
 
 @Reducer
 struct AudioDetailFeature {
     @ObservableState
     struct State: Equatable {
         let project: Project
+        let currentUser: User?  // User 정보 추가
         var selectedTab: Tab
         
         var script: ScriptFeature.State
@@ -28,8 +30,9 @@ struct AudioDetailFeature {
         var playbackRate: Float = 1.0
         var isFavorite: Bool = false
         
-        init(project: Project) {
+        init(project: Project, currentUser: User?) {
             self.project = project
+            self.currentUser = currentUser
             self.selectedTab = .aiSummary
             let transcriptText = project.transcript ?? "아직 받아온 스크립트가 없습니다."
             self.script = ScriptFeature.State(text: transcriptText)
@@ -37,13 +40,13 @@ struct AudioDetailFeature {
             self.isFavorite = project.isFavorite
             
             if let savedSummary = project.summary {
-                    self.aiSummary = AISummaryFeature.State(
-                        transcript: transcriptText,
-                        savedSummary: savedSummary
-                    )
-                } else {
-                    self.aiSummary = AISummaryFeature.State(transcript: transcriptText)
-                }
+                self.aiSummary = AISummaryFeature.State(
+                    transcript: transcriptText,
+                    savedSummary: savedSummary
+                )
+            } else {
+                self.aiSummary = AISummaryFeature.State(transcript: transcriptText)
+            }
         }
     }
     
@@ -54,6 +57,7 @@ struct AudioDetailFeature {
         case binding(BindingAction<State>)
         
         case onAppear
+        case onDisappear
         case playButtonTapped
         case backwardButtonTapped
         case forwardButtonTapped
@@ -67,7 +71,12 @@ struct AudioDetailFeature {
         case chatButtonTapped
         case editTitleButtonTapped
         case deleteProjectButtonTapped
+        
+        case _setupPlayerWithURL(URL)
     }
+    
+    @Dependency(\.fileCloudClient) var fileCloudClient
+    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     
     nonisolated private enum CancelID { case playerObserver }
     
@@ -77,107 +86,75 @@ struct AudioDetailFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                print(
-                    "[AudioDetail] onAppear 진입 - project: \(state.project.name)"
-                )
+                print("[AudioDetail] onAppear 진입 - project: \(state.project.name)")
                 
                 if state.project.category == .pdf {
                     print("[AudioDetail] PDF 문서 - 오디오 플레이어 초기화 생략")
                     return .none
                 }
                 
-                guard let filePath = state.project.filePath else {
-                    print("[AudioDetail] project.filePath 가 없음")
+                // 1. 로컬 파일이 있는지 확인
+                if let filePath = state.project.filePath,
+                   FileManager.default.fileExists(atPath: filePath) {
+                    print("[AudioDetail] 로컬 파일 존재 - 바로 재생: \(filePath)")
+                    return setupPlayer(state: &state, fileURL: URL(fileURLWithPath: filePath))
+                }
+                
+                // 2. 로컬 파일이 없으면 Firebase에서 다운로드
+                print("[AudioDetail] 로컬 파일 없음 - Firebase에서 다운로드 시도")
+                
+                // remoteAudioPath 우선 사용 (수정됨)
+                guard let remotePath = state.project.remoteAudioPath ?? state.project.filePath,
+                      !remotePath.isEmpty else {
+                    print("[AudioDetail] remotePath 없음 - 재생 불가")
                     return .none
                 }
                 
-                let url = URL(fileURLWithPath: filePath)
-                print("[AudioDetail] 시도할 파일 경로: \(url.path)")
-                
-                guard FileManager.default.fileExists(atPath: url.path) else {
-                    print("[AudioDetail] 파일이 존재하지 않음 → \(url.path)")
+                // ownerId 가져오기
+                guard let ownerId = state.currentUser?.ownerId else {
+                    print("[AudioDetail] ownerId 없음 - 비회원은 원격 파일 다운로드 불가")
                     return .none
                 }
                 
-                do {
-                    let session = AVAudioSession.sharedInstance()
-                    try session.setCategory(
-                        .playback,
-                        mode: .default,
-                        options: []
-                    )
-                    try session.setActive(true)
-                    print("[AudioDetail] AVAudioSession playback 세팅 완료")
-                } catch {
-                    print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
-                }
-                
-                state.player = AVPlayer(url: url)
-                print("[AudioDetail] AVPlayer 생성 완료")
-                
-                return .run { [player = state.player] send in
-                    guard let player = player,
-                          let item = player.currentItem
-                    else {
-                        print("[AudioDetail] player 또는 currentItem 이 nil")
-                        return
-                    }
-                    
-                    let totalSeconds: Double
+                return .run { [project = state.project] send in
                     do {
-                        let duration = try await item.asset.load(.duration)
-                        totalSeconds = CMTimeGetSeconds(duration)
-                        if !totalSeconds.isNaN && !totalSeconds.isInfinite {
-                            await send(.setTotalTime(formatTime(totalSeconds)))
-                        }
-                        print("[AudioDetail] 총 재생 시간: \(totalSeconds)초")
-                    } catch {
-                        print("[AudioDetail] duration 로드 실패: \(error)")
-                        return
-                    }
-                    
-                    await withThrowingTaskGroup(of: Void.self) { group in
-                        // progress 업데이트 스트림
-                        group.addTask {
-                            let stream = AsyncStream<Double> { continuation in
-                                let timeScale = CMTimeScale(NSEC_PER_SEC)
-                                let observer = player.addPeriodicTimeObserver(
-                                    forInterval: CMTime(
-                                        seconds: 0.5,
-                                        preferredTimescale: timeScale
-                                    ),
-                                    queue: .main
-                                ) { time in
-                                    let progress =
-                                    totalSeconds > 0
-                                    ? CMTimeGetSeconds(time) / totalSeconds
-                                    : 0
-                                    continuation.yield(progress)
-                                }
-                                
-                                continuation.onTermination = { @Sendable _ in
-                                    player.removeTimeObserver(observer)
-                                }
-                            }
-                            
-                            for await progress in stream {
-                                await send(.updateProgress(progress))
-                            }
-                        }
+                        // Firebase Storage에서 다운로드
+                        print("[AudioDetail] Firebase 다운로드 시작: \(remotePath)")
                         
-                        // 재생 완료 알림
-                        group.addTask {
-                            for await _ in NotificationCenter.default
-                                .notifications(
-                                    named: .AVPlayerItemDidPlayToEndTime,
-                                    object: item
-                                )
-                            {
-                                await send(.playerFinishedPlaying)
-                            }
-                        }
+                        // downloadFileIfNeeded 사용 - 올바른 파라미터 전달
+                        let localPath = try await fileCloudClient.downloadFileIfNeeded(
+                            ownerId,                    // ownerId (수정됨)
+                            project.id.uuidString,      // projectId
+                            remotePath,                 // remotePath
+                            project.filePath            // currentLocalPath
+                        )
+                        
+                        print("[AudioDetail] 다운로드 완료: \(localPath)")
+                        
+                        // 플레이어 설정
+                        await send(._setupPlayerWithURL(URL(fileURLWithPath: localPath)))
+                        
+                    } catch {
+                        print("[AudioDetail] Firebase 다운로드 실패: \(error)")
                     }
                 }
+                
+            case .onDisappear:
+                print("[AudioDetail] onDisappear - 플레이어 정리")
+                
+                // 플레이어 중지
+                if let player = state.player {
+                    player.pause()
+                    player.replaceCurrentItem(with: nil)
+                }
+                state.player = nil
+                state.isPlaying = false
+                
+                // Observer 취소
+                return .cancel(id: CancelID.playerObserver)
+                
+            case ._setupPlayerWithURL(let url):
+                return setupPlayer(state: &state, fileURL: url)
                 
             case .playButtonTapped:
                 guard let player = state.player else {
@@ -198,16 +175,12 @@ struct AudioDetailFeature {
                 }
                 return .none
                 
-                
             case .backwardButtonTapped:
                 guard let player = state.player else { return .none }
                 let currentTime = player.currentTime()
                 let newTime = CMTimeSubtract(
                     currentTime,
-                    CMTime(
-                        seconds: 10,
-                        preferredTimescale: currentTime.timescale
-                    )
+                    CMTime(seconds: 10, preferredTimescale: currentTime.timescale)
                 )
                 player.seek(to: newTime)
                 return .none
@@ -217,10 +190,7 @@ struct AudioDetailFeature {
                 let currentTime = player.currentTime()
                 let newTime = CMTimeAdd(
                     currentTime,
-                    CMTime(
-                        seconds: 10,
-                        preferredTimescale: currentTime.timescale
-                    )
+                    CMTime(seconds: 10, preferredTimescale: currentTime.timescale)
                 )
                 player.seek(to: newTime)
                 return .none
@@ -261,9 +231,7 @@ struct AudioDetailFeature {
                 else { return .none }
                 let duration = item.asset.duration
                 let targetTime = CMTimeGetSeconds(duration) * progress
-                player.seek(
-                    to: CMTime(seconds: targetTime, preferredTimescale: 1)
-                )
+                player.seek(to: CMTime(seconds: targetTime, preferredTimescale: 1))
                 return .none
                 
             case .setTotalTime(let timeString):
@@ -333,5 +301,75 @@ extension AudioDetailFeature {
                 }
             }
         }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func setupPlayer(state: inout State, fileURL: URL) -> Effect<Action> {
+        print("[AudioDetail] setupPlayer - fileURL: \(fileURL.path)")
+        
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            print("[AudioDetail] 파일이 존재하지 않음 → \(fileURL.path)")
+            return .none
+        }
+        
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.setActive(true)
+            print("[AudioDetail] AVAudioSession playback 세팅 완료")
+        } catch {
+            print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
+        }
+        
+        state.player = AVPlayer(url: fileURL)
+        print("[AudioDetail] AVPlayer 생성 완료")
+        
+        return .run { [player = state.player] send in
+            guard let player = player, let item = player.currentItem
+            else {
+                print("[AudioDetail] player 또는 currentItem 이 nil")
+                return
+            }
+            
+            let totalSeconds: Double
+            do {
+                let duration = try await item.asset.load(.duration)
+                totalSeconds = CMTimeGetSeconds(duration)
+                if !totalSeconds.isNaN && !totalSeconds.isInfinite {
+                    await send(.setTotalTime(formatTime(totalSeconds)))
+                }
+                print("[AudioDetail] 총 재생 시간: \(totalSeconds)초")
+            } catch {
+                print("[AudioDetail] duration 로드 실패: \(error)")
+                return
+            }
+            
+            await withThrowingTaskGroup(of: Void.self) { group in
+                // 재생 완료 감지
+                group.addTask {
+                    for await _ in NotificationCenter.default.notifications(
+                        named: .AVPlayerItemDidPlayToEndTime,
+                        object: item
+                    ) {
+                        await send(.playerFinishedPlaying, animation: .default)
+                    }
+                }
+                
+                // 재생 진행률 업데이트
+                group.addTask {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1초
+                        
+                        let current = CMTimeGetSeconds(player.currentTime())
+                        if !current.isNaN && !current.isInfinite {
+                            let progress = totalSeconds > 0 ? current / totalSeconds : 0
+                            await send(.updateProgress(progress))
+                        }
+                    }
+                }
+            }
+        }
+        .cancellable(id: CancelID.playerObserver, cancelInFlight: true)
     }
 }
