@@ -233,13 +233,15 @@ extension ProjectLocalDataClient: DependencyKey {
                     filePath: payload.filePath,
                     fileLength: payload.fileLength,
                     transcript: payload.transcript,
+                    summary: nil,
                     ownerId: payload.ownerId,
-                    syncStatus: payload.syncStatus ?? .synced
+                    syncStatus: payload.syncStatus,
+                    remoteAudioPath: payload.remoteAudioPath
                 )
                 
                 context.insert(model)
                 try context.save()
-                print("[ProjectLocalDataClient] insert 성공 → id: \(payload.id), name: \(payload.name)")
+                print("[ProjectLocalDataClient] insert 성공 → id: \(payload.id), name: \(payload.name), remoteAudioPath: \(payload.remoteAudioPath ?? "nil")")
             },
             
             migrateGuestProjects: { context, newOwnerId in
@@ -270,7 +272,6 @@ extension ProjectLocalDataClient: DependencyKey {
                 
                 return guestProjects.map(ProjectPayload.init(model:))
             },
-            
             
             updateSyncStatus: { context, ids, status, ownerId, remoteAudioPath in
                 print("updateSyncStatus 호출됨 - ids: \(ids), ownerId: \(ownerId)")
@@ -336,6 +337,7 @@ extension ProjectLocalDataClient: DependencyKey {
         )
     }
 }
+
 extension DependencyValues {
     var projectLocalDataClient: ProjectLocalDataClient {
         get { self[ProjectLocalDataClient.self] }
