@@ -60,6 +60,7 @@ struct AudioDetailFeature {
         case aiSummary(AISummaryFeature.Action)
         case destination(PresentationAction<Destination.Action>)
         case binding(BindingAction<State>)
+        case delegate(DelegateAction)
         
         case onAppear
         case playButtonTapped
@@ -75,6 +76,10 @@ struct AudioDetailFeature {
         case chatButtonTapped
         case editTitleButtonTapped
         case deleteProjectButtonTapped
+        
+        enum DelegateAction {
+            case needsRefresh
+        }
     }
     
     nonisolated private enum CancelID { case playerObserver }
@@ -247,38 +252,41 @@ struct AudioDetailFeature {
                 let newIsFavorite = state.isFavorite
                 
                 return .run { send in
-                    // 1. Local SwiftData 업데이트
-                    try await MainActor.run {
-                        try projectLocalDataClient.update(
-                            context,
-                            project.id.uuidString,
-                            nil,
-                            newIsFavorite,
-                            nil,
-                            nil
-                        )
+                    do {
+                        // 1. Local SwiftData 업데이트
+                        try await MainActor.run {
+                            try projectLocalDataClient.update(
+                                context,
+                                project.id.uuidString,
+                                nil,
+                                newIsFavorite,
+                                nil,
+                                nil
+                            )
+                        }
+                        
+                        // 2. Firebase 업데이트 (로그인 상태일 때)
+                        if let ownerId {
+                            let payload = await ProjectPayload(
+                                id: project.id.uuidString,
+                                name: project.name,
+                                creationDate: project.creationDate,
+                                category: project.category,
+                                isFavorite: newIsFavorite, // 변경된 값 사용
+                                filePath: project.filePath,
+                                fileLength: project.fileLength,
+                                transcript: project.transcript,
+                                ownerId: ownerId,
+                                syncStatus: project.syncStatus
+                            )
+                            try await firebaseClient.updateProject(ownerId, payload)
+                        }
+                        
+                        await send(.delegate(.needsRefresh))
+                        
+                    } catch {
+                        print("즐겨찾기 업데이트 실패: \(error)")
                     }
-                    
-                    // 2. Firebase 업데이트 (로그인 상태일 때)
-                    if let ownerId {
-                        let payload = ProjectPayload(
-                            id: project.id.uuidString,
-                            name: project.name,
-                            creationDate: project.creationDate,
-                            category: project.category,
-                            isFavorite: newIsFavorite, // 변경된 값 사용
-                            filePath: project.filePath,
-                            fileLength: project.fileLength,
-                            transcript: project.transcript,
-                            ownerId: ownerId,
-                            syncStatus: project.syncStatus
-                        )
-                        try await firebaseClient.updateProject(ownerId, payload)
-                    }
-                } catch: { error, send in
-                    print("즐겨찾기 업데이트 실패: \(error)")
-                    // 실패 시 UI 롤백 (선택적)
-                    // state.isFavorite.toggle()
                 }
                 
             case .updateProgress(let progress):
@@ -320,7 +328,7 @@ struct AudioDetailFeature {
                 )
                 return .none
                 
-            case .script, .aiSummary, .binding, .destination:
+            case .script, .aiSummary, .binding, .destination, .delegate:
                 return .none
             case .searchButtonTapped:
                 return .none
