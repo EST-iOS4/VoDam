@@ -5,12 +5,22 @@
 //  Created by 강지원 on 11/19/25.
 //
 
-import SwiftUI
 import ComposableArchitecture
+import SwiftUI
 import UniformTypeIdentifiers
+import PDFKit
+import SwiftData
 
 struct PDFButtonView: View {
     let store: StoreOf<PDFButtonFeature>
+
+    @Environment(\.modelContext) var context
+    let ownerId: String?
+
+    init(store: StoreOf<PDFButtonFeature>, ownerId: String? = nil) {
+        self.store = store
+        self.ownerId = ownerId
+    }
 
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
@@ -32,16 +42,31 @@ struct PDFButtonView: View {
                             RoundedRectangle(cornerRadius: 24)
                                 .fill(Color.red)
                         )
-                        .shadow(color: .black.opacity(0.15), radius: 3, x: 0, y: 2)
+                        .shadow(
+                            color: .black.opacity(0.15),
+                            radius: 3,
+                            x: 0,
+                            y: 2
+                        )
 
                     // 텍스트
                     VStack(alignment: .leading, spacing: 4) {
                         Text(viewStore.title)
                             .font(.headline)
-                            .foregroundColor(.black)
+
+                        if viewStore.isProcessing {
+                            Text("텍스트 추출 중...")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
+
                     }
 
                     Spacer()
+
+                    if viewStore.isProcessing {
+                        ProgressView()
+                    }
                 }
                 .padding(.horizontal, 24)
             }
@@ -69,6 +94,11 @@ struct PDFButtonView: View {
                 case .failure:
                     viewStore.send(.pdfImported(.failure(.failed)))
                 }
+            }
+            .onChange(of: viewStore.selectedPDFURL) { _, newValue in
+                guard let url = newValue else { return }
+                // Feature의 savePDF 액션 호출
+                viewStore.send(.savePDF(url, context, ownerId))
             }
         }
     }
