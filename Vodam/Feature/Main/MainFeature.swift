@@ -42,7 +42,7 @@ struct MainFeature {
         
         enum Delegate: Equatable {
             case projectSaved(String)      // 프로젝트 저장 완료
-//            case syncCompleted(String)     // 동기화 완료
+            case syncCompleted(String)     // 동기화 완료
             case userLoggedIn(User)        // 로그인 완료
         }
     }
@@ -160,14 +160,15 @@ struct MainFeature {
                 case .projectSaved(let projectId):
                     return .send(.delegate(.projectSaved(projectId)))
                 case .syncCompleted(let projectId):
-//                    return .send(.delegate(.syncCompleted(projectId)))
-                    return .none
+                    return .send(.delegate(.syncCompleted(projectId)))
                 }
 
             case .fileButton(.delegate(let delegateAction)):
                 switch delegateAction {
                 case .projectSaved(let projectId):
                     return .send(.delegate(.projectSaved(projectId)))
+                case .syncCompleted(let projectId):
+                    return .send(.delegate(.syncCompleted(projectId)))
                 }
 
             case .pdfButton(.delegate(let delegateAction)):
@@ -175,8 +176,7 @@ struct MainFeature {
                 case .projectSaved(let projectId):
                     return .send(.delegate(.projectSaved(projectId)))
                 case .syncCompleted(let projectId):
-//                    return .send(.delegate(.syncCompleted(projectId)))
-                    return .none
+                    return .send(.delegate(.syncCompleted(projectId)))
                 }
                 
             case .loginProviders:
