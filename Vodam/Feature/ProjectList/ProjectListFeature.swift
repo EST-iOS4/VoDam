@@ -7,12 +7,13 @@ struct ProjectListFeature {
     
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.audioCloudClient) var audioCloudClient
+    @Dependency(\.fileCloudClient) var fileCloudClient
     
     @ObservableState
     struct State: Equatable {
         var projects: IdentifiedArrayOf<Project> = []
         var isLoading = false
+        var hasLoadedOnce = false
         var refreshTrigger: UUID? = nil
         var allCategories: [FilterCategory] = FilterCategory.allCases
         var selectedCategory: FilterCategory = .all
@@ -90,14 +91,18 @@ struct ProjectListFeature {
                 
             case .loadProjects(let context):
                 state.isLoading = true
+                state.hasLoadedOnce = true
+                state.refreshTrigger = nil
                 let ownerId = state.currentUser?.ownerId
                 
                 return .run { [projectLocalDataClient] send in
                     do {
-                        let payloads = try projectLocalDataClient.fetchAll(
-                            context,
-                            ownerId
-                        )
+                        let payloads = try await MainActor.run {
+                            try projectLocalDataClient.fetchAll(
+                                context,
+                                ownerId
+                            )
+                        }
                         await send(._projectsResponse(.success(payloads)))
                     } catch {
                         await send(._projectsResponse(.failure(error)))
@@ -106,16 +111,9 @@ struct ProjectListFeature {
                 
             case .projectTapped(id: let projectId):
                 if let project = state.projects[id: projectId] {
-                    //                    switch project.category {
-                    //                    case .pdf:
-                    //                        state.destination = .pdfDetail(
-                    //                            PdfDetailFeature.State(project: project)
-                    //                        )
-                    //                    case .file, .audio:
                     state.destination = .audioDetail(
                         AudioDetailFeature.State(project: project)
                     )
-                    //                    }
                 }
                 return .none
                 
@@ -133,22 +131,26 @@ struct ProjectListFeature {
                 
                 return .run { [projectLocalDataClient, firebaseClient] send in
                     do {
-                        // SwiftData 업데이트
-                        try projectLocalDataClient.update(
-                            context,
-                            projectIdString,
-                            nil,  // name
-                            newFavorite,
-                            nil,  // transcript
-                            nil  // syncStatus
-                        )
+                        // SwiftData 업데이트 - MainActor에서 실행
+                        try await MainActor.run {
+                            try projectLocalDataClient.update(
+                                context,
+                                projectIdString,
+                                nil,  // name
+                                newFavorite,
+                                nil,  // transcript
+                                nil  // syncStatus
+                            )
+                        }
                         
                         // 로그인 사용자면 Firebase도 업데이트
                         if let ownerId {
-                            let payloads = try projectLocalDataClient.fetchAll(
-                                context,
-                                ownerId
-                            )
+                            let payloads = try await MainActor.run {
+                                try projectLocalDataClient.fetchAll(
+                                    context,
+                                    ownerId
+                                )
+                            }
                             if let payload = payloads.first(where: {
                                 $0.id == projectIdString
                             }) {
@@ -166,39 +168,39 @@ struct ProjectListFeature {
                             )
                         )
                     } catch {
-                        print("❌ 즐겨찾기 업데이트 실패: \(error)")
+                        print("즐겨찾기 업데이트 실패: \(error)")
                     }
                 }
                 
             case .deleteProject(id: let projectId, let context):
+                guard let project = state.projects[id: projectId] else {
+                    return .none
+                }
                 let projectIdString = projectId.uuidString
                 let ownerId = state.currentUser?.ownerId
+                let remotePath = project.filePath
                 
                 // UI에서 먼저 제거
                 state.projects.remove(id: projectId)
                 
-                return .run { [projectLocalDataClient, firebaseClient, audioCloudClient] _ in
+                return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] _ in
                     do {
-                        // SwiftData에서 삭제
-                        try projectLocalDataClient.delete(
-                            context,
-                            projectIdString
-                        )
+                        // SwiftData에서 삭제 - MainActor에서 실행
+                        try await MainActor.run {
+                            try projectLocalDataClient.delete(
+                                context,
+                                projectIdString
+                            )
+                        }
                         
                         if let ownerId {
-                            do {
-                                try await audioCloudClient.deleteAudio(
-                                    ownerId,
-                                    projectIdString
-                                )
-                                print(
-                                    "Storage 오디오 파일 삭제 완료: \(projectIdString)"
-                                )
-                            } catch {
-                                print(
-                                    "Storage 오디오 파일 삭제 실패 (계속 진행): \(error.localizedDescription)"
-                                )
-                                
+                            if let remotePath, !remotePath.isEmpty {
+                                do {
+                                    try await fileCloudClient.deleteFile(remotePath)
+                                    print("Storage 오디오 파일 삭제 완료: \(remotePath)")
+                                } catch {
+                                    print("Storage 오디오 파일 삭제 실패 (계속 진행): \(error.localizedDescription)")
+                                }
                             }
                             // 로그인 사용자면 Firebase에서도 삭제
                             try await firebaseClient.deleteProject(
@@ -235,6 +237,7 @@ struct ProjectListFeature {
                 
             case ._projectsResponse(.failure(let error)):
                 state.isLoading = false
+                state.refreshTrigger = nil
                 print("프로젝트 조회 실패: \(error)")
                 return .none
                 
@@ -244,7 +247,7 @@ struct ProjectListFeature {
                 
             case .userChanged(let user):
                 state.currentUser = user
-                return .none
+                return .send(.refreshProjects)
                 
             case .destination, .binding:
                 return .none
@@ -264,21 +267,16 @@ extension ProjectListFeature {
         @ObservableState
         enum State: Equatable {
             case audioDetail(AudioDetailFeature.State)
-            //            case pdfDetail(PdfDetailFeature.State)
         }
         
         enum Action {
             case audioDetail(AudioDetailFeature.Action)
-            //            case pdfDetail(PdfDetailFeature.Action)
         }
         
         var body: some Reducer<State, Action> {
             Scope(state: \.audioDetail, action: \.audioDetail) {
                 AudioDetailFeature()
             }
-            //            Scope(state: \.pdfDetail, action: \.pdfDetail) {
-            //                PdfDetailFeature()
-            //            }
         }
     }
 }

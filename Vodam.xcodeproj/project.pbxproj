@@ -7,18 +7,30 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		70C12ABD2ED8803100D7BB2A /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 70C12ABC2ED8803100D7BB2A /* GoogleSignIn */; };
+		70C12AC02ED8814F00D7BB2A /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = 70C12ABF2ED8814F00D7BB2A /* FirebaseAnalyticsCore */; };
+		70C12AC22ED8814F00D7BB2A /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 70C12AC12ED8814F00D7BB2A /* FirebaseFirestore */; };
 		7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */; };
 		7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D322ECD9177005A08A6 /* KakaoSDKCommon */; };
 		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
-		7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F372ED5344700EC191C /* GoogleSignIn */; };
-		7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7D522F392ED5344700EC191C /* GoogleSignInSwift */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
 		7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F378E2ED694C6008961A3 /* FirebaseCore */; };
 		7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F37902ED694C6008961A3 /* FirebaseFirestore */; };
 		7D9F44D22ED7DA17008961A3 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F44D12ED7DA17008961A3 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		70C129332ED5A2BA00D7BB2A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B4C67BB2EBC8481003C67F9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8B4C67C22EBC8481003C67F9;
+			remoteInfo = Vodam;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		70C1292F2ED5A2BA00D7BB2A /* VodamTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VodamTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B4C67C32EBC8481003C67F9 /* Vodam.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Vodam.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -26,8 +38,13 @@
 		70C11F7B2ED309D600D7BB2A /* Exceptions for "Vodam" folder in "Vodam" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Application/AppFeatureTests.swift,
+				Feature/Chatting/ChattingListFeatureTests.swift,
+				Feature/Chatting/ChattingRoom/ChattingRoomFeatureTests.swift,
+				Feature/Main/MainFeatureTests.swift,
+				Feature/ProjectList/ProjectListFeatureTests.swift,
+				Feature/Record/RecordingFeatureTests.swift,
 				Resource/Info.plist,
-				Secrets.xcconfig,
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
 		};
@@ -45,19 +62,25 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		70C1292C2ED5A2BA00D7BB2A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8B4C67C02EBC8481003C67F9 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7D522F382ED5344700EC191C /* GoogleSignIn in Frameworks */,
+				70C12ABD2ED8803100D7BB2A /* GoogleSignIn in Frameworks */,
+				70C12AC02ED8814F00D7BB2A /* FirebaseAnalyticsCore in Frameworks */,
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
 				7D9F44D22ED7DA17008961A3 /* FirebaseStorage in Frameworks */,
 				7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */,
-				7D522F3A2ED5344700EC191C /* GoogleSignInSwift in Frameworks */,
-				7D9F378F2ED694C6008961A3 /* FirebaseCore in Frameworks */,
-				7D9F37912ED694C6008961A3 /* FirebaseFirestore in Frameworks */,
 				7D1B6D332ECD9177005A08A6 /* KakaoSDKCommon in Frameworks */,
 				7D1B6D312ECD9177005A08A6 /* KakaoSDKAuth in Frameworks */,
+				70C12AC22ED8814F00D7BB2A /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +107,7 @@
 			isa = PBXGroup;
 			children = (
 				8B4C67C32EBC8481003C67F9 /* Vodam.app */,
+				70C1292F2ED5A2BA00D7BB2A /* VodamTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -91,6 +115,26 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		70C1292E2ED5A2BA00D7BB2A /* VodamTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 70C129352ED5A2BA00D7BB2A /* Build configuration list for PBXNativeTarget "VodamTests" */;
+			buildPhases = (
+				70C1292B2ED5A2BA00D7BB2A /* Sources */,
+				70C1292C2ED5A2BA00D7BB2A /* Frameworks */,
+				70C1292D2ED5A2BA00D7BB2A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				70C129342ED5A2BA00D7BB2A /* PBXTargetDependency */,
+			);
+			name = VodamTests;
+			packageProductDependencies = (
+			);
+			productName = VodamTests;
+			productReference = 70C1292F2ED5A2BA00D7BB2A /* VodamTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		8B4C67C22EBC8481003C67F9 /* Vodam */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8B4C67CE2EBC8482003C67F9 /* Build configuration list for PBXNativeTarget "Vodam" */;
@@ -117,6 +161,8 @@
 				7D9F378E2ED694C6008961A3 /* FirebaseCore */,
 				7D9F37902ED694C6008961A3 /* FirebaseFirestore */,
 				7D9F44D12ED7DA17008961A3 /* FirebaseStorage */,
+				70C12ABF2ED8814F00D7BB2A /* FirebaseAnalyticsCore */,
+
 			);
 			productName = Speech;
 			productReference = 8B4C67C32EBC8481003C67F9 /* Vodam.app */;
@@ -129,9 +175,13 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2610;
+				LastSwiftUpdateCheck = 2610;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					70C1292E2ED5A2BA00D7BB2A = {
+						CreatedOnToolsVersion = 26.1.1;
+						TestTargetID = 8B4C67C22EBC8481003C67F9;
+					};
 					8B4C67C22EBC8481003C67F9 = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -149,8 +199,8 @@
 			packageReferences = (
 				7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
-				7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
-				7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				70C12ABB2ED8803100D7BB2A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8B4C67C42EBC8481003C67F9 /* Products */;
@@ -158,11 +208,19 @@
 			projectRoot = "";
 			targets = (
 				8B4C67C22EBC8481003C67F9 /* Vodam */,
+				70C1292E2ED5A2BA00D7BB2A /* VodamTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		70C1292D2ED5A2BA00D7BB2A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8B4C67C12EBC8481003C67F9 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -173,6 +231,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		70C1292B2ED5A2BA00D7BB2A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8B4C67BF2EBC8481003C67F9 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -182,7 +247,57 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		70C129342ED5A2BA00D7BB2A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
+			targetProxy = 70C129332ED5A2BA00D7BB2A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		70C129362ED5A2BA00D7BB2A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam.VodamTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vodam.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Vodam";
+			};
+			name = Debug;
+		};
+		70C129372ED5A2BA00D7BB2A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam.VodamTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Vodam.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Vodam";
+			};
+			name = Release;
+		};
 		8B4C67CC2EBC8482003C67F9 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReferenceAnchor = 8B4C67C52EBC8481003C67F9 /* Vodam */;
@@ -244,7 +359,6 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -304,7 +418,6 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -317,13 +430,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Vodam/Vodam.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3X262XJF5T;
+				DEVELOPMENT_TEAM = AHWGD5X6EC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Vodam/Resource/Info.plist;
@@ -339,10 +449,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = cloud.mandooplz.vodam;
+				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "VoDam-Dev-Minwoo";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -360,13 +469,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Vodam/Vodam.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
-				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3X262XJF5T;
+				DEVELOPMENT_TEAM = AHWGD5X6EC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Vodam/Resource/Info.plist;
@@ -382,10 +488,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = cloud.mandooplz.vodam;
+				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
-				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "VoDam-Dev-Minwoo";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
@@ -399,7 +504,16 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		8B4C67BE2EBC8481003C67F9 /* Build configuration list for PBXProject "VoDam" */ = {
+		70C129352ED5A2BA00D7BB2A /* Build configuration list for PBXNativeTarget "VodamTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				70C129362ED5A2BA00D7BB2A /* Debug */,
+				70C129372ED5A2BA00D7BB2A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8B4C67BE2EBC8481003C67F9 /* Build configuration list for PBXProject "Vodam" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8B4C67CC2EBC8482003C67F9 /* Debug */,
@@ -420,20 +534,28 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		70C12ABB2ED8803100D7BB2A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.0.0;
+			};
+		};
+		70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.6.0;
+			};
+		};
 		7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kakao/kakao-ios-sdk";
 			requirement = {
 				branch = master;
 				kind = branch;
-			};
-		};
-		7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 9.0.0;
 			};
 		};
 		7D5C88922ECAAC3400977C6E /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
@@ -444,17 +566,24 @@
 				minimumVersion = 1.23.1;
 			};
 		};
-		7D9F378D2ED694C6008961A3 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 12.6.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		70C12ABC2ED8803100D7BB2A /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70C12ABB2ED8803100D7BB2A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		70C12ABF2ED8814F00D7BB2A /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
+		};
+		70C12AC12ED8814F00D7BB2A /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 70C12ABE2ED8814F00D7BB2A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
 		7D1B6D302ECD9177005A08A6 /* KakaoSDKAuth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
@@ -469,16 +598,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7D1B6D2F2ECD9177005A08A6 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */;
 			productName = KakaoSDKUser;
-		};
-		7D522F372ED5344700EC191C /* GoogleSignIn */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignIn;
-		};
-		7D522F392ED5344700EC191C /* GoogleSignInSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7D522F362ED5344700EC191C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
-			productName = GoogleSignInSwift;
 		};
 		7D5C88932ECAAC3400977C6E /* ComposableArchitecture */ = {
 			isa = XCSwiftPackageProductDependency;

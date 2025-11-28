@@ -41,7 +41,8 @@ struct MainFeature {
         case delegate(Delegate)
         
         enum Delegate: Equatable {
-            case projectSaved(String)
+            case projectSaved(String)      // 프로젝트 저장 완료
+            case syncCompleted(String)     // 동기화 완료
         }
     }
     
@@ -90,11 +91,12 @@ struct MainFeature {
                 .presented(.delegate(.loggedOut(let isSuccess)))
             ):
                 if isSuccess {
+                    let ownerId = state.currentUser?.ownerId
                     state.currentUser = nil
-                    //                    state.settings = nil
                     return .run { _ in
                         await userStorageClient.clear()
                     }
+                    // 재로그인 시 데이터를 다시 볼 수 있도록 유지
                 }
                 return .none
                 
@@ -129,7 +131,7 @@ struct MainFeature {
                 state.profileFlow = nil
                 return .none
                 
-                //MARK: 통합 로그인 (카카오/애플/구글 통합)
+                // 통합 로그인 (카카오/애플/구글 통합)
             case .loginProviders(
                 .presented(.delegate(.login(let isSuccess, let user)))
             ):
@@ -150,9 +152,28 @@ struct MainFeature {
                 state.settings = nil
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
-            
-            case .recording(.delegate(.projectSaved(let projectId))):
-                return .send(.delegate(.projectSaved(projectId)))
+                
+            case .recording(.delegate(let delegateAction)):
+                switch delegateAction {
+                case .projectSaved(let projectId):
+                    return .send(.delegate(.projectSaved(projectId)))
+                case .syncCompleted(let projectId):
+                    return .send(.delegate(.syncCompleted(projectId)))
+                }
+                
+            case .fileButton(.delegate(let delegateAction)):
+                switch delegateAction {
+                case .projectSaved(let projectId):
+                    return .send(.delegate(.projectSaved(projectId)))
+                }
+                
+            case .pdfButton(.delegate(let delegateAction)):
+                switch delegateAction {
+                case .projectSaved(let projectId):
+                    return .send(.delegate(.projectSaved(projectId)))
+                case .syncCompleted(let projectId):
+                    return .send(.delegate(.syncCompleted(projectId)))
+                }
                 
             case .loginProviders:
                 return .none
