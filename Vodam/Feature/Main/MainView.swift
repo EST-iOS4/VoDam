@@ -15,7 +15,7 @@ struct MainView: View {
     @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
     @Dependency(\.firebaseClient) private var firebaseClient
-    @Dependency(\.audioCloudClient) private var audioCloudClient
+    @Dependency(\.fileCloudClient) private var fileCloudClient
     
     init(store: StoreOf<MainFeature>) {
         self.store = store
@@ -163,7 +163,7 @@ struct MainView: View {
                             
                             do {
                                 let localURL = URL(fileURLWithPath: filePath)
-                                remotePath = try await audioCloudClient.uploadAudio(
+                                remotePath = try await fileCloudClient.uploadFile(
                                     ownerId,
                                     payload.id,
                                     localURL
@@ -174,7 +174,7 @@ struct MainView: View {
                             }
                         }
                         
-                        let syncedPayload = ProjectPayload (
+                        let syncedPayload = ProjectPayload(
                             id: payload.id,
                             name: payload.name,
                             creationDate: payload.creationDate,
@@ -192,8 +192,6 @@ struct MainView: View {
                     
                     try await firebaseClient.uploadProjects(ownerId, syncedPayloads)
                     print("Firestore 업로드 완료: \(syncedPayloads.count)개")
-                    
-                    let ids = syncedPayloads.map(\.id)
                     
                     await MainActor.run {
                         for syncedPayload in syncedPayloads {
@@ -283,7 +281,7 @@ struct MainView: View {
                     
                     Task {
                         do {
-                            let newLocalPath = try await audioCloudClient.downloadAudioIfNeeded(
+                            let newLocalPath = try await fileCloudClient.downloadFileIfNeeded(
                                 ownerId,
                                 payload.id,
                                 remotePath,

@@ -110,6 +110,10 @@ struct AppFeature {
                 print("프로젝트 저장 완료 - ProjectList 새로고침")
                 return .send(.list(.refreshProjects))
                 
+            case .main(.delegate(.syncCompleted(let projectId))):
+                print("동기화 완료 [\(projectId)] - ProjectList 새로고침")
+                return .send(.list(.refreshProjects))
+                
             case .main:
                 return .none
                 

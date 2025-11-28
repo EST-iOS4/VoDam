@@ -16,7 +16,7 @@ struct FileButtonFeature {
     @Dependency(\.audioFileSTTClient) var sttClient
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.audioCloudClient) var audioCloudClient
+    @Dependency(\.fileCloudClient) var fileCloudClient
 
     @ObservableState
     struct State: Equatable {
@@ -117,7 +117,7 @@ struct FileButtonFeature {
                 
             // 저장 로직
             case .saveFile(let url, let transcript, let context, let ownerId):
-                return .run { [projectLocalDataClient, audioCloudClient, firebaseClient] send in
+                return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
                         // 1. 파일을 Documents로 복사
                         guard let storedPath = copyFileToDocuments(from: url) else {
@@ -154,7 +154,7 @@ struct FileButtonFeature {
                         if let ownerId {
                             let localURL = URL(fileURLWithPath: storedPath)
                             
-                            let remotePath = try await audioCloudClient.uploadAudio(
+                            let remotePath = try await fileCloudClient.uploadFile(
                                 ownerId,
                                 payload.id,
                                 localURL

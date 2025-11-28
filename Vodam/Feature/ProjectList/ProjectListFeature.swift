@@ -7,7 +7,7 @@ struct ProjectListFeature {
     
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.audioCloudClient) var audioCloudClient
+    @Dependency(\.fileCloudClient) var fileCloudClient
     
     @ObservableState
     struct State: Equatable {
@@ -91,7 +91,7 @@ struct ProjectListFeature {
                 
             case .loadProjects(let context):
                 state.isLoading = true
-                state.hasLoadedOnce = true 
+                state.hasLoadedOnce = true
                 state.refreshTrigger = nil
                 let ownerId = state.currentUser?.ownerId
                 
@@ -168,18 +168,22 @@ struct ProjectListFeature {
                             )
                         )
                     } catch {
-                        print("❌ 즐겨찾기 업데이트 실패: \(error)")
+                        print("즐겨찾기 업데이트 실패: \(error)")
                     }
                 }
                 
             case .deleteProject(id: let projectId, let context):
+                guard let project = state.projects[id: projectId] else {
+                    return .none
+                }
                 let projectIdString = projectId.uuidString
                 let ownerId = state.currentUser?.ownerId
+                let remotePath = project.filePath
                 
                 // UI에서 먼저 제거
                 state.projects.remove(id: projectId)
                 
-                return .run { [projectLocalDataClient, firebaseClient, audioCloudClient] _ in
+                return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] _ in
                     do {
                         // SwiftData에서 삭제 - MainActor에서 실행
                         try await MainActor.run {
@@ -190,19 +194,13 @@ struct ProjectListFeature {
                         }
                         
                         if let ownerId {
-                            do {
-                                try await audioCloudClient.deleteAudio(
-                                    ownerId,
-                                    projectIdString
-                                )
-                                print(
-                                    "Storage 오디오 파일 삭제 완료: \(projectIdString)"
-                                )
-                            } catch {
-                                print(
-                                    "Storage 오디오 파일 삭제 실패 (계속 진행): \(error.localizedDescription)"
-                                )
-                                
+                            if let remotePath, !remotePath.isEmpty {
+                                do {
+                                    try await fileCloudClient.deleteFile(remotePath)
+                                    print("Storage 오디오 파일 삭제 완료: \(remotePath)")
+                                } catch {
+                                    print("Storage 오디오 파일 삭제 실패 (계속 진행): \(error.localizedDescription)")
+                                }
                             }
                             // 로그인 사용자면 Firebase에서도 삭제
                             try await firebaseClient.deleteProject(

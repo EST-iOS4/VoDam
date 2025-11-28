@@ -57,7 +57,6 @@ struct SettingsFeature {
             case accountDeleted(Bool)
             case logoutCompleted
             case deleteAccountCompleted
-            case requestLocalDataDeletion(String) // ownerId - View에서 처리
         }
 
         enum Alert: Equatable {
@@ -180,14 +179,13 @@ struct SettingsFeature {
                 case .kakao:
                     return .run { [firebaseClient, kakaoAuthClient] send in
                         do {
-                            // View에서 로컬 데이터 삭제 요청
-                            await send(.delegate(.requestLocalDataDeletion(ownerId)))
-                            
                             // Firebase 데이터 삭제
                             try await firebaseClient.deleteAllForUser(ownerId)
+                            print("Firebase 데이터 삭제 완료")
                             
                             // 카카오 계정 연결 해제
                             try await kakaoAuthClient.deleteAccount()
+                            print("카카오 계정 연결 해제 완료")
                             
                             await send(.deleteAccountFinished(true))
                         } catch {
@@ -199,18 +197,22 @@ struct SettingsFeature {
                 case .google:
                     return .run { [firebaseClient, googleAuthClient] send in
                         do {
-                            // View에서 로컬 데이터 삭제 요청
-                            await send(.delegate(.requestLocalDataDeletion(ownerId)))
-                            
                             // Firebase 데이터 삭제
                             try await firebaseClient.deleteAllForUser(ownerId)
+                            print("Firebase 데이터 삭제 완료")
                             
-                            // 구글 계정 연결 해제
-                            try await googleAuthClient.disconnect()
+                            // 구글 계정 연결 해제 시도 (실패해도 계속 진행)
+                            do {
+                                try await googleAuthClient.disconnect()
+                                print("구글 계정 연결 해제 완료")
+                            } catch {
+                                print("구글 계정 연결 해제 실패 (계속 진행): \(error)")
+                                // 구글 disconnect 실패는 무시하고 계속 진행
+                            }
                             
                             await send(.deleteAccountFinished(true))
                         } catch {
-                            print("구글 계정 연결 해제 실패: \(error)")
+                            print("Firebase 데이터 삭제 실패: \(error)")
                             await send(.deleteAccountFinished(false))
                         }
                     }
@@ -224,7 +226,9 @@ struct SettingsFeature {
                     if let url = URL(
                         string: UIApplication.openSettingsURLString
                     ) {
-                        UIApplication.shared.open(url)
+                        await MainActor.run {
+                            UIApplication.shared.open(url)
+                        }
                     }
                 }
 
@@ -239,11 +243,9 @@ struct SettingsFeature {
 
                 return .run { [firebaseClient] send in
                     do {
-                        // View에서 로컬 데이터 삭제 요청
-                        await send(.delegate(.requestLocalDataDeletion(ownerId)))
-                        
                         // Firebase 데이터 삭제
                         try await firebaseClient.deleteAllForUser(ownerId)
+                        print("Firebase 데이터 삭제 완료")
                         
                         await send(.deleteAccountFinished(true))
                     } catch {

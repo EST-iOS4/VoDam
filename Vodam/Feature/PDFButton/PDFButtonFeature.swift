@@ -14,6 +14,7 @@ struct PDFButtonFeature {
 
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
+    @Dependency(\.fileCloudClient) var fileCloudClient
 
     @ObservableState
     struct State: Equatable {
@@ -24,7 +25,6 @@ struct PDFButtonFeature {
         var savedProjectId: String?
     }
 
-    // PDF 선택 에러
     enum PDFImportError: Error, Equatable {
         case failed
     }
@@ -36,15 +36,16 @@ struct PDFButtonFeature {
         case processingStarted
         case processingFinished
         
-        // 저장
-        case savePDF(URL, ModelContext, String?)  // url, context, ownerId
+        case savePDF(URL, ModelContext, String?)
         case pdfSaved(String)
         case pdfSaveFailed(String)
+        case syncCompleted(String)
         
         case delegate(Delegate)
         
         enum Delegate: Equatable {
             case projectSaved(String)
+            case syncCompleted(String)
         }
     }
 
@@ -72,17 +73,16 @@ struct PDFButtonFeature {
             case let .pdfImported(result):
                 switch result {
                 case .success(let url):
-                    print("📄 선택된 PDF 파일:", url)
+                    print("선택된 PDF 파일:", url)
                     state.selectedPDFURL = url
                 case .failure:
-                    print("❌ PDF 파일 가져오기 실패")
+                    print("PDF 파일 가져오기 실패")
                 }
                 return .none
                 
-            // 저장 로직
             case .savePDF(let url, let context, let ownerId):
                 state.isProcessing = true
-                return .run { [projectLocalDataClient, firebaseClient] send in
+                return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] send in
                     do {
                         // 1. 파일을 Documents로 복사
                         guard let storedPath = copyPDFToDocuments(from: url) else {
@@ -93,24 +93,36 @@ struct PDFButtonFeature {
                         // 2. 파일 이름
                         let fileName = url.deletingPathExtension().lastPathComponent
                         
-                        // 3. SwiftData에 저장 - MainActor에서 실행
+                        // 3. SwiftData에 저장 (Local)
                         let payload = try await MainActor.run {
                             try projectLocalDataClient.save(
                                 context,
                                 fileName,
                                 .pdf,
                                 storedPath,
-                                nil,  // PDF는 길이 없음
-                                nil,  // transcript
+                                nil,
+                                nil,
                                 ownerId
                             )
                         }
-                        print("📄 PDF 로컬 저장 완료: \(payload.id)")
+                        print("PDF 로컬 저장 완료: \(payload.id)")
                         
+                        // 저장 완료 알림 (리프레시 트리거)
                         await send(.pdfSaved(payload.id))
                         
-                        // 4. 로그인 유저라면 클라우드 업로드
+                        // 4. 로그인 유저라면 클라우드 동기화
                         if let ownerId {
+                            let localURL = URL(fileURLWithPath: storedPath)
+                            
+                            //통합 클라이언트로 업로드 (파일 확장자 자동 감지)
+                            let remotePath = try await fileCloudClient.uploadFile(
+                                ownerId,
+                                payload.id,
+                                localURL
+                            )
+                            print("PDF Storage 업로드 완료: \(remotePath)")
+                            
+                            // Firebase DB 업로드
                             let syncedPayload = ProjectPayload(
                                 id: payload.id,
                                 name: payload.name,
@@ -122,26 +134,30 @@ struct PDFButtonFeature {
                                 transcript: payload.transcript,
                                 ownerId: ownerId,
                                 syncStatus: .synced,
-                                remoteAudioPath: nil
+                                remoteAudioPath: remotePath
                             )
                             
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
+                            print("Firebase DB 업로드 완료")
                             
-                            // MainActor에서 실행
+                            // 로컬 상태 업데이트
                             try await MainActor.run {
                                 try projectLocalDataClient.updateSyncStatus(
                                     context,
                                     [payload.id],
                                     .synced,
                                     ownerId,
-                                    nil
+                                    remotePath
                                 )
                             }
-                            print("☁️ PDF 클라우드 동기화 완료")
+                            print("동기화 상태 업데이트 완료")
+                            
+                            //동기화 완료 알림 (리프레시 트리거)
+                            await send(.syncCompleted(payload.id))
                         }
                         
                     } catch {
-                        print("❌ PDF 저장 실패: \(error)")
+                        print("PDF 저장 실패: \(error)")
                         await send(.pdfSaveFailed(error.localizedDescription))
                     }
                 }
@@ -151,6 +167,10 @@ struct PDFButtonFeature {
                 state.selectedPDFURL = nil
                 state.isProcessing = false
                 return .send(.delegate(.projectSaved(projectId)))
+                
+            case .syncCompleted(let projectId):
+                // 동기화 완료 시 delegate로 전달
+                return .send(.delegate(.syncCompleted(projectId)))
                 
             case .pdfSaveFailed(let error):
                 print("PDF 저장 실패: \(error)")
@@ -163,7 +183,6 @@ struct PDFButtonFeature {
         }
     }
     
-    // MARK: - Helper
     private func copyPDFToDocuments(from url: URL) -> String? {
         let fileManager = FileManager.default
         guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
@@ -175,7 +194,6 @@ struct PDFButtonFeature {
         }
         
         do {
-            // Security-scoped resource 접근
             guard url.startAccessingSecurityScopedResource() else {
                 print("Security scoped resource 접근 실패")
                 return nil
