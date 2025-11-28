@@ -93,16 +93,18 @@ struct PDFButtonFeature {
                         // 2. 파일 이름
                         let fileName = url.deletingPathExtension().lastPathComponent
                         
-                        // 3. SwiftData에 저장
-                        let payload = try projectLocalDataClient.save(
-                            context,
-                            fileName,
-                            .pdf,
-                            storedPath,
-                            nil,  // PDF는 길이 없음
-                            nil,  // transcript
-                            ownerId
-                        )
+                        // 3. SwiftData에 저장 - MainActor에서 실행
+                        let payload = try await MainActor.run {
+                            try projectLocalDataClient.save(
+                                context,
+                                fileName,
+                                .pdf,
+                                storedPath,
+                                nil,  // PDF는 길이 없음
+                                nil,  // transcript
+                                ownerId
+                            )
+                        }
                         print("📄 PDF 로컬 저장 완료: \(payload.id)")
                         
                         await send(.pdfSaved(payload.id))
@@ -125,8 +127,9 @@ struct PDFButtonFeature {
                             
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
                             
-                            await MainActor.run {
-                                try? projectLocalDataClient.updateSyncStatus(
+                            // MainActor에서 실행
+                            try await MainActor.run {
+                                try projectLocalDataClient.updateSyncStatus(
                                     context,
                                     [payload.id],
                                     .synced,
