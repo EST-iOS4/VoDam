@@ -13,7 +13,7 @@ struct ProjectListFeature {
     struct State: Equatable {
         var projects: IdentifiedArrayOf<Project> = []
         var isLoading = false
-        var needsRefresh = false
+        var refreshTrigger: UUID? = nil
         var allCategories: [FilterCategory] = FilterCategory.allCases
         var selectedCategory: FilterCategory = .all
         var currentSort: SortFilter = .sortedDate
@@ -85,12 +85,11 @@ struct ProjectListFeature {
                 return .none
                 
             case .refreshProjects:
-                state.needsRefresh = true
+                state.refreshTrigger = UUID()
                 return .none
                 
             case .loadProjects(let context):
                 state.isLoading = true
-                state.needsRefresh = false
                 let ownerId = state.currentUser?.ownerId
                 
                 return .run { [projectLocalDataClient] send in
