@@ -14,7 +14,6 @@ struct ProjectListView: View {
     @Bindable var store: StoreOf<ProjectListFeature>
     
     var body: some View {
-        NavigationStack {
             VStack {
                 categoryPicker
                 
@@ -40,13 +39,13 @@ struct ProjectListView: View {
                     store.send(.loadProjects(modelContext))
                 }
             }
-            .task(id: store.currentUser?.ownerId) {
-                // 사용자 변경 시에만 재로드 (로그인/로그아웃)
-                if store.hasLoadedOnce {
-                    print("[ProjectListView] 사용자 변경 감지 - 재로드")
-                    store.send(.loadProjects(modelContext))
-                }
-            }
+//            .task(id: store.currentUser?.ownerId) {
+//                // 사용자 변경 시에만 재로드 (로그인/로그아웃)
+//                if store.hasLoadedOnce {
+//                    print("[ProjectListView] 사용자 변경 감지 - 재로드")
+//                    store.send(.loadProjects(modelContext))
+//                }
+//            }
             .onChange(of: store.refreshTrigger) { oldValue, newValue in
                 // refreshTrigger 변경 시에만 재로드 (projectSaved 이벤트)
                 if newValue != nil && oldValue != newValue {
@@ -59,7 +58,7 @@ struct ProjectListView: View {
             ) { store in
                 destinationView(for: store)
             }
-        }
+        
     }
     
     private var categoryPicker: some View {
