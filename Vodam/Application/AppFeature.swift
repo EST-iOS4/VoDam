@@ -52,8 +52,8 @@ struct AppFeature {
         case main(MainFeature.Action)
         case list(ProjectListFeature.Action)
         case chat(ChattingListFeature.Action)
-        
     }
+    
     @Dependency(\.userStorageClient) var userStorageClient
     
     var body: some Reducer<State, Action> {
@@ -98,15 +98,13 @@ struct AppFeature {
                 state.list.currentUser = nil
                 return .none
                 
-            case .main(
-                .settings(.presented(.delegate(.deleteAccountCompleted)))
-            ):
+            case .main(.settings(.presented(.delegate(.deleteAccountCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
                 return .none
                 
-            // ✅ 구체적인 case를 먼저 배치
+            // ✅ 구체적인 case를 먼저 배치 (녹음 저장 후 리스트 새로고침)
             case .main(.delegate(.projectSaved)):
                 return .send(.list(.refreshProjects))
                 

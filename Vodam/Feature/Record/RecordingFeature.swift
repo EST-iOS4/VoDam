@@ -4,6 +4,7 @@
 
 import ComposableArchitecture
 import Foundation
+import SwiftData
 
 @Reducer
 struct RecordingFeature {
@@ -11,12 +12,15 @@ struct RecordingFeature {
     @Dependency(\.audioRecorder) var recorder
     @Dependency(\.continuousClock) var clock
     @Dependency(\.speechService) var speechService
+    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
+    @Dependency(\.firebaseClient) var firebaseClient
+    @Dependency(\.audioCloudClient) var audioCloudClient
     
     enum Status: Equatable {
         case ready
         case recording
         case paused
-        case finishing  // ✅ STT 완료 대기 상태 추가
+        case finishing
         
         var localizedText: String {
             switch self {
@@ -36,10 +40,7 @@ struct RecordingFeature {
         var lastRecordedLength: Int = 0
         var savedProjectId: String? = nil
         
-        // ✅ Live STT 결과
         var liveTranscript: String = ""
-        
-        // ✅ 최종 transcript (녹음 완료 시 저장용)
         var finalTranscript: String? = nil
     }
     
@@ -50,10 +51,9 @@ struct RecordingFeature {
         case tick
         
         case liveTranscriptUpdated(String)
-        
         case liveTranscriptFinished
         
-        case saveRecording(URL, Int, String?)
+        case saveRecording(URL, Int, String?, ModelContext)
         case recordingSaved(String)
         case recordingSaveFailed(String)
         
@@ -84,24 +84,17 @@ struct RecordingFeature {
                     let startLiveTranscription = speechService.startLiveTranscription
                     
                     return .merge(
-                        // Start recording
                         .run { _ in
                             _ = try? recorder.startRecording()
-                        }
-                        .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
-                        
-                        // Live STT stream
+                        },
                         .run { send in
                             let stream = startLiveTranscription()
                             for await transcript in stream {
                                 await send(.liveTranscriptUpdated(transcript))
                             }
-                            // ✅ 스트림 종료 시 알림
                             await send(.liveTranscriptFinished)
                         }
                         .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
-                        
-                        // Tick timer
                         .run { send in
                             for await _ in clock.timer(interval: .seconds(1)) {
                                 await send(.tick)
@@ -116,13 +109,9 @@ struct RecordingFeature {
                     let startLiveTranscription = speechService.startLiveTranscription
                     
                     return .merge(
-                        // Resume recording
                         .run { _ in
                             recorder.resumeRecording()
-                        }
-                        .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
-                        
-                        // Live STT stream
+                        },
                         .run { send in
                             let stream = startLiveTranscription()
                             for await transcript in stream {
@@ -131,8 +120,6 @@ struct RecordingFeature {
                             await send(.liveTranscriptFinished)
                         }
                         .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
-                        
-                        // Tick timer
                         .run { send in
                             for await _ in clock.timer(interval: .seconds(1)) {
                                 await send(.tick)
@@ -141,8 +128,7 @@ struct RecordingFeature {
                         .cancellable(id: CancelID.timer, cancelInFlight: true)
                     )
                     
-                default:
-                    // state.status == .recording or .finishing
+                case .recording, .finishing:
                     return .none
                 }
                 
@@ -165,17 +151,15 @@ struct RecordingFeature {
                 guard state.status == .recording || state.status == .paused else { return .none }
                 
                 let url = recorder.stopRecording()
-                let length = state.elapsedSeconds
                 state.fileURL = url
                 state.lastRecordedLength = state.elapsedSeconds
                 state.elapsedSeconds = 0
-                state.status = .finishing  // ✅ STT 완료 대기
+                state.status = .finishing
                 
                 let stopLiveTranscription = speechService.stopLiveTranscription
                 
                 return .merge(
                     .cancel(id: CancelID.timer),
-                    // ✅ liveSTT는 cancel하지 않음 - 자연스럽게 종료되도록 함
                     .run { _ in
                         stopLiveTranscription()
                     }
@@ -188,23 +172,88 @@ struct RecordingFeature {
                 return .none
                 
             case .liveTranscriptUpdated(let transcript):
-                // ✅ 빈 문자열은 무시
                 guard !transcript.isEmpty else { return .none }
                 state.liveTranscript = transcript
                 return .none
                 
-            // ✅ STT 스트림 종료 후 최종 저장
             case .liveTranscriptFinished:
                 guard state.status == .finishing else { return .none }
-                
                 state.finalTranscript = state.liveTranscript.isEmpty ? nil : state.liveTranscript
                 state.status = .ready
-                
                 print("🏁 STT 완료, 최종 transcript: \(state.finalTranscript ?? "없음")")
                 return .none
                 
-            case .saveRecording:
-                return .none
+            case .saveRecording(let tempUrl, let length, let ownerId, let context):
+                let transcript = state.finalTranscript
+                
+                return .run { [projectLocalDataClient, audioCloudClient, firebaseClient] send in
+                    do {
+                        guard let storedPath = copyFileToDocuments(from: tempUrl) else {
+                            await send(.recordingSaveFailed("파일 저장 실패"))
+                            return
+                        }
+                        
+                        let dateFormatter = DateFormatter()
+                        dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
+                        let fileName = "녹음 \(dateFormatter.string(from: Date()))"
+                        
+                        let payload = try projectLocalDataClient.save(
+                            context,
+                            fileName,
+                            .audio,
+                            storedPath,
+                            length,
+                            transcript,
+                            ownerId
+                        )
+                        print("✅ 로컬 저장 완료: \(payload.id), transcript: \(transcript ?? "없음")")
+                        
+                        await send(.recordingSaved(payload.id))
+                        
+                        if let ownerId {
+                            let localURL = URL(fileURLWithPath: storedPath)
+                            
+                            let remotePath = try await audioCloudClient.uploadAudio(
+                                ownerId,
+                                payload.id,
+                                localURL
+                            )
+                            
+                            let syncedPayload = ProjectPayload(
+                                id: payload.id,
+                                name: payload.name,
+                                creationDate: payload.creationDate,
+                                category: payload.category,
+                                isFavorite: payload.isFavorite,
+                                filePath: payload.filePath,
+                                fileLength: payload.fileLength,
+                                transcript: payload.transcript,
+                                ownerId: ownerId,
+                                syncStatus: .synced,
+                                remoteAudioPath: remotePath
+                            )
+                            
+                            try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
+                            
+                            await MainActor.run {
+                                try? projectLocalDataClient.updateSyncStatus(
+                                    context,
+                                    [payload.id],
+                                    .synced,
+                                    ownerId,
+                                    remotePath
+                                )
+                            }
+                            print("✅ 클라우드 동기화 완료")
+                        } else {
+                            print("비회원 모드: 클라우드 업로드 생략")
+                        }
+                        
+                    } catch {
+                        print("❌ 저장 프로세스 실패: \(error)")
+                        await send(.recordingSaveFailed(error.localizedDescription))
+                    }
+                }
                 
             case .recordingSaved(let projectId):
                 state.savedProjectId = projectId
@@ -214,12 +263,33 @@ struct RecordingFeature {
                 return .send(.delegate(.projectSaved(projectId)))
                 
             case .recordingSaveFailed(let error):
-                print("녹음 저장 실패: \(error)")
+                print("녹음 저장 실패 에러: \(error)")
                 return .none
                 
             case .delegate:
                 return .none
             }
         }
+    }
+}
+
+// MARK: - Helper
+private func copyFileToDocuments(from url: URL) -> String? {
+    let fileManager = FileManager.default
+    guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+    
+    let destinationURL = documentsDir.appendingPathComponent(url.lastPathComponent)
+    
+    if fileManager.fileExists(atPath: destinationURL.path) {
+        try? fileManager.removeItem(at: destinationURL)
+    }
+    
+    do {
+        try fileManager.copyItem(at: url, to: destinationURL)
+        print("녹음 파일 복사 성공 → \(destinationURL.path)")
+        return destinationURL.path
+    } catch {
+        print("파일 이동 실패: \(error)")
+        return nil
     }
 }
