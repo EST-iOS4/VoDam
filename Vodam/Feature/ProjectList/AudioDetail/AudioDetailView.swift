@@ -6,10 +6,12 @@
 //
 
 import ComposableArchitecture
+import SwiftData
 import SwiftUI
 
 struct AudioDetailView: View {
     @Bindable var store: StoreOf<AudioDetailFeature>
+    @Environment(\.modelContext) private var context
     
     // PDF 확인
     private var isPDF: Bool {
@@ -123,7 +125,7 @@ struct AudioDetailView: View {
                         .font(.title)
                 }
                 
-                Button(action: { store.send(.favoriteButtonTapped) }) {
+                Button(action: { store.send(.favoriteButtonTapped(context)) }) {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
                         .font(.title)
                 }
@@ -145,7 +147,7 @@ struct AudioDetailView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
             
-            Button(action: { store.send(.favoriteButtonTapped) }) {
+            Button(action: { store.send(.favoriteButtonTapped(context)) }) {
                 HStack {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
                         .font(.title2)

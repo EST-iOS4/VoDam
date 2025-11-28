@@ -112,7 +112,7 @@ struct ProjectListFeature {
             case .projectTapped(id: let projectId):
                 if let project = state.projects[id: projectId] {
                     state.destination = .audioDetail(
-                        AudioDetailFeature.State(project: project)
+                        AudioDetailFeature.State(project: project, currentUser: state.currentUser)
                     )
                 }
                 return .none
