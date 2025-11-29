@@ -24,10 +24,9 @@ struct RecordingFeature {
         
         var localizedText: String {
             switch self {
-            case .ready: "준비됨"
-            case .recording: "녹음 중입니다"
-            case .paused: "일시정지됨"
-            case .finishing: "저장 중..."
+            case .ready: "녹음 준비"
+            case .recording: "녹음 중"
+            case .paused: "일시 정지"
             }
         }
     }
@@ -56,6 +55,7 @@ struct RecordingFeature {
         case saveRecording(URL, Int, String?, ModelContext)
         case recordingSaved(String)
         case recordingSaveFailed(String)
+        case syncCompleted(String)
         
         case delegate(Delegate)
         
@@ -195,6 +195,7 @@ struct RecordingFeature {
                 
                 return .run { send in
                     do {
+                        // ✅ 1. 파일을 Documents로 복사
                         guard let storedPath = copyFileToDocuments(from: tempUrl) else {
                             await send(.recordingSaveFailed("파일 저장 실패"))
                             return
@@ -204,56 +205,79 @@ struct RecordingFeature {
                         dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
                         let fileName = "녹음 \(dateFormatter.string(from: Date()))"
                         
-                        let payload = try saveProject(
-                            context,
-                            fileName,
-                            .audio,
-                            storedPath,
-                            length,
-                            transcript,
-                            ownerId
-                        )
-                        print("✅ 로컬 저장 완료: \(payload.id), transcript: \(transcript ?? "없음")")
+                        // ✅ 2. SwiftData에 먼저 저장하여 ID 생성
+                        let payload = try await MainActor.run {
+                            try projectLocalDataClient.save(
+                                context,
+                                fileName,
+                                .audio,
+                                storedPath,
+                                length,
+                                nil,
+                                ownerId
+                            )
+                        }
+                        print("✅ 로컬 저장 완료: \(payload.id)")
                         
                         await send(.recordingSaved(payload.id))
                         
+                        // ✅ 3. 로그인 사용자라면 Storage 업로드 (생성된 ID 사용)
                         if let ownerId {
-                            let localURL = URL(fileURLWithPath: storedPath)
-                            
-                            let remotePath = try await uploadAudio(
-                                ownerId,
-                                payload.id,
-                                localURL
-                            )
-                            
-                            let syncedPayload = ProjectPayload(
-                                id: payload.id,
-                                name: payload.name,
-                                creationDate: payload.creationDate,
-                                category: payload.category,
-                                isFavorite: payload.isFavorite,
-                                filePath: payload.filePath,
-                                fileLength: payload.fileLength,
-                                transcript: payload.transcript,
-                                ownerId: ownerId,
-                                syncStatus: .synced,
-                                remoteAudioPath: remotePath
-                            )
-                            
-                            try await uploadProjects(ownerId, [syncedPayload])
-                            
-                            await MainActor.run {
-                                try? updateSyncStatus(
-                                    context,
-                                    [payload.id],
-                                    .synced,
+                            do {
+                                let localURL = URL(fileURLWithPath: storedPath)
+                                
+                                // 파일 존재 확인
+                                let fileManager = FileManager.default
+                                guard fileManager.fileExists(atPath: localURL.path) else {
+                                    print("❌ 업로드할 파일이 존재하지 않음: \(localURL.path)")
+                                    throw NSError(domain: "RecordingFeature", code: -1, userInfo: [NSLocalizedDescriptionKey: "업로드할 파일이 존재하지 않습니다"])
+                                }
+                                
+                                print("📤 Storage 업로드 시작 (projectId: \(payload.id))")
+                                let remotePath = try await fileCloudClient.uploadFile(
                                     ownerId,
-                                    remotePath
+                                    payload.id,  // ✅ 생성된 projectId 사용
+                                    localURL
                                 )
+                                print("✅ Storage 업로드 완료: \(remotePath)")
+                                
+                                // ✅ 4. Firestore 업로드
+                                let syncedPayload = ProjectPayload(
+                                    id: payload.id,
+                                    name: payload.name,
+                                    creationDate: payload.creationDate,
+                                    category: payload.category,
+                                    isFavorite: payload.isFavorite,
+                                    filePath: payload.filePath,
+                                    fileLength: payload.fileLength,
+                                    transcript: payload.transcript,
+                                    ownerId: ownerId,
+                                    syncStatus: .synced,
+                                    remoteAudioPath: remotePath
+                                )
+                                
+                                try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
+                                print("☁️ Firebase DB 업로드 완료 (remoteAudioPath: \(remotePath))")
+                                
+                                // ✅ 5. 로컬 상태 업데이트
+                                try await MainActor.run {
+                                    try projectLocalDataClient.updateSyncStatus(
+                                        context,
+                                        [payload.id],
+                                        .synced,
+                                        ownerId,
+                                        remotePath
+                                    )
+                                }
+                                print("✅ 동기화 상태 업데이트 완료")
+                                
+                                // 동기화 완료 알림
+                                await send(.syncCompleted(payload.id))
+                                
+                            } catch {
+                                print("❌ 클라우드 동기화 실패 (로컬 저장은 완료): \(error.localizedDescription)")
+                                // 로컬 저장은 이미 완료되었으므로 에러는 로그만 남김
                             }
-                            print("✅ 클라우드 동기화 완료")
-                        } else {
-                            print("비회원 모드: 클라우드 업로드 생략")
                         }
                         
                     } catch {
@@ -269,8 +293,11 @@ struct RecordingFeature {
                 state.finalTranscript = nil
                 return .send(.delegate(.projectSaved(projectId)))
                 
+            case .syncCompleted(let projectId):
+                return .send(.delegate(.syncCompleted(projectId)))
+                
             case .recordingSaveFailed(let error):
-                print("녹음 저장 실패 에러: \(error)")
+                print("❌ 녹음 저장 실패: \(error)")
                 return .none
                 
             case .delegate:
@@ -285,18 +312,23 @@ private func copyFileToDocuments(from url: URL) -> String? {
     let fileManager = FileManager.default
     guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
     
-    let destinationURL = documentsDir.appendingPathComponent(url.lastPathComponent)
-    
-    if fileManager.fileExists(atPath: destinationURL.path) {
-        try? fileManager.removeItem(at: destinationURL)
-    }
-    
-    do {
-        try fileManager.copyItem(at: url, to: destinationURL)
-        print("녹음 파일 복사 성공 → \(destinationURL.path)")
-        return destinationURL.path
-    } catch {
-        print("파일 이동 실패: \(error)")
-        return nil
+    private func copyFileToDocuments(from url: URL) -> String? {
+        let fileManager = FileManager.default
+        guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        
+        let destinationURL = documentsDir.appendingPathComponent(url.lastPathComponent)
+        
+        if fileManager.fileExists(atPath: destinationURL.path) {
+            try? fileManager.removeItem(at: destinationURL)
+        }
+        
+        do {
+            try fileManager.copyItem(at: url, to: destinationURL)
+            print("✅ 파일 복사 완료: \(destinationURL.path)")
+            return destinationURL.path
+        } catch {
+            print("❌ 파일 이동 실패: \(error)")
+            return nil
+        }
     }
 }
