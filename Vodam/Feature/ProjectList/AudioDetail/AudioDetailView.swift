@@ -78,6 +78,9 @@ struct AudioDetailView: View {
         .onAppear {
             store.send(.onAppear)
         }
+        .onDisappear {
+            store.send(.onDisappear)
+        }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
     }
     
