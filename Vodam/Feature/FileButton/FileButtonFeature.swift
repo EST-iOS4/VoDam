@@ -12,18 +12,18 @@ import SwiftData
 
 @Reducer
 struct FileButtonFeature {
-
+    
     @Dependency(\.audioFileSTTClient) var sttClient
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
     @Dependency(\.fileCloudClient) var fileCloudClient
-
+    
     @ObservableState
     struct State: Equatable {
         var title: String = "파일 가져오기"
         var selectedFileURL: URL?
         var isImporterPresented: Bool = false
-
+        
         // STT 상태
         var isTranscribing: Bool = false
         var transcript: String = ""
@@ -32,12 +32,12 @@ struct FileButtonFeature {
         // 저장된 프로젝트 ID
         var savedProjectId: String?
     }
-
+    
     enum Action: Equatable {
         case tapped
         case importerPresented(Bool)
         case fileImported(Result<URL, FileImportError>)
-
+        
         // STT
         case startSTT(URL)
         case sttResponse(Result<String, STTError>)
@@ -46,36 +46,38 @@ struct FileButtonFeature {
         case saveFile(URL, String?, ModelContext, String?)  // url, transcript, context, ownerId
         case fileSaved(String)
         case fileSaveFailed(String)
+        case syncCompleted(String)
         
         case delegate(Delegate)
         
         enum Delegate: Equatable {
             case projectSaved(String)
+            case syncCompleted(String)
         }
     }
-
+    
     enum FileImportError: Error, Equatable {
         case failed
     }
-
+    
     enum STTError: Error, Equatable {
         case failed(String)
     }
-
+    
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-
-            // 파일 선택 클릭
+                
+                // 파일 선택 클릭
             case .tapped:
                 state.isImporterPresented = true
                 return .none
-
+                
             case .importerPresented(let isPresented):
                 state.isImporterPresented = isPresented
                 return .none
-
-            // 파일 선택 후
+                
+                // 파일 선택 후
             case .fileImported(let result):
                 switch result {
                 case .success(let url):
@@ -83,13 +85,13 @@ struct FileButtonFeature {
                     state.selectedFileURL = url
                     // 선택됨 → STT 실행
                     return .send(.startSTT(url))
-
+                    
                 case .failure:
                     state.errorMessage = "파일 선택 실패"
                     return .none
                 }
-
-            // STT 시작
+                
+                // STT 시작
             case .startSTT(let url):
                 state.isTranscribing = true
                 print("🎤 STT 시작: \(url.lastPathComponent)")
@@ -97,25 +99,25 @@ struct FileButtonFeature {
                     let result = await sttClient.transcribe(url)
                     await send(.sttResponse(result))
                 }
-
-            // STT 결과 전달
+                
+                // STT 결과 전달
             case .sttResponse(let result):
                 state.isTranscribing = false
                 print("🎤 STT 종료")
-
+                
                 switch result {
                 case .success(let text):
                     print("📄 STT 결과:")
                     print(text)
                     state.transcript = text
-
+                    
                 case .failure(let error):
                     print("❌ STT 실패:", error)
                     state.errorMessage = "STT 실패: \(error)"
                 }
                 return .none
                 
-            // 저장 로직
+                // 저장 로직
             case .saveFile(let url, let transcript, let context, let ownerId):
                 return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
@@ -187,6 +189,7 @@ struct FileButtonFeature {
                                 )
                             }
                             print("☁️ 클라우드 동기화 완료")
+                            await send(.syncCompleted(payload.id))
                         }
                         
                     } catch {
@@ -199,7 +202,16 @@ struct FileButtonFeature {
                 state.savedProjectId = projectId
                 state.selectedFileURL = nil
                 state.transcript = ""
-                return .send(.delegate(.projectSaved(projectId)))
+                return .run { send in
+                    try await Task.sleep(for: .milliseconds(100))
+                    await send(.delegate(.projectSaved(projectId)))
+                }
+                
+            case .syncCompleted(let projectId):
+                return .run { send in
+                    try await Task.sleep(for: .milliseconds(100))
+                    await send(.delegate(.syncCompleted(projectId)))
+                }
                 
             case .fileSaveFailed(let error):
                 print("파일 저장 실패: \(error)")

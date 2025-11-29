@@ -7,9 +7,15 @@
 
 import ComposableArchitecture
 import SwiftUI
+import SwiftData
 
 struct AppView: View {
     @Bindable var store: StoreOf<AppFeature>
+    
+    @Environment(\.modelContext) private var modelContext
+    @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
+    @Dependency(\.firebaseClient) private var firebaseClient
+    @Dependency(\.fileCloudClient) private var fileCloudClient
 
     var body: some View {
         TabView(selection: $store.startTab.sending(\.startTab)) {
@@ -43,6 +49,22 @@ struct AppView: View {
             }
             .tag(AppFeature.State.Tab.chat)
 
+        }
+        .onChange(of: store.user) { oldValue, newValue in
+            // 사용자 변경 시 Firebase 동기화 (어느 탭에서든 실행됨)
+            if oldValue?.ownerId != newValue?.ownerId {
+                FirebaseSyncHelper.handleUserChange(
+                    oldValue: oldValue,
+                    newValue: newValue,
+                    modelContext: modelContext,
+                    projectLocalDataClient: projectLocalDataClient,
+                    firebaseClient: firebaseClient,
+                    fileCloudClient: fileCloudClient,
+                    onComplete: {
+                        store.send(.list(.refreshProjects))
+                    }
+                )
+            }
         }
     }
 }

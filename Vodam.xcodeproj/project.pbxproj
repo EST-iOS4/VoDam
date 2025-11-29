@@ -15,8 +15,8 @@
 		7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 7D1B6D342ECD9177005A08A6 /* KakaoSDKUser */; };
 		7D5C88942ECAAC3400977C6E /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 7D5C88932ECAAC3400977C6E /* ComposableArchitecture */; };
 		7D9F44D22ED7DA17008961A3 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F44D12ED7DA17008961A3 /* FirebaseStorage */; };
-		8BDFB97D2ED98294002C3940 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F378E2ED694C6008961A3 /* FirebaseCore */; };
-		8BDFB97E2ED98294002C3940 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F37902ED694C6008961A3 /* FirebaseFirestore */; };
+		7D9F44E12ED970C3008961A3 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F378E2ED694C6008961A3 /* FirebaseCore */; };
+		7D9F44E22ED970C3008961A3 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 7D9F37902ED694C6008961A3 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,8 +74,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8BDFB97E2ED98294002C3940 /* FirebaseFirestore in Frameworks */,
-				8BDFB97D2ED98294002C3940 /* FirebaseCore in Frameworks */,
+				7D9F44E22ED970C3008961A3 /* FirebaseFirestore in Frameworks */,
+				7D9F44E12ED970C3008961A3 /* FirebaseCore in Frameworks */,
 				70C12ABD2ED8803100D7BB2A /* GoogleSignIn in Frameworks */,
 				70C12AC02ED8814F00D7BB2A /* FirebaseAnalyticsCore in Frameworks */,
 				7D1B6D352ECD9177005A08A6 /* KakaoSDKUser in Frameworks */,
@@ -258,15 +258,22 @@
 /* Begin XCBuildConfiguration section */
 		70C129362ED5A2BA00D7BB2A /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 8B4C67C52EBC8481003C67F9 /* Vodam */;
+			baseConfigurationReferenceRelativePath = Secrets.xcconfig;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3X262XJF5T;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam.VodamTests;
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.mandooplz.vodam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "VoDam-Dev-Minwoo";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -279,15 +286,22 @@
 		};
 		70C129372ED5A2BA00D7BB2A /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 8B4C67C52EBC8481003C67F9 /* Vodam */;
+			baseConfigurationReferenceRelativePath = Secrets.xcconfig;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 3X262XJF5T;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.whtiebear.vodam.VodamTests;
+				PRODUCT_BUNDLE_IDENTIFIER = cloud.mandooplz.vodam;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "VoDam-Dev-Minwoo";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
@@ -432,6 +446,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Vodam/Vodam.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
@@ -474,6 +489,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Vodam/Vodam.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;

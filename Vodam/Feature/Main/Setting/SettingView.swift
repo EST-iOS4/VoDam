@@ -1,3 +1,10 @@
+//
+//  SettingsFeature.swift
+//  Vodam
+//
+//  Created by 송영민 on 11/17/25.
+//
+
 import ComposableArchitecture
 import PhotosUI
 import SwiftData
@@ -7,15 +14,15 @@ struct SettingView: View {
     @Bindable var store: StoreOf<SettingsFeature>
     @State private var selectedItem: PhotosPickerItem?
     @State private var showDeleteConfirmation = false
-    
+
     @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
     @Dependency(\.fileCloudClient) private var fileCloudClient
-    
+
     private var user: User? {
         store.user
     }
-    
+
     var body: some View {
         List {
             profileSection
@@ -60,30 +67,13 @@ struct SettingView: View {
             }
         }
     }
-    
-    // MARK: - 로컬 데이터 삭제
+
+    // MARK: - 로컬 데이터 삭제 (회원 탈퇴)
     private func deleteLocalData(ownerId: String) async {
         do {
-            let projects = try projectLocalDataClient.fetchAll(modelContext, ownerId)
+            print("탈퇴 처리 - 로컬 데이터 삭제 시작: \(ownerId)")
             
-            print("탈퇴 처리 시작: \(ownerId), 프로젝트 \(projects.count)개")
-            
-            // Storage 삭제
-            for project in projects {
-                if let remotePath = project.remoteAudioPath,
-                   !remotePath.isEmpty,
-                   (project.category == .audio || project.category == .file || project.category == .pdf) {
-                    do {
-                        try await fileCloudClient.deleteFile(remotePath)
-                        print("Storage 파일 삭제: \(project.name)")
-                    } catch {
-                        print("Storage 파일 삭제 실패: \(project.name) - \(error)")
-                        // 실패해도 계속 진행
-                    }
-                }
-            }
-            
-            // 로컬 삭제
+            // 로컬 SwiftData만 삭제 (Firebase는 Feature에서 이미 삭제)
             try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
             
             store.send(.localDataDeleted(ownerId))
@@ -93,7 +83,7 @@ struct SettingView: View {
             print("로컬 데이터 삭제 실패: \(error)")
         }
     }
-    
+
     // MARK: - 로그아웃 시 로컬 데이터 삭제
     private func deleteLocalDataForLogout(ownerId: String) async {
         do {
@@ -108,13 +98,13 @@ struct SettingView: View {
             print("로그아웃 - 로컬 데이터 삭제 실패: \(error)")
         }
     }
-    
+
     @ViewBuilder
     private var profileSection: some View {
         Section {
             HStack {
                 Spacer()
-                
+
                 PhotosPicker(
                     selection: $selectedItem,
                     matching: .images,
@@ -129,13 +119,13 @@ struct SettingView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(user == nil)
-                
+
                 Spacer()
             }
         }
         .listRowBackground(Color.clear)
     }
-    
+
     @ViewBuilder
     private var userInfoSection: some View {
         Section {
@@ -147,7 +137,7 @@ struct SettingView: View {
                     .foregroundColor(.secondary)
             }
             .foregroundColor(.primary)
-            
+
             HStack {
                 Image(systemName: "envelope.circle")
                 Text("이메일")
@@ -161,13 +151,13 @@ struct SettingView: View {
                 }
             }
             .foregroundColor(.primary)
-            
+
             HStack {
                 Image(systemName: "exclamationmark.circle")
                 Text("개인정보처리방침")
             }
             .foregroundColor(.primary)
-            
+
             HStack {
                 Image(systemName: "questionmark.circle")
                 Text("문의하기")
@@ -175,7 +165,7 @@ struct SettingView: View {
             .foregroundColor(.primary)
         }
     }
-    
+
     @ViewBuilder
     private var accountSection: some View {
         Section {
@@ -193,7 +183,7 @@ struct SettingView: View {
                     }
                 }
                 .foregroundStyle(.primary)
-                
+
                 Button {
                     store.send(.deleteAccountTapped)
                 } label: {

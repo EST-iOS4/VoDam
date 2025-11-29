@@ -16,6 +16,7 @@ struct ProjectPayload: Codable, Sendable, Equatable {
     let filePath: String?
     let fileLength: Int?
     let transcript: String?
+    let summary: String?
     let ownerId: String?
     let syncStatus: SyncStatus
     
@@ -29,6 +30,7 @@ struct ProjectPayload: Codable, Sendable, Equatable {
         filePath: String?,
         fileLength: Int?,
         transcript: String?,
+        summary: String? = nil,
         ownerId: String?,
         syncStatus: SyncStatus,
         remoteAudioPath: String? = nil
@@ -41,6 +43,7 @@ struct ProjectPayload: Codable, Sendable, Equatable {
         self.filePath = filePath
         self.fileLength = fileLength
         self.transcript = transcript
+        self.summary = summary
         self.ownerId = ownerId
         self.syncStatus = syncStatus
         self.remoteAudioPath = remoteAudioPath
@@ -55,6 +58,7 @@ struct ProjectPayload: Codable, Sendable, Equatable {
         self.filePath = model.filePath
         self.fileLength = model.fileLength
         self.transcript = model.transcript
+        self.summary = model.summary
         self.ownerId = model.ownerId
         self.syncStatus = model.syncStatus
         self.remoteAudioPath = model.remoteAudioPath

@@ -166,7 +166,10 @@ struct PDFButtonFeature {
                 state.savedProjectId = projectId
                 state.selectedPDFURL = nil
                 state.isProcessing = false
-                return .send(.delegate(.projectSaved(projectId)))
+                return .run { send in
+                    try await Task.sleep(for: .milliseconds(100))
+                    await send(.delegate(.projectSaved(projectId)))
+                }
                 
             case .syncCompleted(let projectId):
                 // 동기화 완료 시 delegate로 전달
