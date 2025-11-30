@@ -143,6 +143,7 @@ struct AudioDetailView: View {
         .padding(.vertical, 8)
     }
     
+    // MARK: - 검색 필드
     @ViewBuilder
     private var searchField: some View {
         HStack {
@@ -159,19 +160,47 @@ struct AudioDetailView: View {
                 store.send(.searchSubmitted)
             }
             
+            // 검색 결과 표시 및 네비게이션
             if !store.searchText.isEmpty {
-                Button(action: { store.send(.searchTextChanged("")) }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                }
-                .transition(.scale.combined(with: .opacity))
+                searchResultsNavigation
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(Color(.systemGray6))
         .cornerRadius(10)
-        .animation(.smooth(duration: 0.2), value: store.searchText.isEmpty)
+    }
+
+    @ViewBuilder
+    private var searchResultsNavigation: some View {
+        HStack(spacing: 4) {
+            if store.script.totalResults > 0 {
+                Text("\(store.script.currentResultNumber)/\(store.script.totalResults)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Button(action: { store.send(.script(.previousResult)) }) {
+                    Image(systemName: "chevron.up")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Button(action: { store.send(.script(.nextResult)) }) {
+                    Image(systemName: "chevron.down")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                Text("결과 없음")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Button(action: { store.send(.searchTextChanged("")) }) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.secondary)
+            }
+        }
     }
     
     @ViewBuilder
