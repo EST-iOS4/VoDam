@@ -9,7 +9,6 @@ import AVFoundation
 import ComposableArchitecture
 import SwiftUI
 
-// MARK: - Helper Functions
 private func formatTime(_ seconds: Double) -> String {
     let minutes = Int(seconds) / 60
     let secs = Int(seconds) % 60
@@ -40,6 +39,10 @@ struct AudioDetailFeature {
         var progress: Double = 0.0
         var playbackRate: Float = 1.0
         var isFavorite: Bool = false
+        
+        // 검색 관련 상태
+        var isSearching = false
+        var searchText = ""
         
         init(project: Project, currentUser: User?) {
             self.project = project
@@ -104,6 +107,9 @@ struct AudioDetailFeature {
         case seek(Double)
         case setTotalTime(String)
         case searchButtonTapped
+        case searchCancelButtonTapped
+        case searchTextChanged(String)
+        case searchSubmitted
         case chatButtonTapped
         case editTitleButtonTapped
         case deleteProjectButtonTapped
@@ -281,9 +287,24 @@ struct AudioDetailFeature {
                 state.totalTime = timeString
                 return .none
                 
-            case .script, .aiSummary, .binding, .destination:
-                return .none
             case .searchButtonTapped:
+                state.isSearching = true
+                return .none
+                
+            case .searchCancelButtonTapped:
+                state.isSearching = false
+                state.searchText = ""
+                return .none
+                
+            case .searchTextChanged(let text):
+                state.searchText = text
+                return .none
+                
+            case .searchSubmitted:
+                print("[AudioDetail] 검색 실행: \(state.searchText)")
+                return .none
+                
+            case .script, .aiSummary, .binding, .destination:
                 return .none
             case .chatButtonTapped:
                 return .none
@@ -297,8 +318,6 @@ struct AudioDetailFeature {
             Destination()
         }
     }
-    
-    // MARK: - Private Helper Functions
     
     private func setupPlayerEffect(fileURL: URL) -> Effect<Action> {
         .run { send in
@@ -371,15 +390,13 @@ struct AudioDetailFeature {
     }
 }
 
-// MARK: - Tab
-extension AudioDetailFeature {
+AudioDetailFeature {
     enum Tab: String, CaseIterable, Equatable {
         case aiSummary = "AI 요약"
         case script = "스크립트"
     }
 }
 
-// MARK: - Destination
 extension AudioDetailFeature {
     @Reducer
     struct Destination {

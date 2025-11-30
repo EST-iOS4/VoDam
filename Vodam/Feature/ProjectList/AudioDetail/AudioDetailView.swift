@@ -10,14 +10,19 @@ import SwiftUI
 
 struct AudioDetailView: View {
     @Bindable var store: StoreOf<AudioDetailFeature>
+    @FocusState private var isSearchFieldFocused: Bool
     
-    // PDF 확인
     private var isPDF: Bool {
         store.project.category == .pdf
     }
     
     var body: some View {
         VStack {
+            if store.isSearching {
+                searchBarView
+                    .transition(.push(from: .trailing))
+            }
+            
             AudioDetailTabBar(
                 selectedTab: Binding(
                     get: { store.selectedTab },
@@ -25,34 +30,69 @@ struct AudioDetailView: View {
                 )
             )
             
-            switch store.selectedTab {
-            case .aiSummary:
-                AISummaryView(
-                    store: store.scope(
-                        state: \.aiSummary, action: \.aiSummary
-                    )
-                )
-            case .script:
-                ScriptView(
-                    store: store.scope(
-                        state: \.script, action: \.script
-                    )
-                )
-            }
+            tabContent
             
             Spacer()
             
-            // PDF가 아닐 때만 재생 컨트롤 표시
-            if !isPDF {
-                audioPlayerControls
-            } else {
-                pdfInfoSection
+            bottomContent
+        }
+        .animation(.smooth(duration: 0.35), value: store.isSearching)
+        .navigationTitle(store.isSearching ? "" : store.project.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { toolbarContent }
+        .navigationBarBackButtonHidden(store.isSearching)
+        .onChange(of: store.isSearching) { _, isSearching in
+            if isSearching {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    isSearchFieldFocused = true
+                }
             }
         }
-        .navigationTitle(store.project.name)
-        .toolbar {
+        .onAppear {
+            store.send(.onAppear)
+        }
+        .onDisappear {
+            store.send(.onDisappear)
+        }
+        .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+    }
+    
+    @ViewBuilder
+    private var tabContent: some View {
+        switch store.selectedTab {
+        case .aiSummary:
+            AISummaryView(
+                store: store.scope(
+                    state: \.aiSummary, action: \.aiSummary
+                )
+            )
+        case .script:
+            ScriptView(
+                store: store.scope(
+                    state: \.script, action: \.script
+                )
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private var bottomContent: some View {
+        if !isPDF {
+            audioPlayerControls
+        } else {
+            pdfInfoSection
+        }
+    }
+    
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        if !store.isSearching {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
-                Button(action: { store.send(.searchButtonTapped) }) {
+                Button(action: {
+                    withAnimation(.smooth(duration: 0.35)) {
+                        _ = store.send(.searchButtonTapped)
+                    }
+                }) {
                     Image(systemName: "magnifyingglass")
                 }
                 
@@ -75,16 +115,65 @@ struct AudioDetailView: View {
                 }
             }
         }
-        .onAppear {
-            store.send(.onAppear)
-        }
-        .onDisappear {
-            store.send(.onDisappear)
-        }
-        .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
     }
     
-    // MARK: 오디오만 컨트롤
+    @ViewBuilder
+    private var searchBarView: some View {
+        HStack(spacing: 12) {
+            Button(action: {
+                withAnimation(.smooth(duration: 0.35)) {
+                    _ = store.send(.searchCancelButtonTapped)
+                }
+            }) {
+                Image(systemName: "chevron.left")
+                    .font(.title3)
+                    .foregroundColor(.primary)
+            }
+            
+            searchField
+            
+            Button("취소") {
+                withAnimation(.smooth(duration: 0.35)) {
+                    _ = store.send(.searchCancelButtonTapped)
+                }
+            }
+            .foregroundColor(.primary)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+    }
+    
+    @ViewBuilder
+    private var searchField: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            
+            TextField("검색", text: Binding(
+                get: { store.searchText },
+                set: { store.send(.searchTextChanged($0)) }
+            ))
+            .focused($isSearchFieldFocused)
+            .submitLabel(.search)
+            .onSubmit {
+                store.send(.searchSubmitted)
+            }
+            
+            if !store.searchText.isEmpty {
+                Button(action: { store.send(.searchTextChanged("")) }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        .animation(.smooth(duration: 0.2), value: store.searchText.isEmpty)
+    }
+    
     @ViewBuilder
     private var audioPlayerControls: some View {
         VStack(spacing: 20) {
@@ -98,42 +187,46 @@ struct AudioDetailView: View {
             }
             .padding(.horizontal)
             
-            HStack(spacing: 40) {
-                Menu {
-                    Button("1.0x", action: { store.send(.setPlaybackRate(1.0)) })
-                    Button("1.5x", action: { store.send(.setPlaybackRate(1.5)) })
-                    Button("2.0x", action: { store.send(.setPlaybackRate(2.0)) })
-                } label: {
-                    Text("\(String(format: "%.1f", store.playbackRate))x")
-                        .font(.headline)
-                }
-                
-                Button(action: { store.send(.backwardButtonTapped) }) {
-                    Image(systemName: "gobackward.10")
-                        .font(.title)
-                }
-                
-                Button(action: { store.send(.playButtonTapped) }) {
-                    Image(systemName: store.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.largeTitle)
-                }
-                
-                Button(action: { store.send(.forwardButtonTapped) }) {
-                    Image(systemName: "goforward.10")
-                        .font(.title)
-                }
-                
-                Button(action: { store.send(.favoriteButtonTapped) }) {
-                    Image(systemName: store.isFavorite ? "star.fill" : "star")
-                        .font(.title)
-                }
-            }
-            .padding(.bottom)
+            playbackControls
         }
         .padding()
     }
     
-    //pdf 만
+    @ViewBuilder
+    private var playbackControls: some View {
+        HStack(spacing: 40) {
+            Menu {
+                Button("1.0x", action: { store.send(.setPlaybackRate(1.0)) })
+                Button("1.5x", action: { store.send(.setPlaybackRate(1.5)) })
+                Button("2.0x", action: { store.send(.setPlaybackRate(2.0)) })
+            } label: {
+                Text("\(String(format: "%.1f", store.playbackRate))x")
+                    .font(.headline)
+            }
+            
+            Button(action: { store.send(.backwardButtonTapped) }) {
+                Image(systemName: "gobackward.10")
+                    .font(.title)
+            }
+            
+            Button(action: { store.send(.playButtonTapped) }) {
+                Image(systemName: store.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.largeTitle)
+            }
+            
+            Button(action: { store.send(.forwardButtonTapped) }) {
+                Image(systemName: "goforward.10")
+                    .font(.title)
+            }
+            
+            Button(action: { store.send(.favoriteButtonTapped) }) {
+                Image(systemName: store.isFavorite ? "star.fill" : "star")
+                    .font(.title)
+            }
+        }
+        .padding(.bottom)
+    }
+    
     @ViewBuilder
     private var pdfInfoSection: some View {
         VStack(spacing: 16) {
