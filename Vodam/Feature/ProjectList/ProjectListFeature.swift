@@ -4,7 +4,6 @@ import SwiftData
 
 @Reducer
 struct ProjectListFeature {
-    
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
     @Dependency(\.fileCloudClient) var fileCloudClient
@@ -238,6 +237,9 @@ struct ProjectListFeature {
                 state.currentUser = user
                 return .send(.refreshProjects)
                 
+            case .destination(.presented(.audioDetail(.delegate(.didDeleteProject)))):
+                state.destination = nil
+                return .none
             case .destination(.presented(.audioDetail(.delegate(.needsRefresh)))):
                 return .send(.refreshProjects)
                 
