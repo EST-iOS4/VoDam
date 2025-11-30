@@ -294,14 +294,15 @@ struct AudioDetailFeature {
             case .searchCancelButtonTapped:
                 state.isSearching = false
                 state.searchText = ""
-                return .none
+                return .send(.script(.clearSearch))
                 
             case .searchTextChanged(let text):
                 state.searchText = text
-                return .none
+                return .send(.script(.search(text)))
                 
             case .searchSubmitted:
                 print("[AudioDetail] 검색 실행: \(state.searchText)")
+                state.selectedTab = .script
                 return .none
                 
             case .script, .aiSummary, .binding, .destination:
