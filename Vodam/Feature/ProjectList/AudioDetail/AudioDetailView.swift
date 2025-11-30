@@ -63,12 +63,12 @@ struct AudioDetailView: View {
                 }
                 
                 Menu {
-                    Button(action: {  }) {
+                    Button(action: { store.send(.editTitleButtonTapped) }) {
                         Label("제목 수정", systemImage: "pencil")
                     }
                     
                     Button(role: .destructive) {
-                        store.send(.deleteProjectButtonTapped)
+                        store.send(.deleteProjectButtonTapped(context))
                     } label: {
                         Label("삭제", systemImage: "xmark")
                     }
@@ -83,6 +83,9 @@ struct AudioDetailView: View {
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
             ChattingRoomView(store: $0)
+        }
+        .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
+            ProjectTitleEditView(store: $0)
         }
     }
     
