@@ -390,7 +390,7 @@ struct AudioDetailFeature {
     }
 }
 
-AudioDetailFeature {
+extension AudioDetailFeature {
     enum Tab: String, CaseIterable, Equatable {
         case aiSummary = "AI 요약"
         case script = "스크립트"
