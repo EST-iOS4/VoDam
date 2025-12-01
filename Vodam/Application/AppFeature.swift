@@ -20,22 +20,9 @@ struct AppFeature {
         var main = MainFeature.State()
         var list = ProjectListFeature.State()
         var chat = ChattingListFeature.State(
-            chattingList: [
-                ChattingInfo(
-                    id: "1",
-                    title: "프로젝트 1",
-                    content: "프로젝트 대화 내용프로젝트 대화 내용...",
-                    recentEditedDate: Date()
-                ),
-                ChattingInfo(
-                    id: "2",
-                    title: "프로젝트 2",
-                    content: "TCA 요약에 대한 대화 내용...",
-                    recentEditedDate: Date()
-                ),
-            ]
-        )
-        
+                chattingList: []
+                )
+                
         enum Tab: Equatable {
             case main
             case list
