@@ -35,7 +35,7 @@ class SpeechService: NSObject {
 
     // MARK: - START
     func startLiveTranscription() -> AsyncStream<String> {
-        if isStarted, transcriptContinuation != nil {
+        if isStarted, let _ = transcriptContinuation {
             return AsyncStream { continuation in
                 continuation.onTermination = { _ in }
             }

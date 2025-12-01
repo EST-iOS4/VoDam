@@ -25,10 +25,10 @@ enum AuthService {
     //MARK: Google 로그인
     static func loginWithGoogle() async throws -> User {
         guard
-            let scene = await UIApplication.shared.connectedScenes.first
+            let scene = UIApplication.shared.connectedScenes.first
                 as? UIWindowScene,
-            let window = await scene.windows.first(where: { $0.isKeyWindow }),
-            let rootVC = await window.rootViewController
+            let window = scene.windows.first(where: { $0.isKeyWindow }),
+            let rootVC = window.rootViewController
         else {
             throw AuthServiceError.authError("RootViewController 찾기 실패")
         }
@@ -306,10 +306,10 @@ extension AuthService {
     //MARK: Apple 로그인
     static func loginWithApple(userStorageClient: UserStorageClient) async throws -> User {
         guard
-            let scene = await UIApplication.shared.connectedScenes.first
+            let scene = UIApplication.shared.connectedScenes.first
                 as? UIWindowScene,
-            let window = await scene.windows.first(where: { $0.isKeyWindow }),
-            let rootVC = await window.rootViewController
+            let window = scene.windows.first(where: { $0.isKeyWindow }),
+            let _ = window.rootViewController
         else {
             throw AuthServiceError.authError("RootViewController 찾기 실패")
         }
@@ -321,7 +321,7 @@ extension AuthService {
         let controller = ASAuthorizationController(authorizationRequests: [
             request
         ])
-        let delegate = await AppleAuthControllerDelegate(
+        let delegate = AppleAuthControllerDelegate(
             presentationAnchor: window,
             userStorageClient: userStorageClient
         )

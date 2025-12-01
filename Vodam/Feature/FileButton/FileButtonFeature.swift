@@ -122,7 +122,7 @@ struct FileButtonFeature {
                 return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
                         // 1. 파일을 Documents로 복사
-                        guard let storedPath = copyFileToDocuments(from: url) else {
+                        guard let storedPath = await copyFileToDocuments(from: url) else {
                             await send(.fileSaveFailed("파일 저장 실패"))
                             return
                         }
@@ -132,7 +132,7 @@ struct FileButtonFeature {
                         
                         // 3. 파일 길이 계산 (오디오 파일인 경우)
                         var fileLength: Int? = nil
-                        if let duration = getAudioDuration(url: URL(fileURLWithPath: storedPath)) {
+                        if let duration = await getAudioDuration(url: URL(fileURLWithPath: storedPath)) {
                             fileLength = Int(duration)
                         }
                         
@@ -162,7 +162,7 @@ struct FileButtonFeature {
                                 localURL
                             )
                             
-                            let syncedPayload = ProjectPayload(
+                            let syncedPayload = await ProjectPayload(
                                 id: payload.id,
                                 name: payload.name,
                                 creationDate: payload.creationDate,
