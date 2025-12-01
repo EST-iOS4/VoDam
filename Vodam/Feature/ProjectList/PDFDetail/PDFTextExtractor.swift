@@ -9,7 +9,7 @@ import Foundation
 import PDFKit
 
 struct PDFTextExtractor {
-    static func extractText(from url: URL) -> String? {
+    static func extractText(from url: URL, maxLength: Int? = nil) -> String? {
         print("[PDFTextExtractor] 텍스트 추출 시작: \(url.lastPathComponent)")
         
         guard let pdfDocument = PDFDocument(url: url) else {
@@ -30,33 +30,24 @@ struct PDFTextExtractor {
             
             if let pageText = page.string {
                 extractedText += pageText
-                extractedText += "\n\n" // 페이지 구분
-                
+                extractedText += "\n\n"
                 print("[PDFTextExtractor] 페이지 \(pageIndex + 1) 추출 완료 (\(pageText.count)자)")
             }
         }
         
-        let trimmedText = extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmedText = extractedText.trimmingCharacters(in: .whitespacesAndNewlines)
         
         guard !trimmedText.isEmpty else {
             print("[PDFTextExtractor] 추출된 텍스트가 없습니다")
             return nil
         }
         
-        print("[PDFTextExtractor] 전체 추출 완료: \(trimmedText.count)자")
-        return trimmedText
-    }
-    
-    static func extractText(from url: URL, maxLength: Int = 10000) -> String? {
-        guard var text = extractText(from: url) else {
-            return nil
-        }
-        
-        if text.count > maxLength {
-            text = String(text.prefix(maxLength))
+        if let maxLength = maxLength, trimmedText.count > maxLength {
+            trimmedText = String(trimmedText.prefix(maxLength))
             print("[PDFTextExtractor] 텍스트 잘림: \(maxLength)자로 제한")
         }
         
-        return text
+        print("[PDFTextExtractor] 전체 추출 완료: \(trimmedText.count)자")
+        return trimmedText
     }
 }

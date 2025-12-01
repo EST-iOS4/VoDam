@@ -5,6 +5,7 @@
 import ComposableArchitecture
 import Foundation
 import SwiftData
+import AVFoundation
 
 @Reducer
 struct RecordingFeature {
@@ -21,14 +22,14 @@ struct RecordingFeature {
         case ready
         case recording
         case paused
-        case finishing  // ✅ 추가
+        case finishing
         
         var localizedText: String {
             switch self {
             case .ready: "녹음 준비"
             case .recording: "녹음 중"
             case .paused: "일시 정지"
-            case .finishing: "저장 중..."  // ✅ 추가
+            case .finishing: "저장 중..."
             }
         }
     }
@@ -41,7 +42,6 @@ struct RecordingFeature {
         var lastRecordedLength: Int = 0
         var savedProjectId: String? = nil
         
-        // ✅ 추가
         var liveTranscript: String = ""
         var finalTranscript: String? = nil
     }
@@ -52,9 +52,9 @@ struct RecordingFeature {
         case stopTapped
         case tick
         
-        // ✅ 추가
         case liveTranscriptUpdated(String)
         case liveTranscriptFinished
+        case recordingFileSaved(URL)  // ✅ 새로운 액션 추가
         
         case saveRecording(URL, Int, String?, ModelContext)
         case recordingSaved(String)
@@ -81,7 +81,6 @@ struct RecordingFeature {
             case .startTapped:
                 switch state.status {
                 case .ready:
-                    // ✅ 수정: transcript 초기화 및 STT 스트림 수신
                     state.elapsedSeconds = 0
                     state.liveTranscript = ""
                     state.finalTranscript = nil
@@ -90,7 +89,26 @@ struct RecordingFeature {
                     let startLiveTranscription = speechService.startLiveTranscription
                     
                     return .merge(
-                        .run { _ in _ = try? recorder.startRecording() },
+                        
+                        .run { _ in _ = try? await recorder.startRecording() },
+                        .run { send in
+                            // ✅ 녹음 시작 전 AVAudioSession 초기화
+                            do {
+                                let session = AVAudioSession.sharedInstance()
+                                
+                                // 기존 세션 비활성화
+                                try? session.setActive(false, options: .notifyOthersOnDeactivation)
+                                
+                                // 녹음 모드로 설정 (.record는 options 없이 사용)
+                                try session.setCategory(.record, mode: .default, options: [])
+                                try session.setActive(true)
+                                print("[Recording] ✅ AVAudioSession 녹음 모드 설정 완료")
+                            } catch {
+                                print("[Recording] ⚠️ AVAudioSession 설정 실패: \(error)")
+                            }
+                            
+                            _ = try? await recorder.startRecording()
+                        },
                         .run { send in
                             let stream = startLiveTranscription()
                             for await transcript in stream {
@@ -100,21 +118,20 @@ struct RecordingFeature {
                         }
                         .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
                         .run { send in
-                            for await _ in clock.timer(interval: .seconds(1)) { await send(.tick) }
+                            for await _ in await clock.timer(interval: .seconds(1)) { await send(.tick) }
                         }.cancellable(id: CancelID.timer, cancelInFlight: true)
                     )
                     
                 case .paused:
-                    // ✅ 수정: resumeTranscription 사용
                     state.status = .recording
                     
                     let resumeTranscription = speechService.resumeTranscription
                     
                     return .merge(
-                        .run { _ in recorder.resumeRecording() },
+                        .run { _ in await recorder.resumeRecording() },
                         .run { _ in resumeTranscription() },
                         .run { send in
-                            for await _ in clock.timer(interval: .seconds(1)) { await send(.tick) }
+                            for await _ in await clock.timer(interval: .seconds(1)) { await send(.tick) }
                         }.cancellable(id: CancelID.timer, cancelInFlight: true)
                     )
                     
@@ -127,7 +144,6 @@ struct RecordingFeature {
                 recorder.pauseRecording()
                 state.status = .paused
                 
-                // ✅ 수정: pauseTranscription 사용
                 let pauseTranscription = speechService.pauseTranscription
                 
                 return .merge(
@@ -136,11 +152,8 @@ struct RecordingFeature {
                 )
                 
             case .stopTapped:
-                // ✅ 수정: finishing 상태 추가
                 guard state.status == .recording || state.status == .paused else { return .none }
                 
-                let url = recorder.stopRecording()
-                state.fileURL = url
                 state.lastRecordedLength = state.elapsedSeconds
                 state.elapsedSeconds = 0
                 state.status = .finishing
@@ -149,34 +162,93 @@ struct RecordingFeature {
                 
                 return .merge(
                     .cancel(id: CancelID.timer),
-                    .run { _ in stopLiveTranscription() }
+                    .run { _ in stopLiveTranscription() },
+                    // ✅ 녹음 완전히 종료되도록 대기 후 URL 가져오기
+                    .run { [recorder] send in
+                        // 녹음 중지
+                        let url = recorder.stopRecording()
+                        
+                        // ✅ 파일이 완전히 쓰여질 때까지 대기
+                        try? await Task.sleep(for: .milliseconds(500))
+                        
+                        // ✅ URL이 유효한 경우에만 저장
+                        if let url = url {
+                            await send(.recordingFileSaved(url))
+                        } else {
+                            print("❌ 녹음 파일 URL을 가져올 수 없음")
+                            await send(.recordingSaveFailed("녹음 파일을 찾을 수 없습니다"))
+                        }
+                    }
                 )
                 
             case .tick:
                 if state.status == .recording { state.elapsedSeconds += 1 }
                 return .none
                 
-            // ✅ 추가: STT 결과 처리
             case .liveTranscriptUpdated(let transcript):
                 guard !transcript.isEmpty else { return .none }
                 state.liveTranscript = transcript
                 return .none
                 
             case .liveTranscriptFinished:
-                guard state.status == .finishing else { return .none }
                 state.finalTranscript = state.liveTranscript.isEmpty ? nil : state.liveTranscript
-                state.status = .ready
-                print("🏁 STT 완료, 최종 transcript: \(state.finalTranscript ?? "없음")")
+                print("🎤 STT 완료, 최종 transcript: \(state.finalTranscript ?? "없음")")
+                return .none
+                
+            case .recordingFileSaved(let url):
+                // ✅ 녹음 파일이 저장되면 fileURL에 저장
+                state.fileURL = url
+                print("🎤 녹음 파일 URL 저장됨: \(url.path)")
                 return .none
                 
             case .saveRecording(let tempUrl, let length, let ownerId, let context):
-                // ✅ 수정: finalTranscript 사용
                 let transcript = state.finalTranscript
                 
                 return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
-                        guard let storedPath = copyFileToDocuments(from: tempUrl) else {
+                        // ✅ 1. 파일 존재 및 유효성 확인
+                        guard FileManager.default.fileExists(atPath: tempUrl.path) else {
+                            print("❌ 임시 파일이 존재하지 않음: \(tempUrl.path)")
+                            await send(.recordingSaveFailed("녹음 파일을 찾을 수 없습니다"))
+                            return
+                        }
+                        
+                        // ✅ 2. 파일이 유효한 오디오인지 확인
+                        let asset = AVURLAsset(url: tempUrl)
+                        let duration: CMTime
+                        do {
+                            duration = try await asset.load(.duration)
+                            let seconds = CMTimeGetSeconds(duration)
+                            print("✅ 오디오 파일 유효성 확인 완료: \(seconds)초")
+                            
+                            if seconds <= 0.1 || seconds.isNaN || seconds.isInfinite {
+                                print("❌ 오디오 파일 길이가 유효하지 않음: \(seconds)")
+                                await send(.recordingSaveFailed("녹음 파일이 손상되었습니다"))
+                                return
+                            }
+                        } catch {
+                            print("❌ 오디오 파일 유효성 검사 실패: \(error)")
+                            await send(.recordingSaveFailed("녹음 파일이 손상되었습니다"))
+                            return
+                        }
+                        
+                        // ✅ 3. 안전하게 Documents로 복사
+                        guard let storedPath = await copyFileToDocumentsSafely(from: tempUrl) else {
                             await send(.recordingSaveFailed("파일 저장 실패"))
+                            return
+                        }
+                        
+                        // ✅ 4. 복사된 파일도 다시 검증
+                        let copiedURL = URL(fileURLWithPath: storedPath)
+                        let copiedAsset = AVURLAsset(url: copiedURL)
+                        do {
+                            let copiedDuration = try await copiedAsset.load(.duration)
+                            let seconds = CMTimeGetSeconds(copiedDuration)
+                            print("✅ 복사된 파일 검증 완료: \(seconds)초")
+                        } catch {
+                            print("❌ 복사된 파일이 손상됨: \(error)")
+                            try? FileManager.default.removeItem(atPath: storedPath)
+                            await send(.recordingSaveFailed("파일 복사 중 오류 발생"))
                             return
                         }
                         
@@ -191,7 +263,7 @@ struct RecordingFeature {
                                 .audio,
                                 storedPath,
                                 length,
-                                transcript,  // ✅ 수정: nil → transcript
+                                transcript,
                                 ownerId
                             )
                         }
@@ -261,9 +333,9 @@ struct RecordingFeature {
             case .recordingSaved(let projectId):
                 state.savedProjectId = projectId
                 state.fileURL = nil
-                // ✅ 추가: transcript 초기화
                 state.liveTranscript = ""
                 state.finalTranscript = nil
+                state.status = .ready  // ✅ 상태 초기화
                 return .send(.delegate(.projectSaved(projectId)))
                 
             case .syncCompleted(let projectId):
@@ -271,6 +343,8 @@ struct RecordingFeature {
                 
             case .recordingSaveFailed(let error):
                 print("❌ 녹음 저장 실패: \(error)")
+                state.status = .ready  // ✅ 실패해도 상태 초기화
+                state.fileURL = nil
                 return .none
                 
             case .delegate:
@@ -279,22 +353,57 @@ struct RecordingFeature {
         }
     }
     
-    private func copyFileToDocuments(from url: URL) -> String? {
+    // ✅ 안전한 파일 복사 함수
+    private func copyFileToDocumentsSafely(from url: URL) -> String? {
         let fileManager = FileManager.default
-        guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            print("❌ Documents 디렉토리를 찾을 수 없음")
+            return nil
+        }
         
-        let destinationURL = documentsDir.appendingPathComponent(url.lastPathComponent)
+        // 고유한 파일명 생성
+        let uniqueFileName = "\(UUID().uuidString).m4a"
+        let destinationURL = documentsDir.appendingPathComponent(uniqueFileName)
         
+        // 기존 파일 삭제
         if fileManager.fileExists(atPath: destinationURL.path) {
             try? fileManager.removeItem(at: destinationURL)
         }
         
         do {
+            // ✅ 파일 크기 확인
+            let attributes = try fileManager.attributesOfItem(atPath: url.path)
+            if let fileSize = attributes[.size] as? UInt64 {
+                print("📦 원본 파일 크기: \(fileSize) bytes")
+                
+                if fileSize == 0 {
+                    print("❌ 파일 크기가 0입니다")
+                    return nil
+                }
+            }
+            
+            // ✅ 파일 복사 (move가 아닌 copy)
             try fileManager.copyItem(at: url, to: destinationURL)
             print("✅ 파일 복사 완료: \(destinationURL.path)")
+            
+            // ✅ 복사된 파일 크기 확인
+            let copiedAttributes = try fileManager.attributesOfItem(atPath: destinationURL.path)
+            if let copiedSize = copiedAttributes[.size] as? UInt64 {
+                print("📦 복사된 파일 크기: \(copiedSize) bytes")
+                
+                if copiedSize == 0 {
+                    print("❌ 복사된 파일 크기가 0입니다")
+                    try? fileManager.removeItem(at: destinationURL)
+                    return nil
+                }
+            }
+            
+            // ✅ 원본 임시 파일 삭제
+            try? fileManager.removeItem(at: url)
+            
             return destinationURL.path
         } catch {
-            print("❌ 파일 이동 실패: \(error)")
+            print("❌ 파일 복사 실패: \(error)")
             return nil
         }
     }
