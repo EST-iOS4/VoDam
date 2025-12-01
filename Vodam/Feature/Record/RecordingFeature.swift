@@ -89,7 +89,7 @@ struct RecordingFeature {
                     let startLiveTranscription = speechService.startLiveTranscription
                     
                     return .merge(
-                        .run { _ in
+                        .run { _ in _ = try? await recorder.startRecording() },
                             // ✅ 녹음 시작 전 AVAudioSession 초기화
                             do {
                                 let session = AVAudioSession.sharedInstance()
@@ -116,7 +116,7 @@ struct RecordingFeature {
                         }
                         .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
                         .run { send in
-                            for await _ in clock.timer(interval: .seconds(1)) { await send(.tick) }
+                            for await _ in await clock.timer(interval: .seconds(1)) { await send(.tick) }
                         }.cancellable(id: CancelID.timer, cancelInFlight: true)
                     )
                     
@@ -126,10 +126,10 @@ struct RecordingFeature {
                     let resumeTranscription = speechService.resumeTranscription
                     
                     return .merge(
-                        .run { _ in recorder.resumeRecording() },
+                        .run { _ in await recorder.resumeRecording() },
                         .run { _ in resumeTranscription() },
                         .run { send in
-                            for await _ in clock.timer(interval: .seconds(1)) { await send(.tick) }
+                            for await _ in await clock.timer(interval: .seconds(1)) { await send(.tick) }
                         }.cancellable(id: CancelID.timer, cancelInFlight: true)
                     )
                     
@@ -231,7 +231,7 @@ struct RecordingFeature {
                         }
                         
                         // ✅ 3. 안전하게 Documents로 복사
-                        guard let storedPath = copyFileToDocumentsSafely(from: tempUrl) else {
+                        guard let storedPath = await copyFileToDocumentsSafely(from: tempUrl) else {
                             await send(.recordingSaveFailed("파일 저장 실패"))
                             return
                         }

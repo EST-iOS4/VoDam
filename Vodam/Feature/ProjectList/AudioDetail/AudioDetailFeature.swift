@@ -184,8 +184,6 @@ struct AudioDetailFeature {
                     do {
                         print("[AudioDetail] Firebase 다운로드 시작: \(remotePath)")
                         
-                        @Dependency(\.fileCloudClient) var fileCloudClient
-                        
                         let localPath = try await fileCloudClient.downloadFileIfNeeded(
                             ownerId,
                             projectId,
