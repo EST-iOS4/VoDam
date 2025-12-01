@@ -90,7 +90,7 @@ struct RecordingFeature {
                     let startLiveTranscription = speechService.startLiveTranscription
                     
                     return .merge(
-                        .run { _ in _ = try? recorder.startRecording() },
+                        .run { _ in _ = try? await recorder.startRecording() },
                         .run { send in
                             let stream = startLiveTranscription()
                             for await transcript in stream {
@@ -100,7 +100,7 @@ struct RecordingFeature {
                         }
                         .cancellable(id: CancelID.liveSTT, cancelInFlight: true),
                         .run { send in
-                            for await _ in clock.timer(interval: .seconds(1)) { await send(.tick) }
+                            for await _ in await clock.timer(interval: .seconds(1)) { await send(.tick) }
                         }.cancellable(id: CancelID.timer, cancelInFlight: true)
                     )
                     
@@ -111,10 +111,10 @@ struct RecordingFeature {
                     let resumeTranscription = speechService.resumeTranscription
                     
                     return .merge(
-                        .run { _ in recorder.resumeRecording() },
+                        .run { _ in await recorder.resumeRecording() },
                         .run { _ in resumeTranscription() },
                         .run { send in
-                            for await _ in clock.timer(interval: .seconds(1)) { await send(.tick) }
+                            for await _ in await clock.timer(interval: .seconds(1)) { await send(.tick) }
                         }.cancellable(id: CancelID.timer, cancelInFlight: true)
                     )
                     
@@ -175,7 +175,7 @@ struct RecordingFeature {
                 
                 return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
-                        guard let storedPath = copyFileToDocuments(from: tempUrl) else {
+                        guard let storedPath = await copyFileToDocuments(from: tempUrl) else {
                             await send(.recordingSaveFailed("파일 저장 실패"))
                             return
                         }
