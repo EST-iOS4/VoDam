@@ -6,11 +6,13 @@
 //
 
 import ComposableArchitecture
+import SwiftData
 import SwiftUI
 
 struct AudioDetailView: View {
     @Bindable var store: StoreOf<AudioDetailFeature>
     @FocusState private var isSearchFieldFocused: Bool
+    @Environment(\.modelContext) private var context
     
     private var isPDF: Bool {
         store.project.category == .pdf
@@ -101,12 +103,12 @@ struct AudioDetailView: View {
                 }
                 
                 Menu {
-                    Button(action: {  }) {
+                    Button(action: { store.send(.editTitleButtonTapped) }) {
                         Label("제목 수정", systemImage: "pencil")
                     }
                     
                     Button(role: .destructive) {
-                        store.send(.deleteProjectButtonTapped)
+                        store.send(.deleteProjectButtonTapped(context))
                     } label: {
                         Label("삭제", systemImage: "xmark")
                     }
@@ -201,6 +203,13 @@ struct AudioDetailView: View {
                     .foregroundColor(.secondary)
             }
         }
+        .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+        .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
+            ChattingRoomView(store: $0)
+        }
+        .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
+            ProjectTitleEditView(store: $0)
+        }
     }
     
     @ViewBuilder
@@ -267,7 +276,7 @@ struct AudioDetailView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
             
-            Button(action: { store.send(.favoriteButtonTapped) }) {
+            Button(action: { store.send(.favoriteButtonTapped(context)) }) {
                 HStack {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
                         .font(.title2)

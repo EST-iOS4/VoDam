@@ -11,7 +11,6 @@ import SwiftData
 
 @Reducer
 struct ProjectListFeature {
-    
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
     @Dependency(\.fileCloudClient) var fileCloudClient
@@ -74,7 +73,6 @@ struct ProjectListFeature {
         case deleteProject(id: Project.ID, ModelContext)
         
         case _projectsResponse(Result<[ProjectPayload], Error>)
-        case _favoriteUpdated(id: String, isFavorite: Bool)
         case binding(BindingAction<State>)
         
         case destination(PresentationAction<Destination.Action>)
@@ -227,7 +225,7 @@ struct ProjectListFeature {
                 
                 let newFavorite = !project.isFavorite
                 project.isFavorite = newFavorite
-                state.projects[id: projectId] = project
+                state.projects[id: projectId] = project // Optimistic UI update
                 
                 let projectIdString = projectId.uuidString
                 let ownerId = state.currentUser?.ownerId
@@ -265,12 +263,6 @@ struct ProjectListFeature {
                             }
                         }
                         
-                        await send(
-                            ._favoriteUpdated(
-                                id: projectIdString,
-                                isFavorite: newFavorite
-                            )
-                        )
                     } catch {
                         print("즐겨찾기 업데이트 실패: \(error)")
                     }
@@ -349,12 +341,14 @@ struct ProjectListFeature {
                 print("프로젝트 조회 실패: \(error)")
                 return .none
                 
-            case ._favoriteUpdated:
-                // 이미 State에서 업데이트됨
-                return .none
-                
             case .userChanged(let user):
                 state.currentUser = user
+                return .send(.refreshProjects)
+                
+            case .destination(.presented(.audioDetail(.delegate(.didDeleteProject)))):
+                state.destination = nil
+                return .none
+            case .destination(.presented(.audioDetail(.delegate(.needsRefresh)))):
                 return .send(.refreshProjects)
                 
             case .destination, .binding:
