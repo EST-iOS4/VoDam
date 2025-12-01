@@ -53,9 +53,11 @@ struct RecordingView: View {
         .frame(height: 240)
         .padding(.horizontal, 20)
         
-        .onChange(of: store.fileURL) { _, newValue in
-            guard let url = newValue else { return }
-            store.send(.saveRecording(url, store.lastRecordedLength, ownerId, modelContext))
+        .onChange(of: store.status) { oldValue, newValue in
+            if oldValue == .finishing && newValue == .ready,
+               let url = store.fileURL {
+                store.send(.saveRecording(url, store.lastRecordedLength, ownerId, modelContext))
+            }
         }
     }
     
@@ -107,6 +109,11 @@ struct RecordingView: View {
                         .background(Circle().fill(Color.red))
                 }
             }
+            
+        case .finishing:
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .frame(width: 56, height: 56)
         }
     }
     
