@@ -85,7 +85,7 @@ struct PDFButtonFeature {
                 return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] send in
                     do {
                         // 1. 파일을 Documents로 복사
-                        guard let storedPath = copyPDFToDocuments(from: url) else {
+                        guard let storedPath = await copyPDFToDocuments(from: url) else {
                             await send(.pdfSaveFailed("PDF 저장 실패"))
                             return
                         }

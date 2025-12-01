@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ProjectPayload: Codable, Sendable, Equatable {
+nonisolated struct ProjectPayload: Codable, Sendable, Equatable {
     let id: String
     let name: String
     let creationDate: Date

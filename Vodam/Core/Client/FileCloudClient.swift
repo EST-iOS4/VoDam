@@ -51,7 +51,7 @@ extension FileCloudClient: DependencyKey {
             let fileExtension = fileURL.pathExtension.lowercased()
             print("📝 [FileCloud] 파일 확장자: \(fileExtension)")
             
-            let (path, contentType) = getPathAndContentType(
+            let (path, contentType) = await getPathAndContentType(
                 ownerId: ownerId,
                 projectId: projectId,
                 fileExtension: fileExtension
