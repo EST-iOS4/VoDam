@@ -89,7 +89,9 @@ struct RecordingFeature {
                     let startLiveTranscription = speechService.startLiveTranscription
                     
                     return .merge(
+                        
                         .run { _ in _ = try? await recorder.startRecording() },
+                        .run { send in
                             // ✅ 녹음 시작 전 AVAudioSession 초기화
                             do {
                                 let session = AVAudioSession.sharedInstance()
@@ -105,7 +107,7 @@ struct RecordingFeature {
                                 print("[Recording] ⚠️ AVAudioSession 설정 실패: \(error)")
                             }
                             
-                            _ = try? recorder.startRecording()
+                            _ = try? await recorder.startRecording()
                         },
                         .run { send in
                             let stream = startLiveTranscription()
