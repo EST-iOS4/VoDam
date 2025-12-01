@@ -53,9 +53,12 @@ struct RecordingView: View {
         .frame(height: 240)
         .padding(.horizontal, 20)
         
-        .onChange(of: store.status) { oldValue, newValue in
-            if oldValue == .finishing && newValue == .ready,
-               let url = store.fileURL {
+        // ✅ fileURL과 finalTranscript 둘 다 준비되면 저장 시작
+        .onChange(of: store.fileURL) { oldValue, newValue in
+            if let url = newValue,
+               store.status == .finishing,
+               store.finalTranscript != nil || store.liveTranscript.isEmpty {
+                print("🎤 녹음 파일 저장 시작: \(url.path)")
                 store.send(.saveRecording(url, store.lastRecordedLength, ownerId, modelContext))
             }
         }
@@ -112,7 +115,7 @@ struct RecordingView: View {
             
         case .finishing:
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .progressViewStyle(CircularProgressViewStyle(tint: .black))
                 .frame(width: 56, height: 56)
         }
     }
