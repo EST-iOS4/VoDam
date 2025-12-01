@@ -84,16 +84,22 @@ struct PDFButtonFeature {
                 state.isProcessing = true
                 return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] send in
                     do {
-                        // 1. 파일을 Documents로 복사
-                        guard let storedPath = copyPDFToDocuments(from: url) else {
+                        guard let storedPath = await copyPDFToDocuments(from: url) else {
                             await send(.pdfSaveFailed("PDF 저장 실패"))
                             return
                         }
                         
-                        // 2. 파일 이름
                         let fileName = url.deletingPathExtension().lastPathComponent
                         
-                        // 3. SwiftData에 저장 (Local)
+                        let storedURL = URL(fileURLWithPath: storedPath)
+                        let extractedText = await PDFTextExtractor.extractText(from: storedURL, maxLength: 50000)
+                        
+                        if let text = extractedText {
+                            print("PDF 텍스트 추출 완료: \(text.count)자")
+                        } else {
+                            print("PDF 텍스트 추출 실패 또는 빈 PDF")
+                        }
+                        
                         let payload = try await MainActor.run {
                             try projectLocalDataClient.save(
                                 context,
@@ -101,13 +107,13 @@ struct PDFButtonFeature {
                                 .pdf,
                                 storedPath,
                                 nil,
-                                nil,
+                                extractedText,
                                 ownerId
                             )
                         }
                         print("PDF 로컬 저장 완료: \(payload.id)")
                         
-                        // 저장 완료 알림 (리프레시 트리거)
+                    
                         await send(.pdfSaved(payload.id))
                         
                         // 4. 로그인 유저라면 클라우드 동기화
@@ -123,7 +129,7 @@ struct PDFButtonFeature {
                             print("PDF Storage 업로드 완료: \(remotePath)")
                             
                             // Firebase DB 업로드
-                            let syncedPayload = ProjectPayload(
+                            let syncedPayload = await ProjectPayload(
                                 id: payload.id,
                                 name: payload.name,
                                 creationDate: payload.creationDate,

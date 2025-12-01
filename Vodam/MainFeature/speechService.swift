@@ -35,7 +35,7 @@ class SpeechService: NSObject {
 
     // MARK: - START
     func startLiveTranscription() -> AsyncStream<String> {
-        if isStarted, let continuation = transcriptContinuation {
+        if isStarted, transcriptContinuation != nil {
             return AsyncStream { continuation in
                 continuation.onTermination = { _ in }
             }
@@ -51,19 +51,30 @@ class SpeechService: NSObject {
 
             let audioSession = AVAudioSession.sharedInstance()
             do {
-                try audioSession.setCategory(.record, mode: .measurement)
-                try audioSession.setActive(true)
+                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .defaultToSpeaker)
+                try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
             } catch {
                 print("🎧 AudioSession 오류:", error)
                 continuation.finish()
                 return
             }
 
+            // ✅ 오디오 세션 설정 후 inputNode 접근
             let inputNode = self.audioEngine.inputNode
-            let recordingFormat = inputNode.outputFormat(forBus: 0)
+            
+            // ✅ 하드웨어 포맷 사용
+            let hardwareFormat = inputNode.inputFormat(forBus: 0)
+            
+            guard hardwareFormat.sampleRate > 0, hardwareFormat.channelCount > 0 else {
+                print("❌ 하드웨어 포맷 무효 - sampleRate: \(hardwareFormat.sampleRate), channels: \(hardwareFormat.channelCount)")
+                continuation.finish()
+                return
+            }
+            
+            print("✅ 오디오 포맷 - sampleRate: \(hardwareFormat.sampleRate), channels: \(hardwareFormat.channelCount)")
             
             inputNode.removeTap(onBus: 0)
-            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: hardwareFormat) { buffer, _ in
                 self.recognitionRequest?.append(buffer)
             }
 
@@ -88,7 +99,6 @@ class SpeechService: NSObject {
             }
         }
     }
-
     // MARK: - PAUSE
     func pauseTranscription() {
         if audioEngine.isRunning {
