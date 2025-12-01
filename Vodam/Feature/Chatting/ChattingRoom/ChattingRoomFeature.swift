@@ -66,7 +66,7 @@ struct ChattingRoomFeature {
                             await send(.loadMessages(messages))
                             
                         } catch {
-                            print("Failed to load messages: \(error)")
+                            logger.error("Failed to load messages")
                             await send(.loadMessages([]))
                         }
                     }
@@ -94,7 +94,6 @@ struct ChattingRoomFeature {
                     state.messageText = ""
                     
                     return .run { [projectName = state.projectName] send in
-                        print("\(projectName)")
                         logger.debug("♨️2")
                             // 유저 메세지 저장
                         let db = Firestore.firestore()
@@ -111,26 +110,21 @@ struct ChattingRoomFeature {
                                 .collection("messages")
                                 .addDocument(data: messageData)
                             logger.debug("♨️3")
-                            print("\(ref.documentID)")
                         }
                         catch {
-                            print("Failed to save user message: \(error)")
+                            logger.error("유저메세지 저장 실패")
                         }
                     
                         await send(.setAITyping(true))
-                            // API
+                        // API
                         do {
                             let question = AlanClient.Question(userMessage.content)
-                            
                             let answer = try await AlanClient.shared.question(question)
-                            
                             await send(.aIResponse(answer.content))
-                            
                         } catch {
-                            print("Alan API Error: \(error)")
+                            logger.debug("Alan API Error")
                             await send(.aIResponse("죄송해요, 지금은 대답하기 어려워요."))
                         }
-                        
                         await send(.setAITyping(false))
                     }
                     
