@@ -92,7 +92,7 @@ struct MainFeature {
                 .presented(.delegate(.loggedOut(let isSuccess)))
             ):
                 if isSuccess {
-                    let ownerId = state.currentUser?.ownerId
+                    let _ = state.currentUser?.ownerId
                     state.currentUser = nil
                     return .run { _ in
                         await userStorageClient.clear()

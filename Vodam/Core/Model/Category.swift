@@ -8,7 +8,7 @@
 import Foundation
 
 
-enum ProjectCategory: String, Codable, CaseIterable, Hashable {
+nonisolated enum ProjectCategory: String, Codable, CaseIterable, Hashable {
     case audio
     case file
     case pdf

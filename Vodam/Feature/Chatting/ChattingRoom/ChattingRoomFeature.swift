@@ -56,7 +56,9 @@ struct ChattingRoomFeature {
                                 .getDocuments()
                             
                             let messages = snapshot.documents.compactMap { doc -> Message? in
-                                try? doc.data(as: Message.self)
+                                var message = try? doc.data(as: Message.self)
+                                message?.id = doc.documentID
+                                return message
                             }
                             
                             await send(.loadMessages(messages))
