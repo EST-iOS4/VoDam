@@ -1,5 +1,5 @@
 //
-//  RecordingLocalDataClient.swift
+//  ProjectLocalDataClient.swift
 //  Vodam
 //
 //  Created by 송영민 on 11/26/25.
@@ -34,7 +34,8 @@ struct ProjectLocalDataClient {
         _ name: String?,
         _ isFavorite: Bool?,
         _ transcript: String?,
-        _ syncStatus: SyncStatus?
+        _ syncStatus: SyncStatus?,
+        _ summary: String?
     ) throws -> Void
     
     var delete:
@@ -45,6 +46,12 @@ struct ProjectLocalDataClient {
     
     var deleteAllForOwner:
     @Sendable (_ context: ModelContext, _ ownerId: String) throws -> Void
+    
+    var insert:
+    @Sendable (
+        _ context: ModelContext,
+        _ payload: ProjectPayload
+    ) throws -> Void
     
     var migrateGuestProjects:
     @Sendable (
@@ -146,7 +153,7 @@ extension ProjectLocalDataClient: DependencyKey {
                 return models.map(ProjectPayload.init(model:))
             },
             
-            update: { context, id, name, isFavorite, transcript, syncStatus in
+            update: { context, id, name, isFavorite, transcript, syncStatus, summary in
                 let targetId = id
                 let descriptor = FetchDescriptor<ProjectModel>(
                     predicate: #Predicate { project in
@@ -165,6 +172,10 @@ extension ProjectLocalDataClient: DependencyKey {
                 if let isFavorite { model.isFavorite = isFavorite }
                 if let transcript { model.transcript = transcript }
                 if let syncStatus { model.syncStatus = syncStatus }
+                if let summary {
+                    model.summary = summary
+                    print("[ProjectLocalDataClient] summary 업데이트: \(summary.prefix(50))")
+                }
                 
                 try context.save()
                 print("[ProjectLocalDataClient] update 성공 → id: \(id)")
@@ -216,6 +227,28 @@ extension ProjectLocalDataClient: DependencyKey {
                 )
             },
             
+            insert: { context, payload in
+                // ProjectPayload → ProjectModel 변환
+                let model = ProjectModel(
+                    id: payload.id,
+                    name: payload.name,
+                    creationDate: payload.creationDate,
+                    category: payload.category,
+                    isFavorite: payload.isFavorite,
+                    filePath: payload.filePath,
+                    fileLength: payload.fileLength,
+                    transcript: payload.transcript,
+                    summary: nil,
+                    ownerId: payload.ownerId,
+                    syncStatus: payload.syncStatus,
+                    remoteAudioPath: payload.remoteAudioPath
+                )
+                
+                context.insert(model)
+                try context.save()
+                print("[ProjectLocalDataClient] insert 성공 → id: \(payload.id), name: \(payload.name), remoteAudioPath: \(payload.remoteAudioPath ?? "nil")")
+            },
+            
             migrateGuestProjects: { context, newOwnerId in
                 let localOnlyRaw = SyncStatus.localOnly.rawValue
                 
@@ -244,7 +277,6 @@ extension ProjectLocalDataClient: DependencyKey {
                 
                 return guestProjects.map(ProjectPayload.init(model:))
             },
-            
             
             updateSyncStatus: { context, ids, status, ownerId, remoteAudioPath in
                 print("updateSyncStatus 호출됨 - ids: \(ids), ownerId: \(ownerId)")
@@ -301,14 +333,16 @@ extension ProjectLocalDataClient: DependencyKey {
                 )
             },
             fetchAll: { _, _ in [] },
-            update: { _, _, _, _, _, _ in },
+            update: { _, _, _, _, _, _, _ in },
             delete: { _, _ in },
             deleteAllForOwner: { _, _ in },
+            insert: { _, _ in },
             migrateGuestProjects: { _, _ in [] },
             updateSyncStatus: { _, _, _, _, _ in }
         )
     }
 }
+
 extension DependencyValues {
     var projectLocalDataClient: ProjectLocalDataClient {
         get { self[ProjectLocalDataClient.self] }

@@ -52,8 +52,8 @@ struct AppFeature {
         case main(MainFeature.Action)
         case list(ProjectListFeature.Action)
         case chat(ChattingListFeature.Action)
-        
     }
+    
     @Dependency(\.userStorageClient) var userStorageClient
     
     var body: some Reducer<State, Action> {
@@ -92,6 +92,13 @@ struct AppFeature {
                 state.list.currentUser = user
                 return .send(.list(.userChanged(user)))
                 
+            case .main(.delegate(.userLoggedIn(let user))):
+                // MainFeature에서 로그인 완료 시 전파
+                state.user = user
+                state.list.currentUser = user
+                print("[AppFeature] 로그인 완료: \(user.name), ownerId: \(user.ownerId)")
+                return .none
+                
             case .main(.settings(.presented(.delegate(.logoutCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
@@ -99,22 +106,22 @@ struct AppFeature {
                 // 로그아웃 후 ProjectList를 비회원 상태로 새로고침
                 return .send(.list(.refreshProjects))
                 
-            case .main(
-                .settings(.presented(.delegate(.deleteAccountCompleted)))
-            ):
+            case .main(.settings(.presented(.delegate(.deleteAccountCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
                 // 회원 탈퇴 후 ProjectList를 비회원 상태로 새로고침
                 return .send(.list(.refreshProjects))
                 
+            // ✅ 구체적인 case를 먼저 배치 (녹음 저장 후 리스트 새로고침)
             case .main(.delegate(.projectSaved)):
                 print("프로젝트 저장 완료 - ProjectList 새로고침")
                 return .send(.list(.refreshProjects))
                 
             case .main(.delegate(.syncCompleted(let projectId))):
                 print("동기화 완료 [\(projectId)] - ProjectList 새로고침")
-                return .send(.list(.refreshProjects))
+               return .send(.list(.refreshProjects))
+                
                 
             case .main:
                 return .none

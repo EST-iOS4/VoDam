@@ -7,9 +7,11 @@
 
 import SwiftUI
 import ComposableArchitecture
+import SwiftData
 
 struct AISummaryView: View {
     let store: StoreOf<AISummaryFeature>
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         Group {
@@ -49,7 +51,7 @@ struct AISummaryView: View {
                 .foregroundColor(.secondary)
             
             Button(action: {
-                store.send(.summarizeButtonTapped)
+                store.send(.summarizeButtonTapped(modelContext))
             }) {
                 HStack {
                     Image(systemName: "sparkles")
@@ -87,7 +89,7 @@ struct AISummaryView: View {
                     Spacer()
                     
                     Button(action: {
-                        store.send(.summarizeButtonTapped)
+                        store.send(.summarizeButtonTapped(modelContext))
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.clockwise")
