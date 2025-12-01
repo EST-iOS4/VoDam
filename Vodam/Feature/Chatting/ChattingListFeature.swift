@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import Foundation
+import OSLog
 
 @Reducer
 struct ChattingListFeature {
@@ -44,9 +45,9 @@ struct ChattingListFeature {
                     
                 case .onAppear:
                     return .run { send in
-                        print("📡 리스트 감시 시작...") // 1번 로그
+                        logger.debug("리스트 감시 시작")// 1번 로그
                         for await rooms in firebaseClient.listenToChatRooms() {
-                            print("📦 데이터 도착! 개수: \(rooms.count)") // 2번 로그
+                            logger.debug("데이터 도착!") // 2번 로그
                             await send(.updateList(rooms))
                         }
                     }
