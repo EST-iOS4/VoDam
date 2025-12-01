@@ -53,6 +53,7 @@ struct PDFButtonView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(viewStore.title)
                             .font(.headline)
+                            .foregroundColor(.black)
 
                         if viewStore.isProcessing {
                             Text("텍스트 추출 중...")

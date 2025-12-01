@@ -52,7 +52,7 @@ struct LoginProvidersView: View {
 
                         Text("Sign in with Google")
                             .font(.system(size: 19, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.black)
 
                     }
                     .padding(.horizontal, 18)
