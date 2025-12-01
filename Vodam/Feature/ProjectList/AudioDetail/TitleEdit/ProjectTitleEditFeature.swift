@@ -82,6 +82,7 @@ struct ProjectTitleEditFeature {
                                 newName,
                                 nil,
                                 nil,
+                                nil,
                                 nil
                             )
                         }

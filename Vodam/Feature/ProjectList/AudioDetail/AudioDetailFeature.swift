@@ -9,6 +9,7 @@ import AVFoundation
 import ComposableArchitecture
 import Foundation
 import SwiftUI
+import SwiftData
 
 
 private func formatTime(_ seconds: Double) -> String {
@@ -281,6 +282,7 @@ struct AudioDetailFeature {
                                 nil,
                                 newIsFavorite,
                                 nil,
+                                nil,
                                 nil
                             )
                         }
@@ -376,8 +378,6 @@ struct AudioDetailFeature {
                 state.destination = nil
                 return .send(.delegate(.needsRefresh))
             case .script, .aiSummary, .binding, .destination, .delegate:
-                return .none
-            case .searchButtonTapped:
                 return .none
             case .editTitleButtonTapped:
                 var editableProject = state.project

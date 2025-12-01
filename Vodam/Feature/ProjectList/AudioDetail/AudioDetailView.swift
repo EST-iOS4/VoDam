@@ -57,6 +57,12 @@ struct AudioDetailView: View {
             store.send(.onDisappear)
         }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+        .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
+            ChattingRoomView(store: $0)
+        }
+        .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
+            ProjectTitleEditView(store: $0)
+        }
     }
     
     @ViewBuilder
@@ -203,13 +209,6 @@ struct AudioDetailView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
-        .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
-            ChattingRoomView(store: $0)
-        }
-        .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
-            ProjectTitleEditView(store: $0)
-        }
     }
     
     @ViewBuilder
@@ -257,7 +256,7 @@ struct AudioDetailView: View {
                     .font(.title)
             }
             
-            Button(action: { store.send(.favoriteButtonTapped) }) {
+            Button(action: { store.send(.favoriteButtonTapped(context)) }) {
                 Image(systemName: store.isFavorite ? "star.fill" : "star")
                     .font(.title)
             }
