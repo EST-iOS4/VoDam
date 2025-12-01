@@ -8,9 +8,13 @@
 import FirebaseFirestore
 import Foundation
 import ComposableArchitecture
+import OSLog
 
 @Reducer
 struct ChattingRoomFeature {
+    
+    nonisolated private let logger = Logger(subsystem: "ChattingRoomFeature", category: "Domain")
+    
         // MARK: - State
     @ObservableState
     struct State: Equatable {
@@ -49,7 +53,7 @@ struct ChattingRoomFeature {
                 case .onAppear:
                     return .run { [projectName = state.projectName] send in
                         do {
-                            let snapshot = try await db.collection("chatsRooms")
+                            let snapshot = try await db.collection("chats")
                                 .document(projectName)
                                 .collection("messages")
                                 .order(by: "timestamp", descending: false)
@@ -81,7 +85,7 @@ struct ChattingRoomFeature {
                     return .none
                     
                 case .sendMessage:
-                    print("1")
+                    logger.debug("♨️1")
                     let userMessage = Message(
                         content: state.messageText,
                         isFromUser: true
@@ -90,18 +94,29 @@ struct ChattingRoomFeature {
                     state.messageText = ""
                     
                     return .run { [projectName = state.projectName] send in
-                        print("2")
+                        print("\(projectName)")
+                        logger.debug("♨️2")
                             // 유저 메세지 저장
+                        let db = Firestore.firestore()
+                        
                         do {
-                            try await db.collection("chatRooms")
+                            let messageData: [String: Any] = [
+                                "content" : userMessage.content,
+                                "isFromUser": true,
+                                "timestamp": FieldValue.serverTimestamp()
+                            ]
+                            
+                            let ref = try await db.collection("chats")
                                 .document(projectName)
                                 .collection("messages")
-                                .addDocument(from: userMessage)
-                            print("3")
-                        } catch {
+                                .addDocument(data: messageData)
+                            logger.debug("♨️3")
+                            print("\(ref.documentID)")
+                        }
+                        catch {
                             print("Failed to save user message: \(error)")
                         }
-                        
+                    
                         await send(.setAITyping(true))
                             // API
                         do {
@@ -127,7 +142,7 @@ struct ChattingRoomFeature {
                     state.messages.append(aIMessage)
                         // AI 메세지 저장
                     return .run{ [projectName = state.projectName] _ in
-                        try? await db.collection("chatRooms")
+                        try? await db.collection("chats")
                             .document(projectName)
                             .collection("messages")
                             .addDocument(from: aIMessage)
