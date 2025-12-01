@@ -28,6 +28,12 @@ struct FirebaseClient {
     var deleteProject:
         @Sendable (_ ownerId: String, _ projectId: String)
             async throws -> Void
+    
+    var createChatRoom:
+        @Sendable (_ projectName: String) async throws -> Void
+    
+    var listenToChatRooms:
+    @Sendable () -> AsyncStream<[ChattingInfo]>
 }
 
 extension FirebaseClient: DependencyKey {
@@ -160,6 +166,64 @@ extension FirebaseClient: DependencyKey {
                     .delete()
                 
                 print("[FirebaseClient] project 삭제 완료: ownerId=\(ownerId), id=\(projectId)")
+            },
+            
+            createChatRoom: { projectName in
+                let db = Firestore.firestore()
+                
+                let data: [String: Any] = [
+                    "title" : projectName,
+                    "content" : "목록에 보여질 초기 메세지 -> 다른내용으로 변경 예정",
+                    "recentEditedDate" : FieldValue.serverTimestamp()
+                ]
+                
+                try await db
+                    .collection("chatRooms")
+                    .document(projectName)
+                    .setData(data, merge: true) // 기존 데이터 유지
+            },
+            
+            listenToChatRooms: {
+                AsyncStream { continuation in
+                    let db = Firestore.firestore()
+                    
+                    let listener = db.collection("chatRooms")
+                        .order(by:"recentEditedDate", descending: true)
+                        .addSnapshotListener{ snapshot, error in
+                            
+                            if let error = error {
+                                print("⛔️ [FirebaseClient] 채팅목록 리스너에러 : \(error)")
+                                continuation.finish()
+                                return
+                            }
+                        // 문서가 없으면 빈 배열
+                            guard let documents = snapshot?.documents else {
+                                continuation.yield([])
+                                return
+                            }
+                        // firestore -> chattinginfo
+                            let rooms = documents.compactMap { doc -> ChattingInfo? in
+                                let data = doc.data()
+                                
+                                let timestamp = data["recentEditedDate"] as? Timestamp
+                                let date = timestamp?.dateValue() ?? Date()
+                                
+                                return ChattingInfo(
+                                    id: doc.documentID,
+                                    title: data["title"] as? String ?? doc.documentID,
+                                    content: data["content"] as? String ?? "",
+                                    recentEditedDate: date
+                                )
+                            }
+                            
+                            continuation.yield(rooms)
+                        }
+                    
+                    continuation.onTermination = { _ in
+                        listener.remove()
+                        print("[FirebaseClient] 채팅목록 리스너 해제")
+                    }
+                }
             }
         )
     }
@@ -170,7 +234,9 @@ extension FirebaseClient: DependencyKey {
             uploadProjects: { _, _ in },
             fetchProjects: { _ in [] },
             updateProject: { _, _ in },
-            deleteProject: { _, _ in }
+            deleteProject: { _, _ in },
+            createChatRoom: { _ in },
+            listenToChatRooms: { AsyncStream { continuation in continuation.finish() } }
         )
     }
 }
@@ -255,3 +321,4 @@ extension ProjectPayload {
         )
     }
 }
+
