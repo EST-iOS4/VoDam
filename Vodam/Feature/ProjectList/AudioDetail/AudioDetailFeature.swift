@@ -7,7 +7,9 @@
 
 import AVFoundation
 import ComposableArchitecture
+import Foundation
 import SwiftUI
+
 
 private func formatTime(_ seconds: Double) -> String {
     let minutes = Int(seconds) / 60
@@ -20,17 +22,21 @@ struct AudioDetailFeature {
     
     @Dependency(\.fileCloudClient) var fileCloudClient
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
+    @Dependency(\.firebaseClient) var firebaseClient
     
     @ObservableState
     struct State: Equatable {
-        let project: Project
-        let currentUser: User?
+        var project: Project
         var selectedTab: Tab
         
         var script: ScriptFeature.State
         var aiSummary: AISummaryFeature.State
         
         @Presents var destination: Destination.State?
+        
+        // 유저 정보
+        var currentUser: User?
+        @ObservationStateIgnored var pendingDeletionContext: ModelContext?
         
         @ObservationStateIgnored var player: AVPlayer?
         var isPlaying = false
@@ -94,6 +100,7 @@ struct AudioDetailFeature {
         case aiSummary(AISummaryFeature.Action)
         case destination(PresentationAction<Destination.Action>)
         case binding(BindingAction<State>)
+        case delegate(DelegateAction)
         
         case onAppear
         case onDisappear
@@ -101,7 +108,7 @@ struct AudioDetailFeature {
         case backwardButtonTapped
         case forwardButtonTapped
         case setPlaybackRate(Float)
-        case favoriteButtonTapped
+        case favoriteButtonTapped(ModelContext)
         case updateProgress(Double)
         case playerFinishedPlaying
         case seek(Double)
@@ -112,10 +119,15 @@ struct AudioDetailFeature {
         case searchSubmitted
         case chatButtonTapped
         case editTitleButtonTapped
-        case deleteProjectButtonTapped
-        
+        case deleteProjectButtonTapped(ModelContext)
+        case deleteProjectConfirmed
         case _setupPlayerWithURL(URL)
         case _playerReady(AVPlayer, Double)
+        
+        enum DelegateAction {
+            case needsRefresh
+            case didDeleteProject
+        }
     }
     
     var body: some Reducer<State, Action> {
@@ -252,9 +264,50 @@ struct AudioDetailFeature {
                 }
                 return .none
                 
-            case .favoriteButtonTapped:
+            case .favoriteButtonTapped(let context):
                 state.isFavorite.toggle()
-                return .none
+                let newIsFavorite = state.isFavorite
+                state.project.isFavorite = newIsFavorite
+                let ownerId = state.currentUser?.ownerId
+                let project = state.project
+                
+                return .run { send in
+                    do {
+                        // 1. Local SwiftData 업데이트
+                        try await MainActor.run {
+                            try projectLocalDataClient.update(
+                                context,
+                                project.id.uuidString,
+                                nil,
+                                newIsFavorite,
+                                nil,
+                                nil
+                            )
+                        }
+                        
+                        // 2. Firebase 업데이트 (로그인 상태일 때)
+                        if let ownerId {
+                            let payload = await ProjectPayload(
+                                id: project.id.uuidString,
+                                name: project.name,
+                                creationDate: project.creationDate,
+                                category: project.category,
+                                isFavorite: newIsFavorite, // 변경된 값 사용
+                                filePath: project.filePath,
+                                fileLength: project.fileLength,
+                                transcript: project.transcript,
+                                ownerId: ownerId,
+                                syncStatus: project.syncStatus
+                            )
+                            try await firebaseClient.updateProject(ownerId, payload)
+                        }
+                        
+                        await send(.delegate(.needsRefresh))
+                        
+                    } catch {
+                        print("즐겨찾기 업데이트 실패: \(error)")
+                    }
+                }
                 
             case .updateProgress(let progress):
                 state.progress = progress
@@ -286,6 +339,12 @@ struct AudioDetailFeature {
             case .setTotalTime(let timeString):
                 state.totalTime = timeString
                 return .none
+            
+            case .chatButtonTapped:
+                state.destination = .chattingRoom(
+                    ChattingRoomFeature.State(projectName: state.project.name)
+                )
+                return .none
                 
             case .searchButtonTapped:
                 state.isSearching = true
@@ -304,15 +363,99 @@ struct AudioDetailFeature {
                 print("[AudioDetail] 검색 실행: \(state.searchText)")
                 state.selectedTab = .script
                 return .none
-                
-            case .script, .aiSummary, .binding, .destination:
+            case .destination(.presented(.alert(.confirmDelete))):
+                return .send(.deleteProjectConfirmed)
+              
+            case .destination(.dismiss):
+                state.pendingDeletionContext = nil
                 return .none
-            case .chatButtonTapped:
+              
+            case .destination(.presented(.editTitle(.delegate(.didFinish(let updatedProject))))):
+                state.project = updatedProject
+                state.project.isFavorite = state.isFavorite
+                state.destination = nil
+                return .send(.delegate(.needsRefresh))
+            case .script, .aiSummary, .binding, .destination, .delegate:
+                return .none
+            case .searchButtonTapped:
                 return .none
             case .editTitleButtonTapped:
+                var editableProject = state.project
+                editableProject.isFavorite = state.isFavorite
+                state.destination = .editTitle(
+                    ProjectTitleEditFeature.State(
+                        project: editableProject,
+                        currentUser: state.currentUser
+                    )
+                )
                 return .none
-            case .deleteProjectButtonTapped:
+            case .deleteProjectButtonTapped(let context):
+                state.pendingDeletionContext = context
+                state.destination = .alert(
+                    AlertState {
+                        TextState("프로젝트 삭제하시겠습니까?")
+                    } actions: {
+                        ButtonState(
+                            role: .destructive,
+                            action: .confirmDelete
+                        ) {
+                            TextState("삭제")
+                        }
+                        ButtonState(role: .cancel) {
+                            TextState("취소")
+                        }
+                    } message: {
+                        TextState("삭제된 프로젝트는 복원할 수 없습니다.")
+                    }
+                )
                 return .none
+                
+            case .deleteProjectConfirmed:
+                guard let context = state.pendingDeletionContext else {
+                    return .none
+                }
+                state.pendingDeletionContext = nil
+                let projectIdString = state.project.id.uuidString
+                let ownerId = state.currentUser?.ownerId
+                let localFilePath = state.project.filePath
+                
+                return .run { [projectLocalDataClient, firebaseClient] send in
+                    do {
+                        try await MainActor.run {
+                            try projectLocalDataClient.delete(
+                                context,
+                                projectIdString
+                            )
+                        }
+                        
+                        if let localFilePath,
+                           FileManager.default.fileExists(atPath: localFilePath)
+                        {
+                            do {
+                                try FileManager.default.removeItem(atPath: localFilePath)
+                                print("로컬 파일 삭제 완료: \(localFilePath)")
+                            } catch {
+                                print("로컬 파일 삭제 실패 (계속 진행): \(error)")
+                            }
+                        }
+                        
+                        if let ownerId {
+                            do {
+                                try await firebaseClient.deleteProject(
+                                    ownerId,
+                                    projectIdString
+                                )
+                            } catch {
+                                print("Firebase 삭제 실패 (계속 진행): \(error)")
+                            }
+                        }
+                        
+                        await send(.delegate(.needsRefresh))
+                        await send(.delegate(.didDeleteProject))
+                    } catch {
+                        print("프로젝트 삭제 실패: \(error)")
+                    }
+                }
             }
         }
         .ifLet(\.$destination, action: \.destination) {
@@ -404,10 +547,14 @@ extension AudioDetailFeature {
         @ObservableState
         enum State: Equatable {
             case alert(AlertState<Action.Alert>)
+            case chattingRoom(ChattingRoomFeature.State)
+            case editTitle(ProjectTitleEditFeature.State)
         }
         
         enum Action {
             case alert(Alert)
+            case chattingRoom(ChattingRoomFeature.Action)
+            case editTitle(ProjectTitleEditFeature.Action)
             
             enum Alert {
                 case confirmDelete
@@ -415,9 +562,19 @@ extension AudioDetailFeature {
         }
         
         var body: some Reducer<State, Action> {
+            Scope(state: \.chattingRoom, action: \.chattingRoom) {
+                ChattingRoomFeature()
+            }
+            Scope(state: \.editTitle, action: \.editTitle) {
+                ProjectTitleEditFeature()
+            }
             Reduce { state, action in
                 switch action {
                 case .alert:
+                    return .none
+                case .chattingRoom:
+                    return .none
+                case .editTitle:
                     return .none
                 }
             }
