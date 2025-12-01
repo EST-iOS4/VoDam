@@ -20,6 +20,7 @@ struct Project: Hashable, Equatable, Identifiable {
     var transcript: String?
     var syncStatus: SyncStatus = .localOnly
     var summary: String? = nil
+    var remoteAudioPath: String? = nil   
     
     static let mock: IdentifiedArrayOf<Project> = [
         Project(
@@ -33,4 +34,14 @@ struct Project: Hashable, Equatable, Identifiable {
             syncStatus: .localOnly
         ),
     ]
+}
+// RecordingMetadata 변환
+extension Project {
+    init(from recording: RecordingMetadata) {
+        self.id = UUID(uuidString: recording.id) ?? UUID()
+        self.name = recording.filename
+        self.creationDate = recording.createdAt
+        self.category = .audio
+        self.isFavorite = false
+    }
 }

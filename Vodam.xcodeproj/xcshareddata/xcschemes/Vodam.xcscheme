@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "2610"
+   LastUpgradeVersion = "2600"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -18,7 +18,7 @@
                BlueprintIdentifier = "8B4C67C22EBC8481003C67F9"
                BuildableName = "Vodam.app"
                BlueprintName = "Vodam"
-               ReferencedContainer = "container:Vodam.xcodeproj">
+               ReferencedContainer = "container:VoDam.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -38,7 +38,7 @@
                BlueprintIdentifier = "70C1291D2ED48FA400D7BB2A"
                BuildableName = "AppFeatureTests.xctest"
                BlueprintName = "AppFeatureTests"
-               ReferencedContainer = "container:Vodam.xcodeproj">
+               ReferencedContainer = "container:VoDam.xcodeproj">
             </BuildableReference>
          </TestableReference>
          <TestableReference
@@ -49,7 +49,7 @@
                BlueprintIdentifier = "70C1292E2ED5A2BA00D7BB2A"
                BuildableName = "VodamTests.xctest"
                BlueprintName = "VodamTests"
-               ReferencedContainer = "container:Vodam.xcodeproj">
+               ReferencedContainer = "container:VoDam.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -71,7 +71,7 @@
             BlueprintIdentifier = "8B4C67C22EBC8481003C67F9"
             BuildableName = "Vodam.app"
             BlueprintName = "Vodam"
-            ReferencedContainer = "container:Vodam.xcodeproj">
+            ReferencedContainer = "container:VoDam.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -88,7 +88,7 @@
             BlueprintIdentifier = "8B4C67C22EBC8481003C67F9"
             BuildableName = "Vodam.app"
             BlueprintName = "Vodam"
-            ReferencedContainer = "container:Vodam.xcodeproj">
+            ReferencedContainer = "container:VoDam.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

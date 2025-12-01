@@ -7,6 +7,7 @@
 
 import Foundation
 import ComposableArchitecture
+import SwiftData
 
 // MARK: - RecordingMetadata
 struct RecordingMetadata: Identifiable, Codable, Equatable {
@@ -29,42 +30,40 @@ struct RecordingMetadata: Identifiable, Codable, Equatable {
     }
 }
 
-
 // MARK: - RecordingRepository 인터페이스
 struct RecordingRepository {
-    /// SwiftData 저장
     var saveLocal: (RecordingMetadata) async throws -> Void
-
-    /// Firebase 저장 (추후 구현)
+    var fetchAll: () async throws -> [RecordingMetadata]
+    var delete: (String) async throws -> Void
     var saveRemote: (RecordingMetadata) async throws -> Void
-
-    /// 로그인 여부 (Firebase Auth 연결 시 사용)
     var isLoggedIn: () -> Bool
 }
 
-
 // MARK: - DependencyKey 등록
 enum RecordingRepositoryKey: DependencyKey {
-
+    
+    // ✅ ModelContainer 제거 - VodamApp에서 설정한 container 사용
+    // ✅ 실제 저장은 projectLocalDataClient 사용 권장
     static let liveValue: RecordingRepository = RecordingRepository(
-
         saveLocal: { metadata in
-            // 실제 SwiftData 저장 로직은 View에서 ModelContext로 처리
-            // 여기서는 저장 요청만 알림
-            print("📥 로컬 저장 요청됨: \(metadata.filename)")
+            // projectLocalDataClient를 사용하세요
+            print("⚠️ RecordingRepository.saveLocal 호출됨 - projectLocalDataClient 사용 권장")
         },
-
+        fetchAll: {
+            // projectLocalDataClient를 사용하세요
+            print("⚠️ RecordingRepository.fetchAll 호출됨 - projectLocalDataClient 사용 권장")
+            return []
+        },
+        delete: { id in
+            // projectLocalDataClient를 사용하세요
+            print("⚠️ RecordingRepository.delete 호출됨 - projectLocalDataClient 사용 권장")
+        },
         saveRemote: { metadata in
-            print("🌐 원격 저장 요청됨 (Firebase 준비 예정): \(metadata.filename)")
+            print("🌐 Firebase 준비 예정: \(metadata.filename)")
         },
-
-        isLoggedIn: {
-            // TODO: Firebase Auth 붙이면 변경
-            return false
-        }
+        isLoggedIn: { false }
     )
 }
-
 
 // MARK: - DependencyValues 확장
 extension DependencyValues {
