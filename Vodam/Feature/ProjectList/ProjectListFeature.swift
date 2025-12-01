@@ -1,5 +1,5 @@
 //
-// ProjectListView.swift
+// ProjectListFeature.swift
 // Vodam
 //
 // Created by 서정원 on 11/17/25.
@@ -27,7 +27,6 @@ struct ProjectListFeature {
         var searchText: String = ""
         var isFavorite = false
         
-        // 현재 사용자 (AppFeature에서 전달)
         var currentUser: User? = nil
         
         @Presents var destination: Destination.State?
@@ -77,7 +76,6 @@ struct ProjectListFeature {
         
         case destination(PresentationAction<Destination.Action>)
         
-        // 사용자 변경 알림 (AppFeature에서 전달)
         case userChanged(User?)
     }
     
@@ -89,7 +87,6 @@ struct ProjectListFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                // View에서 context와 함께 loadProjects 호출
                 return .none
                 
             case .refreshProjects:
@@ -111,20 +108,16 @@ struct ProjectListFeature {
                 return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] send in
                     do {
                         if let ownerId = ownerId {
-                            // ✅ 로그인 상태: Firebase 기준 (양방향 동기화)
                             print("[ProjectList] 로그인 상태 - Firebase에서 프로젝트 로드: \(ownerId)")
                             
-                            // 1. Firebase에서 프로젝트 가져오기
                             let remoteProjects = try await firebaseClient.fetchProjects(ownerId)
                             print("[ProjectList] 🔥 Firebase에서 \(remoteProjects.count)개 프로젝트 가져옴:")
                             for (index, project) in remoteProjects.enumerated() {
                                 print("  [\(index)] id: \(project.id), name: \(project.name)")
                             }
                             
-                            // 2. 로컬 SwiftData와 양방향 동기화
                             await MainActor.run {
                                 do {
-                                    // 기존 로컬 데이터 가져오기
                                     let localProjects = try projectLocalDataClient.fetchAll(context, ownerId)
                                     let localIds = Set(localProjects.map { $0.id })
                                     let remoteIds = Set(remoteProjects.map { $0.id })
@@ -132,15 +125,11 @@ struct ProjectListFeature {
                                     print("[ProjectList] 🔍 동기화 시작:")
                                     print("  - 로컬 프로젝트: \(localProjects.count)개")
                                     print("  - Firebase 프로젝트: \(remoteProjects.count)개")
-                                    
-                                    // 로컬 프로젝트 ID 출력
                                     print("  - 로컬 IDs: \(localIds)")
                                     print("  - Firebase IDs: \(remoteIds)")
                                     
-                                    // A. Firebase에 있는 프로젝트 → 로컬에 추가/업데이트
                                     for remoteProject in remoteProjects {
                                         if localIds.contains(remoteProject.id) {
-                                            // 업데이트 (remoteAudioPath 포함)
                                             print("[ProjectList] ✏️ 업데이트: \(remoteProject.name)")
                                             try projectLocalDataClient.update(
                                                 context,
@@ -152,13 +141,11 @@ struct ProjectListFeature {
                                                 remoteProject.summary
                                             )
                                         } else {
-                                            // 새로 추가
                                             print("[ProjectList] ➕ 추가: \(remoteProject.name)")
                                             try projectLocalDataClient.insert(context, remoteProject)
                                         }
                                     }
                                     
-                                    // B. Firebase에 없는 로컬 프로젝트 → 로컬에서 삭제
                                     let projectsToDelete = localProjects.filter { localProject in
                                         let shouldDelete = !remoteIds.contains(localProject.id) && localProject.syncStatus == .synced
                                         if shouldDelete {
@@ -178,22 +165,18 @@ struct ProjectListFeature {
                                 }
                             }
                             
-                            // 3. Storage 고아 파일 정리 (추가됨)
                             await Self.cleanupOrphanedStorageFiles(
                                 ownerId: ownerId,
                                 remoteProjects: remoteProjects,
                                 fileCloudClient: fileCloudClient
                             )
                             
-                            
-                            // 최종적으로 로컬에서 읽어서 표시 (동기화 완료된 데이터)
                             let payloads = try await MainActor.run {
                                 try projectLocalDataClient.fetchAll(context, ownerId)
                             }
                             await send(._projectsResponse(.success(payloads)))
                             
                         } else {
-                            // 비회원 상태: 로컬만 사용
                             print("[ProjectList] 비회원 상태 - 로컬에서 프로젝트 로드")
                             let payloads = try await MainActor.run {
                                 try projectLocalDataClient.fetchAll(context, nil)
@@ -207,15 +190,17 @@ struct ProjectListFeature {
                 .cancellable(id: ProjectListCancelID.loadProjects, cancelInFlight: true)
                 
             case .projectTapped(id: let projectId):
-                if let project = state.projects[id: projectId] {
-                    // currentUser를 AudioDetailFeature에 전달 (수정됨)
-                    state.destination = .audioDetail(
-                        AudioDetailFeature.State(
-                            project: project,
-                            currentUser: state.currentUser
-                        )
-                    )
+                guard let project = state.projects[id: projectId] else {
+                    return .none
                 }
+                
+                state.destination = .audioDetail(
+                    AudioDetailFeature.State(
+                        project: project,
+                        currentUser: state.currentUser
+                    )
+                )
+                
                 return .none
                 
             case .favoriteButtonTapped(id: let projectId, let context):
@@ -225,27 +210,25 @@ struct ProjectListFeature {
                 
                 let newFavorite = !project.isFavorite
                 project.isFavorite = newFavorite
-                state.projects[id: projectId] = project // Optimistic UI update
+                state.projects[id: projectId] = project
                 
                 let projectIdString = projectId.uuidString
                 let ownerId = state.currentUser?.ownerId
                 
                 return .run { [projectLocalDataClient, firebaseClient] send in
                     do {
-                        // SwiftData 업데이트 - MainActor에서 실행
                         try await MainActor.run {
                             try projectLocalDataClient.update(
                                 context,
                                 projectIdString,
-                                nil,  // name
+                                nil,
                                 newFavorite,
-                                nil,  // transcript
-                                nil,  // syncStatus
-                                nil   // summary
+                                nil,
+                                nil,
+                                nil
                             )
                         }
                         
-                        // 로그인 사용자면 Firebase도 업데이트
                         if let ownerId {
                             let payloads = try await MainActor.run {
                                 try projectLocalDataClient.fetchAll(
@@ -274,16 +257,12 @@ struct ProjectListFeature {
                 }
                 let projectIdString = projectId.uuidString
                 let ownerId = state.currentUser?.ownerId
-                
-                // remoteAudioPath 사용 (수정됨)
                 let remotePath = project.remoteAudioPath ?? project.filePath
                 
-                // UI에서 먼저 제거
                 state.projects.remove(id: projectId)
                 
                 return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] _ in
                     do {
-                        // SwiftData에서 삭제 - MainActor에서 실행
                         try await MainActor.run {
                             try projectLocalDataClient.delete(
                                 context,
@@ -300,7 +279,6 @@ struct ProjectListFeature {
                                     print("Storage 오디오 파일 삭제 실패 (계속 진행): \(error.localizedDescription)")
                                 }
                             }
-                            // 로그인 사용자면 Firebase에서도 삭제
                             try await firebaseClient.deleteProject(
                                 ownerId,
                                 projectIdString
@@ -315,7 +293,6 @@ struct ProjectListFeature {
             case ._projectsResponse(.success(let payloads)):
                 state.isLoading = false
                 
-                // ProjectPayload → Project 변환 (remoteAudioPath 포함)
                 let projects = payloads.map { payload -> Project in
                     Project(
                         id: UUID(uuidString: payload.id) ?? UUID(),
@@ -348,8 +325,13 @@ struct ProjectListFeature {
             case .destination(.presented(.audioDetail(.delegate(.didDeleteProject)))):
                 state.destination = nil
                 return .none
+                
             case .destination(.presented(.audioDetail(.delegate(.needsRefresh)))):
                 return .send(.refreshProjects)
+            
+            // ✅ 모든 audioDetail 액션은 그냥 통과
+            case .destination(.presented(.audioDetail)):
+                return .none
                 
             case .destination, .binding:
                 return .none
@@ -384,7 +366,6 @@ extension ProjectListFeature {
 }
 
 extension ProjectListFeature {
-    /// Firebase Storage에서 Firestore에 없는 고아 파일 정리
     static func cleanupOrphanedStorageFiles(
         ownerId: String,
         remoteProjects: [ProjectPayload],
@@ -393,14 +374,12 @@ extension ProjectListFeature {
         do {
             print("[ProjectList] 🧹 Storage 고아 파일 정리 시작")
             
-            // 1. Firestore에 등록된 파일 경로 목록
             let validRemotePaths = Set(remoteProjects.compactMap { $0.remoteAudioPath })
             print("  - Firestore에 등록된 파일: \(validRemotePaths.count)개")
             for path in validRemotePaths {
                 print("    ✅ \(path)")
             }
             
-            // 2. Storage에서 실제 파일 목록 조회
             let storagePath = "users/\(ownerId)/audio"
             let storageFiles = try await fileCloudClient.listFiles(storagePath)
             print("  - Storage에 실제 존재하는 파일: \(storageFiles.count)개")
@@ -408,7 +387,6 @@ extension ProjectListFeature {
                 print("    📦 \(path)")
             }
             
-            // 3. Storage에는 있지만 Firestore에 없는 파일 찾기
             let orphanedFiles = storageFiles.filter { !validRemotePaths.contains($0) }
             
             if orphanedFiles.isEmpty {
@@ -421,7 +399,6 @@ extension ProjectListFeature {
                 print("    ❌ \(path)")
             }
             
-            // 4. 고아 파일 삭제
             var deletedCount = 0
             for orphanedPath in orphanedFiles {
                 do {

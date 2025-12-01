@@ -9,8 +9,8 @@
 import FirebaseFirestore
 import Foundation
 
-struct Message: Identifiable, Codable,Equatable {
-    @DocumentID var id: String?
+nonisolated struct Message: Identifiable, Codable,Equatable {
+    var id: String?
     var content: String
     var isFromUser: Bool
     var timestamp: Date
