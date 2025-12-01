@@ -8,9 +8,13 @@
 import FirebaseFirestore
 import Foundation
 import ComposableArchitecture
+import OSLog
 
 @Reducer
 struct ChattingRoomFeature {
+    
+    nonisolated private let logger = Logger(subsystem: "ChattingRoomFeature", category: "Domain")
+    
         // MARK: - State
     @ObservableState
     struct State: Equatable {
@@ -64,7 +68,7 @@ struct ChattingRoomFeature {
                             await send(.loadMessages(messages))
                             
                         } catch {
-                            print("Failed to load messages: \(error)")
+                            logger.error("Failed to load messages")
                             await send(.loadMessages([]))
                         }
                     }
@@ -83,7 +87,7 @@ struct ChattingRoomFeature {
                     return .none
                     
                 case .sendMessage:
-                    print("1")
+                    logger.debug("♨️1")
                     let userMessage = Message(
                         content: state.messageText,
                         isFromUser: true
@@ -92,32 +96,37 @@ struct ChattingRoomFeature {
                     state.messageText = ""
                     
                     return .run { [projectName = state.projectName] send in
-                        print("2")
+                        logger.debug("♨️2")
                             // 유저 메세지 저장
+                        let db = Firestore.firestore()
+                        
                         do {
-                            try await db.collection("chats")
+                            let messageData: [String: Any] = [
+                                "content" : userMessage.content,
+                                "isFromUser": true,
+                                "timestamp": FieldValue.serverTimestamp()
+                            ]
+                            
+                            let ref = try await db.collection("chats")
                                 .document(projectName)
                                 .collection("messages")
-                                .addDocument(from: userMessage)
-                            print("3")
-                        } catch {
-                            print("Failed to save user message: \(error)")
+                                .addDocument(data: messageData)
+                            logger.debug("♨️3")
                         }
-                        
+                        catch {
+                            logger.error("유저메세지 저장 실패")
+                        }
+                    
                         await send(.setAITyping(true))
-                            // API
+                        // API
                         do {
                             let question = AlanClient.Question(userMessage.content)
-                            
                             let answer = try await AlanClient.shared.question(question)
-                            
                             await send(.aIResponse(answer.content))
-                            
                         } catch {
-                            print("Alan API Error: \(error)")
+                            logger.debug("Alan API Error")
                             await send(.aIResponse("죄송해요, 지금은 대답하기 어려워요."))
                         }
-                        
                         await send(.setAITyping(false))
                     }
                     
@@ -129,7 +138,7 @@ struct ChattingRoomFeature {
                     state.messages.append(aIMessage)
                         // AI 메세지 저장
                     return .run{ [projectName = state.projectName] _ in
-                        try await db.collection("chats")
+                        try? await db.collection("chats")
                             .document(projectName)
                             .collection("messages")
                             .addDocument(from: aIMessage)
