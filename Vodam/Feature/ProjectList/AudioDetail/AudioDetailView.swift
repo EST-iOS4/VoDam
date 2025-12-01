@@ -53,8 +53,9 @@ struct AudioDetailView: View {
         .onAppear {
             store.send(.onAppear)
         }
+        
         .onDisappear {
-            store.send(.onDisappear)
+            store.send(.viewWillDisappear)
         }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
@@ -151,7 +152,6 @@ struct AudioDetailView: View {
         .padding(.vertical, 8)
     }
     
-    // MARK: - 검색 필드
     @ViewBuilder
     private var searchField: some View {
         HStack {
@@ -168,7 +168,6 @@ struct AudioDetailView: View {
                 store.send(.searchSubmitted)
             }
             
-            // 검색 결과 표시 및 네비게이션
             if !store.searchText.isEmpty {
                 searchResultsNavigation
             }
@@ -178,7 +177,7 @@ struct AudioDetailView: View {
         .background(Color(.systemGray6))
         .cornerRadius(10)
     }
-
+    
     @ViewBuilder
     private var searchResultsNavigation: some View {
         HStack(spacing: 4) {
