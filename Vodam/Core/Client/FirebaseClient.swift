@@ -168,9 +168,9 @@ extension FirebaseClient: DependencyKey {
             createChatRoom: { projectName in
                 let db = Firestore.firestore()
                 
-                let [String:Any] = [
+                let data: [String: Any] = [
                     "title" : projectName,
-                    "content" : "목록에 보여질 초기 메세지 -> 다른내용으로 변경 예정"
+                    "content" : "목록에 보여질 초기 메세지 -> 다른내용으로 변경 예정",
                     "recentEditedDate" : FieldValue.serverTimestamp()
                 ]
                 
@@ -182,7 +182,7 @@ extension FirebaseClient: DependencyKey {
             
             listenToChatRooms: {
                 AsyncStream { continuation in
-                    let db = Firebase.firestore()
+                    let db = Firestore.firestore()
                     
                     let listener = db.collection("chatRooms")
                         .order(by:"recentEditedDate", descending: true)
@@ -202,14 +202,14 @@ extension FirebaseClient: DependencyKey {
                             let rooms = documents.compactMap { doc -> ChattingInfo? in
                                 let data = doc.data()
                                 
-                                let timestamp = data["recentEditedDate"] as! Timestamp
+                                let timestamp = data["recentEditedDate"] as? Timestamp
                                 let date = timestamp?.dateValue() ?? Date()
                                 
                                 return ChattingInfo(
                                     id: doc.documentID,
                                     title: data["title"] as? String ?? doc.documentID,
                                     content: data["content"] as? String ?? "",
-                                    recentEditedData: date
+                                    recentEditedDate: date
                                 )
                             }
                             
@@ -231,7 +231,9 @@ extension FirebaseClient: DependencyKey {
             uploadProjects: { _, _ in },
             fetchProjects: { _ in [] },
             updateProject: { _, _ in },
-            deleteProject: { _, _ in }
+            deleteProject: { _, _ in },
+            createChatRoom: { _ in },
+            listenToChatRooms: { AsyncStream { continuation in continuation.finish() } }
         )
     }
 }
@@ -316,3 +318,4 @@ extension ProjectPayload {
         )
     }
 }
+

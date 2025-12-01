@@ -37,5 +37,9 @@ struct ChattingListView: View {
         .background(Color.white)
         .background(ignoresSafeAreaEdges: .vertical)
         .padding(.horizontal, 10)
+        .onAppear{
+            print("뷰 호출됨!")
+            store.send(.onAppear)
+        }
     }
 }

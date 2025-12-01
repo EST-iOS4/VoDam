@@ -49,7 +49,7 @@ struct ChattingRoomFeature {
                 case .onAppear:
                     return .run { [projectName = state.projectName] send in
                         do {
-                            let snapshot = try await db.collection("chats")
+                            let snapshot = try await db.collection("chatsRooms")
                                 .document(projectName)
                                 .collection("messages")
                                 .order(by: "timestamp", descending: false)
@@ -93,7 +93,7 @@ struct ChattingRoomFeature {
                         print("2")
                             // 유저 메세지 저장
                         do {
-                            try await db.collection("chats")
+                            try await db.collection("chatRooms")
                                 .document(projectName)
                                 .collection("messages")
                                 .addDocument(from: userMessage)
@@ -127,7 +127,7 @@ struct ChattingRoomFeature {
                     state.messages.append(aIMessage)
                         // AI 메세지 저장
                     return .run{ [projectName = state.projectName] _ in
-                        try? await db.collection("chats")
+                        try? await db.collection("chatRooms")
                             .document(projectName)
                             .collection("messages")
                             .addDocument(from: aIMessage)
