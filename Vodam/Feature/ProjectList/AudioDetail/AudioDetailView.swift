@@ -6,10 +6,12 @@
 //
 
 import ComposableArchitecture
+import SwiftData
 import SwiftUI
 
 struct AudioDetailView: View {
     @Bindable var store: StoreOf<AudioDetailFeature>
+    @Environment(\.modelContext) private var context
     
     // PDF 확인
     private var isPDF: Bool {
@@ -61,12 +63,12 @@ struct AudioDetailView: View {
                 }
                 
                 Menu {
-                    Button(action: {  }) {
+                    Button(action: { store.send(.editTitleButtonTapped) }) {
                         Label("제목 수정", systemImage: "pencil")
                     }
                     
                     Button(role: .destructive) {
-                        store.send(.deleteProjectButtonTapped)
+                        store.send(.deleteProjectButtonTapped(context))
                     } label: {
                         Label("삭제", systemImage: "xmark")
                     }
@@ -79,6 +81,12 @@ struct AudioDetailView: View {
             store.send(.onAppear)
         }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+        .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
+            ChattingRoomView(store: $0)
+        }
+        .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
+            ProjectTitleEditView(store: $0)
+        }
     }
     
     // MARK: 오디오만 컨트롤
@@ -120,7 +128,7 @@ struct AudioDetailView: View {
                         .font(.title)
                 }
                 
-                Button(action: { store.send(.favoriteButtonTapped) }) {
+                Button(action: { store.send(.favoriteButtonTapped(context)) }) {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
                         .font(.title)
                 }
@@ -142,7 +150,7 @@ struct AudioDetailView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
             
-            Button(action: { store.send(.favoriteButtonTapped) }) {
+            Button(action: { store.send(.favoriteButtonTapped(context)) }) {
                 HStack {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
                         .font(.title2)
