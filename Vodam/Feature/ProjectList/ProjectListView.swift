@@ -33,32 +33,23 @@ struct ProjectListView: View {
                 }
             }
             .task {
-                // 최초 로드만 실행
                 if !store.hasLoadedOnce {
                     print("[ProjectListView] 최초 로드 시작")
                     store.send(.loadProjects(modelContext))
                 }
             }
-//            .task(id: store.currentUser?.ownerId) {
-//                // 사용자 변경 시에만 재로드 (로그인/로그아웃)
-//                if store.hasLoadedOnce {
-//                    print("[ProjectListView] 사용자 변경 감지 - 재로드")
-//                    store.send(.loadProjects(modelContext))
-//                }
-//            }
             .onChange(of: store.refreshTrigger) { oldValue, newValue in
-                // refreshTrigger 변경 시에만 재로드 (projectSaved 이벤트)
                 if newValue != nil && oldValue != newValue {
                     print("[ProjectListView] Refresh triggered: \(newValue?.uuidString ?? "nil")")
                     store.send(.loadProjects(modelContext))
                 }
             }
+            // ✅ navigationDestination을 item 기반으로 변경
             .navigationDestination(
-                store: self.store.scope(state: \.$destination, action: \.destination)
-            ) { store in
-                destinationView(for: store)
+                item: $store.scope(state: \.destination?.audioDetail, action: \.destination.audioDetail)
+            ) { detailStore in
+                AudioDetailView(store: detailStore)
             }
-        
     }
     
     private var categoryPicker: some View {
@@ -111,7 +102,6 @@ struct ProjectListView: View {
         .listStyle(.plain)
         .animation(.default, value: store.projectState)
         .refreshable {
-            // Pull-to-refresh: 수동으로 Firebase 재동기화
             print("[ProjectListView] Pull-to-refresh 트리거")
             await withCheckedContinuation { continuation in
                 store.send(.loadProjects(modelContext))
@@ -134,16 +124,6 @@ struct ProjectListView: View {
             }
         } label: {
             Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
-        }
-    }
-    
-    @ViewBuilder
-    private func destinationView(for store: Store<ProjectListFeature.Destination.State, ProjectListFeature.Destination.Action>) -> some View {
-        switch store.state {
-        case .audioDetail:
-            if let detailStore = store.scope(state: \.audioDetail, action: \.audioDetail) {
-                AudioDetailView(store: detailStore)
-            }
         }
     }
 }
@@ -211,8 +191,6 @@ struct ProjectRow: View {
         }
     }
     
-    // MARK: - Project Info
-    
     private var projectInfo: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(project.name)
@@ -240,8 +218,6 @@ struct ProjectRow: View {
                 .foregroundColor(.gray)
         }
     }
-    
-    // MARK: - Favorite Button
     
     private var favoriteButton: some View {
         Button(action: onFavoriteTap) {
