@@ -56,7 +56,9 @@ struct ChattingRoomFeature {
                                 .getDocuments()
                             
                             let messages = snapshot.documents.compactMap { doc -> Message? in
-                                try? doc.data(as: Message.self)
+                                var message = try? doc.data(as: Message.self)
+                                message?.id = doc.documentID
+                                return message
                             }
                             
                             await send(.loadMessages(messages))
@@ -127,7 +129,7 @@ struct ChattingRoomFeature {
                     state.messages.append(aIMessage)
                         // AI 메세지 저장
                     return .run{ [projectName = state.projectName] _ in
-                        try? await db.collection("chats")
+                        try await db.collection("chats")
                             .document(projectName)
                             .collection("messages")
                             .addDocument(from: aIMessage)

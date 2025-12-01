@@ -13,7 +13,7 @@ enum AuthProvider: String, Equatable, Codable, Sendable {
     case kakao
 }
 
-struct User: Equatable, Codable, Identifiable, Sendable {
+nonisolated struct User: Equatable, Codable, Identifiable, Sendable {
     var appleUserId: String?
     
     var id:String

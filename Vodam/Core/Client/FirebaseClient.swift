@@ -90,7 +90,7 @@ extension FirebaseClient: DependencyKey {
                         .collection("projects")
                         .document(project.id)
                     
-                    let data = project.toFirestoreData()
+                    let data = await project.toFirestoreData()
                     
                     // ✅ 디버깅: 저장할 데이터 출력
                     print("📝 [FirebaseClient] Firestore 저장 데이터:")
@@ -98,7 +98,7 @@ extension FirebaseClient: DependencyKey {
                     print("   - name: \(project.name)")
                     print("   - remoteAudioPath: \(data["remoteAudioPath"] ?? "nil")")
                     
-                    await batch.setData(data, forDocument: docRef)
+                    batch.setData(data, forDocument: docRef)
                 }
                 
                 try await batch.commit()
@@ -114,15 +114,18 @@ extension FirebaseClient: DependencyKey {
                     .order(by: "creationDate", descending: true)
                     .getDocuments()
                 
-                let projects = snapshot.documents.compactMap { doc -> ProjectPayload? in
+                var projects: [ProjectPayload] = []
+                for doc in snapshot.documents {
                     let data = doc.data()
-                    
+
                     // ✅ 디버깅: Firestore에서 읽은 데이터 출력
                     print("📖 [FirebaseClient] Firestore 읽기:")
                     print("   - id: \(doc.documentID)")
                     print("   - remoteAudioPath: \(data["remoteAudioPath"] ?? "nil")")
-                    
-                    return ProjectPayload.fromFirestoreData(data)
+
+                    if let project = await ProjectPayload.fromFirestoreData(data) {
+                        projects.append(project)
+                    }
                 }
                 
                 print("[FirebaseClient] fetchProjects 완료: ownerId=\(ownerId), count=\(projects.count)")
@@ -131,7 +134,7 @@ extension FirebaseClient: DependencyKey {
             
             updateProject: { ownerId, project in
                 let db = Firestore.firestore()
-                let data = project.toFirestoreData()
+                let data = await project.toFirestoreData()
                 
                 print("📝 [FirebaseClient] updateProject:")
                 print("   - id: \(project.id)")
@@ -211,7 +214,7 @@ extension ProjectPayload {
         return data
     }
     
-    static func fromFirestoreData(_ data: [String: Any]) -> ProjectPayload? {
+    static func fromFirestoreData(_ data: [String: Any]) async -> ProjectPayload? {
         guard
             let id = data["id"] as? String,
             let name = data["name"] as? String,
