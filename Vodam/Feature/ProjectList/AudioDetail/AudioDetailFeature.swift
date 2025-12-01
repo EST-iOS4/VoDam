@@ -35,7 +35,6 @@ struct AudioDetailFeature {
         
         @Presents var destination: Destination.State?
         
-        // 유저 정보
         var currentUser: User?
         @ObservationStateIgnored var pendingDeletionContext: ModelContext?
         
@@ -47,7 +46,8 @@ struct AudioDetailFeature {
         var playbackRate: Float = 1.0
         var isFavorite: Bool = false
         
-        // 검색 관련 상태
+        var isPlayerReady = false
+        
         var isSearching = false
         var searchText = ""
         
@@ -105,6 +105,7 @@ struct AudioDetailFeature {
         
         case onAppear
         case onDisappear
+        case viewWillDisappear
         case playButtonTapped
         case backwardButtonTapped
         case forwardButtonTapped
@@ -145,21 +146,24 @@ struct AudioDetailFeature {
         Reduce { state, action in
             switch action {
             case .onAppear:
-                print("[AudioDetail] onAppear 진입 - project: \(state.project.name)")
+                print("[AudioDetail] onAppear 진입 - project: \(state.project.name), isPlayerReady: \(state.isPlayerReady)")
                 
                 if state.project.category == .pdf {
                     print("[AudioDetail] PDF 문서 - 오디오 플레이어 초기화 생략")
                     return .none
                 }
                 
-                // 1. 로컬 파일이 있는지 확인
+                if state.isPlayerReady {
+                    print("[AudioDetail] 플레이어 이미 준비됨 - 초기화 스킵")
+                    return .none
+                }
+                
                 if let filePath = state.project.filePath,
                    FileManager.default.fileExists(atPath: filePath) {
                     print("[AudioDetail] 로컬 파일 존재 - 바로 재생: \(filePath)")
                     return setupPlayerEffect(fileURL: URL(fileURLWithPath: filePath))
                 }
                 
-                // 2. 로컬 파일이 없으면 Firebase에서 다운로드
                 print("[AudioDetail] 로컬 파일 없음 - Firebase에서 다운로드 시도")
                 
                 guard let remotePath = state.project.remoteAudioPath ?? state.project.filePath,
@@ -179,8 +183,6 @@ struct AudioDetailFeature {
                 return .run { send in
                     do {
                         print("[AudioDetail] Firebase 다운로드 시작: \(remotePath)")
-                        
-                        @Dependency(\.fileCloudClient) var fileCloudClient
                         
                         let localPath = try await fileCloudClient.downloadFileIfNeeded(
                             ownerId,
@@ -202,24 +204,20 @@ struct AudioDetailFeature {
                 
             case ._playerReady(let player, let totalSeconds):
                 state.player = player
+                state.isPlayerReady = true
                 if !totalSeconds.isNaN && !totalSeconds.isInfinite {
                     state.totalTime = formatTime(totalSeconds)
                 }
+                print("[AudioDetail] 플레이어 준비 완료")
                 return startPlayerObservation(player: player, totalSeconds: totalSeconds)
                 
-            case .onDisappear:
-                print("[AudioDetail] onDisappear - 플레이어 정리")
-                
-                if let player = state.player {
-                    player.pause()
-                    player.replaceCurrentItem(with: nil)
-                }
-                state.player = nil
-                state.isPlaying = false
-                
-                return .cancel(id: "player_observer")
-                
             case .playButtonTapped:
+                if state.player == nil {
+                    print("[AudioDetail] player가 nil - 재초기화 시도")
+                    state.isPlayerReady = false
+                    return .send(.onAppear)
+                }
+                
                 guard let player = state.player else {
                     print("[AudioDetail] playButtonTapped 호출됐는데 player 가 nil")
                     return .none
@@ -232,6 +230,11 @@ struct AudioDetailFeature {
                     player.play()
                     player.rate = state.playbackRate
                     print("[AudioDetail] player.play() 호출, rate = \(state.playbackRate)")
+                    
+                    if let item = player.currentItem {
+                        let totalSeconds = CMTimeGetSeconds(item.asset.duration)
+                        return startPlayerObservation(player: player, totalSeconds: totalSeconds)
+                    }
                 } else {
                     player.pause()
                     print("[AudioDetail] player.pause() 호출")
@@ -274,7 +277,6 @@ struct AudioDetailFeature {
                 
                 return .run { send in
                     do {
-                        // 1. Local SwiftData 업데이트
                         try await MainActor.run {
                             try projectLocalDataClient.update(
                                 context,
@@ -287,14 +289,13 @@ struct AudioDetailFeature {
                             )
                         }
                         
-                        // 2. Firebase 업데이트 (로그인 상태일 때)
                         if let ownerId {
                             let payload = await ProjectPayload(
                                 id: project.id.uuidString,
                                 name: project.name,
                                 creationDate: project.creationDate,
                                 category: project.category,
-                                isFavorite: newIsFavorite, // 변경된 값 사용
+                                isFavorite: newIsFavorite,
                                 filePath: project.filePath,
                                 fileLength: project.fileLength,
                                 transcript: project.transcript,
@@ -341,7 +342,7 @@ struct AudioDetailFeature {
             case .setTotalTime(let timeString):
                 state.totalTime = timeString
                 return .none
-            
+                
             case .chatButtonTapped:
                 let projectName = state.project.name
                     
@@ -369,20 +370,23 @@ struct AudioDetailFeature {
                 print("[AudioDetail] 검색 실행: \(state.searchText)")
                 state.selectedTab = .script
                 return .none
+                
             case .destination(.presented(.alert(.confirmDelete))):
                 return .send(.deleteProjectConfirmed)
-              
+                
             case .destination(.dismiss):
                 state.pendingDeletionContext = nil
                 return .none
-              
+                
             case .destination(.presented(.editTitle(.delegate(.didFinish(let updatedProject))))):
                 state.project = updatedProject
                 state.project.isFavorite = state.isFavorite
                 state.destination = nil
                 return .send(.delegate(.needsRefresh))
+                
             case .script, .aiSummary, .binding, .destination, .delegate:
                 return .none
+                
             case .editTitleButtonTapped:
                 var editableProject = state.project
                 editableProject.isFavorite = state.isFavorite
@@ -393,6 +397,7 @@ struct AudioDetailFeature {
                     )
                 )
                 return .none
+                
             case .deleteProjectButtonTapped(let context):
                 state.pendingDeletionContext = context
                 state.destination = .alert(
@@ -414,6 +419,20 @@ struct AudioDetailFeature {
                 )
                 return .none
                 
+            case .onDisappear:
+                print("[AudioDetail] onDisappear - 플레이어 정리하지 않음 (뒤로가기)")
+                return .none
+                
+            case .viewWillDisappear:
+                print("[AudioDetail] viewWillDisappear - 재생 일시정지")
+                
+                if state.isPlaying, let player = state.player {
+                    player.pause()
+                    state.isPlaying = false
+                    print("[AudioDetail] 재생 일시정지 완료")
+                }
+                return .none
+                
             case .deleteProjectConfirmed:
                 guard let context = state.pendingDeletionContext else {
                     return .none
@@ -423,43 +442,54 @@ struct AudioDetailFeature {
                 let ownerId = state.currentUser?.ownerId
                 let localFilePath = state.project.filePath
                 
-                return .run { [projectLocalDataClient, firebaseClient] send in
-                    do {
-                        try await MainActor.run {
-                            try projectLocalDataClient.delete(
-                                context,
-                                projectIdString
-                            )
-                        }
-                        
-                        if let localFilePath,
-                           FileManager.default.fileExists(atPath: localFilePath)
-                        {
-                            do {
-                                try FileManager.default.removeItem(atPath: localFilePath)
-                                print("로컬 파일 삭제 완료: \(localFilePath)")
-                            } catch {
-                                print("로컬 파일 삭제 실패 (계속 진행): \(error)")
-                            }
-                        }
-                        
-                        if let ownerId {
-                            do {
-                                try await firebaseClient.deleteProject(
-                                    ownerId,
+                if let player = state.player {
+                    player.pause()
+                    player.replaceCurrentItem(with: nil)
+                }
+                state.player = nil
+                state.isPlaying = false
+                state.isPlayerReady = false
+                
+                return .merge(
+                    .cancel(id: "player_observer"),
+                    .run { [projectLocalDataClient, firebaseClient] send in
+                        do {
+                            try await MainActor.run {
+                                try projectLocalDataClient.delete(
+                                    context,
                                     projectIdString
                                 )
-                            } catch {
-                                print("Firebase 삭제 실패 (계속 진행): \(error)")
                             }
+                            
+                            if let localFilePath,
+                               FileManager.default.fileExists(atPath: localFilePath)
+                            {
+                                do {
+                                    try FileManager.default.removeItem(atPath: localFilePath)
+                                    print("로컬 파일 삭제 완료: \(localFilePath)")
+                                } catch {
+                                    print("로컬 파일 삭제 실패 (계속 진행): \(error)")
+                                }
+                            }
+                            
+                            if let ownerId {
+                                do {
+                                    try await firebaseClient.deleteProject(
+                                        ownerId,
+                                        projectIdString
+                                    )
+                                } catch {
+                                    print("Firebase 삭제 실패 (계속 진행): \(error)")
+                                }
+                            }
+                            
+                            await send(.delegate(.needsRefresh))
+                            await send(.delegate(.didDeleteProject))
+                        } catch {
+                            print("프로젝트 삭제 실패: \(error)")
                         }
-                        
-                        await send(.delegate(.needsRefresh))
-                        await send(.delegate(.didDeleteProject))
-                    } catch {
-                        print("프로젝트 삭제 실패: \(error)")
                     }
-                }
+                )
             }
         }
         .ifLet(\.$destination, action: \.destination) {
@@ -478,11 +508,40 @@ struct AudioDetailFeature {
             
             do {
                 let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.playback, mode: .default, options: [])
-                try session.setActive(true)
-                print("[AudioDetail] AVAudioSession playback 세팅 완료")
+                
+                let currentCategory = session.category
+                print("[AudioDetail] 현재 AVAudioSession 카테고리: \(currentCategory)")
+                
+                if currentCategory != .playback {
+                    // 다른 오디오 세션이 활성화되어 있으면 비활성화 시도
+                    if session.isOtherAudioPlaying {
+                        print("[AudioDetail] 다른 오디오가 재생 중 - 재생 대기")
+                    }
+                    
+                    try session.setCategory(.playback, mode: .default, options: [])
+                    try session.setActive(true, options: [.notifyOthersOnDeactivation])
+                    print("[AudioDetail] AVAudioSession playback 세팅 완료")
+                }
             } catch {
                 print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
+                // ✅ 세션 설정 실패해도 재생 시도
+            }
+            
+            // ✅ 3. 파일 유효성 재검증
+            let asset = AVURLAsset(url: fileURL)
+            do {
+                let duration = try await asset.load(.duration)
+                let seconds = CMTimeGetSeconds(duration)
+                
+                if seconds <= 0.1 || seconds.isNaN || seconds.isInfinite {
+                    print("[AudioDetail] ❌ 유효하지 않은 오디오 파일: \(seconds)초")
+                    return
+                }
+                
+                print("[AudioDetail] ✅ 유효한 오디오 파일: \(seconds)초")
+            } catch {
+                print("[AudioDetail] ❌ 파일 유효성 검증 실패: \(error)")
+                return
             }
             
             let player = AVPlayer(url: fileURL)
@@ -495,7 +554,7 @@ struct AudioDetailFeature {
             
             let totalSeconds: Double
             do {
-                let duration = try await item.asset.load(.duration)
+                let duration = try await asset.load(.duration)
                 totalSeconds = CMTimeGetSeconds(duration)
                 print("[AudioDetail] 총 재생 시간: \(totalSeconds)초")
             } catch {
