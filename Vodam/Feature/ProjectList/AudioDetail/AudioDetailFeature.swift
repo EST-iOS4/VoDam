@@ -343,10 +343,14 @@ struct AudioDetailFeature {
                 return .none
             
             case .chatButtonTapped:
+                let projectName = state.project.name
+                    
                 state.destination = .chattingRoom(
-                    ChattingRoomFeature.State(projectName: state.project.name)
+                    ChattingRoomFeature.State(projectName: projectName)
                 )
-                return .none
+                return .run{ _ in
+                    try? await firebaseClient.createChatRoom(projectName)
+                }
                 
             case .searchButtonTapped:
                 state.isSearching = true
