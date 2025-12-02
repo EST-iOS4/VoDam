@@ -357,9 +357,9 @@ struct ProjectListFeature {
                 )
                 
             case let .aiSummaryRequested(projectId, transcript, ownerId, context):
-                return .run { [projectLocalDataClient, firebaseClient, context] send in
+                return .run { [projectLocalDataClient, firebaseClient, context, ownerId] send in
                     do {
-                        let chunks = await splitTranscript(transcript, maxChunkLength: 2000)
+                        let chunks = await splitTranscript(transcript, maxChunkLength: 1300)
                         
                         guard !chunks.isEmpty else {
                             print("[AISummary] 요약할 텍스트가 없습니다.")
@@ -565,7 +565,12 @@ struct ProjectListFeature {
                             let short = base.count > 25 ? String(base.prefix(25)) : base
                             let preview = short + "의 방"
                             
-                            try await firebaseClient.updateChatRoomPreview(existingProject.id, existingProject.name, preview)
+                            try await firebaseClient.updateChatRoomPreview(
+                                ownerId,
+                                existingProject.id,
+                                existingProject.name,
+                                preview
+                            )
                             
                             print("[AISummary] Firebase 저장 완료")
                         }
