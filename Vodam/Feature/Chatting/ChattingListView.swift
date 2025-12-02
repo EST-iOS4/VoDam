@@ -1,26 +1,21 @@
-    //
-    //  ChattingListView.swift
-    //  Vodam
-    //
-    //  Created by 이건준 on 11/19/25.
-    //
+//
+//  ChattingListView.swift
+//  Vodam
+//
+//  Created by 이건준 on 11/19/25.
+//
 
 import ComposableArchitecture
 import SwiftUI
 
 struct ChattingListView: View {
-    let store: StoreOf<ChattingListFeature>
+    @Bindable var store: StoreOf<ChattingListFeature>
 
     var body: some View {
-        WithPerceptionTracking {
+        NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             List(store.chattingList) { chattingInfo in
-                NavigationLink {
-                    ChattingRoomView(
-                        store: Store(
-                            initialState: ChattingRoomFeature.State(roomId: chattingInfo.id, title: chattingInfo.title),
-                            reducer: { ChattingRoomFeature() }
-                        )
-                    )
+                Button {
+                    store.send(.chattingTapped(chattingInfo))
                 } label: {
                     ChattingItemView(chattingInfo: chattingInfo)
                         .listRowSeparator(.hidden)
@@ -31,15 +26,15 @@ struct ChattingListView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-        }
-        .listStyle(.plain)
-        .background(Color.white)
-        .background(ignoresSafeAreaEdges: .vertical)
-        .padding(.horizontal, 10)
-        .onAppear{
-            print("뷰 호출됨!")
-            store.send(.onAppear)
+            .listStyle(.plain)
+            .background(Color.white)
+            .padding(.horizontal, 10)
+            .onAppear {
+                print("뷰 호출됨!")
+                store.send(.onAppear)
+            }
+        } destination: { store in
+            ChattingRoomView(store: store)
         }
     }
 }
