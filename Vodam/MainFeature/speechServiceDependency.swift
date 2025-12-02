@@ -7,30 +7,38 @@ import ComposableArchitecture
 import Speech
 
 struct SpeechServiceClient {
-    var startLiveTranscription: @Sendable () -> AsyncStream<String>
-    var stopLiveTranscription: @Sendable () -> Void
-    var pauseTranscription: @Sendable () -> Void
-    var resumeTranscription: @Sendable () -> Void
+    var startLiveTranscription: @Sendable (_ owner: String) async -> AsyncStream<String>?
+    var stopLiveTranscription: @Sendable (_ owner: String) async -> Void
+    var pauseTranscription: @Sendable (_ owner: String) async -> Void
+    var resumeTranscription: @Sendable (_ owner: String) async -> Void
+    var forceStop: @Sendable () async -> Void
 }
 
 extension SpeechServiceClient: DependencyKey {
-    static let liveValue: SpeechServiceClient = {
-        // 🔥 실제 SpeechService 인스턴스
-        let service = SpeechService()
-        
-        return SpeechServiceClient(
-            startLiveTranscription: { service.startLiveTranscription() },
-            stopLiveTranscription: { service.stopLiveTranscription() },
-            pauseTranscription: { service.pauseTranscription() },
-            resumeTranscription: { service.resumeTranscription() }
-        )
-    }()
+    static let liveValue = SpeechServiceClient(
+        startLiveTranscription: { owner in
+            await SpeechService.shared.startLiveTranscription(owner: owner)
+        },
+        stopLiveTranscription: { owner in
+            await SpeechService.shared.stopLiveTranscription(owner: owner)
+        },
+        pauseTranscription: { owner in
+            await SpeechService.shared.pauseTranscription(owner: owner)
+        },
+        resumeTranscription: { owner in
+            await SpeechService.shared.resumeTranscription(owner: owner)
+        },
+        forceStop: {
+            await SpeechService.shared.forceStop()
+        }
+    )
     
     static let testValue = SpeechServiceClient(
-        startLiveTranscription: { AsyncStream { _ in } },
-        stopLiveTranscription: { },
-        pauseTranscription: { },
-        resumeTranscription: { }
+        startLiveTranscription: { _ in AsyncStream { _ in } },
+        stopLiveTranscription: { _ in },
+        pauseTranscription: { _ in },
+        resumeTranscription: { _ in },
+        forceStop: { }
     )
 }
 

@@ -77,10 +77,19 @@ struct ProjectListFeature {
         case destination(PresentationAction<Destination.Action>)
         
         case userChanged(User?)
+        
+        case aiSummaryRequested(
+            ProjectId: String,
+            transcript: String,
+            ownerId: String?,
+            context: ModelContext
+        )
+        case aiSummaryResponse(projectId: String, summary: String)
+        case aiSummaryFailed(projectId: String)
     }
     
     nonisolated enum ProjectListCancelID{ case loadProjects }
-
+    
     var body: some Reducer<State, Action> {
         BindingReducer()
         
@@ -320,6 +329,7 @@ struct ProjectListFeature {
                 
             case .userChanged(let user):
                 state.currentUser = user
+                state.destination = nil
                 return .send(.refreshProjects)
                 
             case .destination(.presented(.audioDetail(.delegate(.didDeleteProject)))):
@@ -328,8 +338,197 @@ struct ProjectListFeature {
                 
             case .destination(.presented(.audioDetail(.delegate(.needsRefresh)))):
                 return .send(.refreshProjects)
-            
-            // ✅ 모든 audioDetail 액션은 그냥 통과
+                
+            case let .destination(.presented(.audioDetail(.aiSummary(.summarizeButtonTapped(context))))):
+                guard let destination = state.destination,
+                      case let .audioDetail(detailState) = destination
+                else { return .none }
+                
+                let transcript = detailState.aiSummary.transcript
+                let projectId = detailState.aiSummary.projectId
+                let ownerId = detailState.aiSummary.ownerId
+                
+                return .send(
+                    .aiSummaryRequested(ProjectId: projectId, transcript: transcript, ownerId: ownerId, context: context)
+                )
+                
+            case let .aiSummaryRequested(projectId, transcript, ownerId, context):
+                return .run { [projectLocalDataClient, firebaseClient, context] send in
+                    do {
+                        let chunks = splitTranscript(transcript, maxChunkLength: 1200)
+                        
+                        guard !chunks.isEmpty else {
+                            print("[AISummary] 요약할 텍스트가 없습니다.")
+                            await send(.aiSummaryFailed(projectId: projectId))
+                            return
+                        }
+                        
+                        print("[AISummary] 총 \(chunks.count)개 청크로 분할")
+                        
+                        let partialSummaries: [String]
+                        
+                        if chunks.count == 1 {
+                            print("[AISummary] 단일 청크 요약 호출")
+                            let question = AlanClient.Question(
+                                "다음 텍스트를 3개의 핵심 포인트로 3줄로 간결하게 요약해주세요:\n\n\(chunks[0])"
+                            )
+                            let answer = try await AlanClient.shared.question(question)
+                            partialSummaries = [answer.content]
+                        } else {
+                            print("[AISummary] \(chunks.count)개 청크 병렬 요약 시작")
+                            partialSummaries = try await withThrowingTaskGroup(of: (Int, String).self) { group in
+                                for (index, chunk) in chunks.enumerated() {
+                                    group.addTask {
+                                        let q = AlanClient.Question(
+                                            """
+                                            다음은 긴 문서의 일부입니다. 이 부분만 3개의 핵심 포인트로 간결하게 요약해주세요:
+                                            
+                                            \(chunk)
+                                            """
+                                        )
+                                        let a = try await AlanClient.shared.question(q)
+                                        return (index, a.content)
+                                    }
+                                }
+                                
+                                var results = Array(repeating: "", count: chunks.count)
+                                for try await (index, summary) in group {
+                                    results[index] = summary
+                                }
+                                return results
+                            }
+                        }
+                        
+                        let combined = partialSummaries.joined(separator: "\n\n---\n\n")
+                        
+                        let maxFinalLength = 1800
+                        let finalInput: String
+                        if combined.count > maxFinalLength {
+                            let endIndex = combined.index(combined.startIndex, offsetBy: maxFinalLength)
+                            finalInput = String(combined[..<endIndex]) + "\n\n(일부 요약만 사용되었습니다.)"
+                        } else {
+                            finalInput = combined
+                        }
+                        
+                        let finalQuestion = AlanClient.Question(
+                            """
+                            아래는 긴 문서를 여러 부분으로 나누어 요약한 결과들입니다.
+                            
+                            이 부분 요약들을 모두 고려해서,
+                            전체 문서를 3개의 핵심 포인트로 3줄로 간결하게 다시 요약해주세요.
+                            
+                            부분 요약들:
+                            \(finalInput)
+                            """
+                        )
+                        
+                        print("[AISummary] 최종 요약 호출 시작")
+                        let finalAnswer = try await AlanClient.shared.question(finalQuestion)
+                        let summary = finalAnswer.content
+                        
+                        print("[AISummary] 최종 요약 완료: \(summary.prefix(50))...")
+                        
+                        await send(.aiSummaryResponse(projectId: projectId, summary: summary))
+                        
+                        if let ownerId {
+                            print("[AISummary] Firebase에 요약본 저장 시작")
+                            
+                            let allProjects = try await projectLocalDataClient.fetchAll(context, ownerId)
+                            
+                            guard let existingProject = allProjects.first(where: { $0.id == projectId }) else {
+                                print("[AISummary] 프로젝트를 찾을 수 없음: \(projectId)")
+                                return
+                            }
+                            
+                            let updatedProject = ProjectPayload(
+                                id: existingProject.id,
+                                name: existingProject.name,
+                                creationDate: existingProject.creationDate,
+                                category: existingProject.category,
+                                isFavorite: existingProject.isFavorite,
+                                filePath: existingProject.filePath,
+                                fileLength: existingProject.fileLength,
+                                transcript: existingProject.transcript,
+                                summary: summary,  // 최종 요약본
+                                ownerId: existingProject.ownerId,
+                                syncStatus: existingProject.syncStatus,
+                                remoteAudioPath: existingProject.remoteAudioPath
+                            )
+                            
+                            try await firebaseClient.updateProject(ownerId, updatedProject)
+                            
+                            try await projectLocalDataClient.update(
+                                context,
+                                projectId,
+                                nil,  // name
+                                nil,  // isFavorite
+                                nil,  // transcript
+                                nil,  // syncStatus
+                                summary  // summary
+                            )
+                            
+                            let roomId = existingProject.id
+                            let title = existingProject.name
+                            
+                            let base = summary
+                                .replacingOccurrences(of: "\n", with: "")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                            
+                            let short: String
+                            if base.count > 25 {
+                                short = String(base.prefix(25))
+                            } else {
+                                short = base
+                            }
+                            
+                            let preview = short + "의 방"
+                            
+                            try await firebaseClient.updateChatRoomPreview(
+                                roomId,
+                                title,
+                                preview
+                            )
+                            
+                            print("[AISummary] Firebase 저장 + 채팅 프리뷰 업데이트 완료")
+                        } else {
+                            print("[AISummary] 비회원 - Firebase 저장 생략")
+                        }
+                        
+                    } catch {
+                        print("[AISummary] AI 요약 실패: \(error)")
+                        await send(.aiSummaryFailed(projectId: projectId))
+                    }
+                }
+                
+            case let .aiSummaryResponse(projectId, summary):
+                if var destination = state.destination,
+                   case var .audioDetail(detail) = destination,
+                   detail.aiSummary.projectId == projectId {
+                    detail.aiSummary.summary = summary
+                    detail.aiSummary.isLoading = false
+                    
+                    destination = .audioDetail(detail)
+                    state.destination = destination
+                }
+                
+                if let index = state.projects.firstIndex(where: { $0.id.uuidString == projectId}) {
+                    state.projects[index].summary = summary
+                }
+                return .none
+                
+            case let .aiSummaryFailed(projectId):
+                if var destination = state.destination,
+                   case var .audioDetail(detail) = destination,
+                   detail.aiSummary.projectId == projectId {
+                    
+                    detail.aiSummary.isLoading = false
+                    detail.aiSummary.summary = "요약 생성에 실패했습니다."
+                    
+                    destination = .audioDetail(detail)
+                    state.destination = destination
+                }
+                return .none
+                
             case .destination(.presented(.audioDetail)):
                 return .none
                 
@@ -416,4 +615,27 @@ extension ProjectListFeature {
             print("[ProjectList] ⚠️ Storage 고아 파일 정리 실패: \(error)")
         }
     }
+}
+
+fileprivate func splitTranscript(_ text: String, maxChunkLength: Int ) -> [String] {
+    guard !text.isEmpty else {
+        return []
+    }
+    
+    var result: [String] = []
+    var startIndex = text.startIndex
+    
+    while startIndex < text.endIndex {
+        let endIndex = text.index(
+            startIndex,
+            offsetBy: maxChunkLength,
+            limitedBy: text.endIndex
+        ) ?? text.endIndex
+        
+        let chunk = String(text[startIndex..<endIndex])
+        result.append(chunk)
+        startIndex = endIndex
+    }
+    
+    return result
 }
