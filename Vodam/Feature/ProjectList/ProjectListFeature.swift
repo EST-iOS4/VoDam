@@ -320,6 +320,7 @@ struct ProjectListFeature {
                 
             case .userChanged(let user):
                 state.currentUser = user
+                state.destination = nil
                 return .send(.refreshProjects)
                 
             case .destination(.presented(.audioDetail(.delegate(.didDeleteProject)))):
