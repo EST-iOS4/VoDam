@@ -18,6 +18,9 @@ struct AISummaryFeature {
         var projectId: String
         var ownerId: String?
         
+        var progress: Double = 0.0
+        var progressMessage: String? = nil
+        
         init(
             transcript: String,
             savedSummary: String? = nil,
@@ -37,6 +40,8 @@ struct AISummaryFeature {
         case summaryFailed(Error)
         case summarySavedToFirebase
         case summarySaveFailedToFirebase(Error)
+        
+        case updateProgress(Double, String)
     }
     
     var body: some Reducer<State, Action> {
@@ -49,15 +54,21 @@ struct AISummaryFeature {
                 }
                 
                 state.isLoading = true
+                state.progress = 0.0
+                state.progressMessage = "요약 준비 중..."
                 return .none
                 
             case .summaryResponse(let summary):
                 state.isLoading = false
                 state.summary = summary
+                state.progress = 1.0
+                state.progressMessage = "요약 완료!"
                 return .none
                 
             case .summaryFailed(let error):
                 state.isLoading = false
+                state.progress = 0.0
+                state.progressMessage = nil
                 print("AI 요약 실패: \(error)")
                 state.summary = "요약 생성에 실패했습니다. 다시 시도해주세요."
                 return .none
@@ -68,6 +79,11 @@ struct AISummaryFeature {
                 
             case .summarySaveFailedToFirebase(let error):
                 print("[AISummary] 요약본 Firebase 저장 실패 (계속 진행): \(error)")
+                return .none
+                
+            case let .updateProgress(progress, message):
+                state.progress = progress
+                state.progressMessage = message
                 return .none
             }
         }
