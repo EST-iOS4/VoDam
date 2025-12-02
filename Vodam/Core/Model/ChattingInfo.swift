@@ -12,4 +12,11 @@ struct ChattingInfo: Identifiable, Equatable {
     let title: String
     let content: String
     let recentEditedDate: Date
+    
+    var formattedDate: String {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "ko_KR")
+            formatter.dateFormat = "yy/MM/dd a h:mm"
+            return formatter.string(from: recentEditedDate)
+        }
 }
