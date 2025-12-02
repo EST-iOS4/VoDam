@@ -54,9 +54,9 @@ struct AudioDetailView: View {
             store.send(.onAppear)
         }
         
-        .onDisappear {
-            store.send(.viewWillDisappear)
-        }
+//        .onDisappear {
+//            store.send(.viewWillDisappear)
+//        }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
             ChattingRoomView(store: $0)
