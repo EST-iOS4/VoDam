@@ -359,7 +359,7 @@ struct ProjectListFeature {
             case let .aiSummaryRequested(projectId, transcript, ownerId, context):
                 return .run { [projectLocalDataClient, firebaseClient, context, ownerId] send in
                     do {
-                        let chunks = await splitTranscript(transcript, maxChunkLength: 1300)
+                        let chunks = await splitTranscript(transcript, maxChunkLength: 300)
                         
                         guard !chunks.isEmpty else {
                             print("[AISummary] 요약할 텍스트가 없습니다.")
@@ -445,6 +445,15 @@ struct ProjectListFeature {
                         for (groupIndex, group) in summaryGroups.enumerated() {
                             let combinedGroup = group.joined(separator: " ")
                             
+                            let maxGroupLength = 300
+                            let limitedGroup: String
+                            if combinedGroup.count > maxGroupLength {
+                                let endIdx = combinedGroup.index(combinedGroup.startIndex, offsetBy: maxGroupLength)
+                                limitedGroup = String(combinedGroup[..<endIdx])
+                            } else {
+                                limitedGroup = combinedGroup
+                            }
+                            
                             let q = AlanClient.Question(
                                     """
                                     다음 요약들을 2-3문장으로 통합:
@@ -488,7 +497,7 @@ struct ProjectListFeature {
                         
                         let finalInput = intermediateSummaries.joined(separator: " ")
                         
-                        let maxFinalLength = 500
+                        let maxFinalLength = 300
                         let truncatedInput: String
                         if finalInput.count > maxFinalLength {
                             let endIndex = finalInput.index(finalInput.startIndex, offsetBy: maxFinalLength)

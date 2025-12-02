@@ -29,7 +29,6 @@ struct AlanClient: AlanLLMInterface {
     // MARK: flows
     @concurrent
     func question(_ question: Question) async throws -> Answer {
-        // configure url
         let token = AuthToken.current
         
         guard var urlComponents = URLComponents(string: "\(id.value.absoluteString)/question") else {
@@ -58,7 +57,7 @@ struct AlanClient: AlanLLMInterface {
             }
             
             guard httpResponse.statusCode == 200 else {
-                logger.error("HTTP 오류: 상태 코드 \(httpResponse.statusCode) - \(httpResponse) ")
+                logger.error("HTTP 오류: 상태 코드 \(httpResponse.statusCode) - \(httpResponse)")
                 if let bodyString = String(data: data, encoding: .utf8) {
                     logger.error("HTTP 오류 응답 바디: \(bodyString, privacy: .public)")
                 } else {
@@ -83,6 +82,7 @@ struct AlanClient: AlanLLMInterface {
             throw AlanClient.Error.networkError(error)
         }
     }
+
     
     @concurrent
     func resetState(token: AuthToken = .current) async throws {
