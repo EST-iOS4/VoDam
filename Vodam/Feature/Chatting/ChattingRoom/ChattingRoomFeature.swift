@@ -65,27 +65,20 @@ struct ChattingRoomFeature {
                             logger.debug("📦 총 문서 개수: \(snapshot.documents.count)")
                             
                             let messages = snapshot.documents.compactMap { doc -> Message? in
-                                print("📄 문서 ID: \(doc.documentID)")
-                                print("📄 문서 데이터: \(doc.data())")
                                 
                                 do {
                                     var message = try doc.data(as: Message.self)
                                     message.id = doc.documentID
-                                    print("✅ 디코딩 성공: \(message.content)")
                                     return message
                                 } catch {
-                                    print("❌ 디코딩 실패: \(error)")
-                                    print("❌ 실패한 데이터: \(doc.data())")
                                     return nil
                                 }
                             }
                             
-                            print("🎯 성공적으로 로드된 메시지: \(messages.count)개")
                             await send(.loadMessages(messages))
                             
                         } catch {
                             logger.error("Failed to load messages: \(error.localizedDescription)")
-                            print("🔥 Firebase 로드 에러: \(error)")
                             await send(.loadMessages([]))
                         }
                     }
@@ -95,13 +88,32 @@ struct ChattingRoomFeature {
                         let dummyMessage = Message(
                             content: "안녕하세요! 오늘 \(state.title)에 대해 무엇을 도와드릴까요?",
                             isFromUser: false,
-                            timestamp: Date().addingTimeInterval(-300)
+                            timestamp: Date()
                         )
                         state.messages = [dummyMessage]
+                        
+                        return .run{[projectName = state.projectName] _ in
+                            let db = Firestore.firestore()
+                            let messageData: [String: Any] = [
+                                "content": dummyMessage.content,
+                                "isFromUser": false as Bool,
+                                "timestamp": Date()
+                            ]
+                            do{
+                                try await db.collection("chats")
+                                    .document(projectName)
+                                    .collection("messages")
+                                    .addDocument(data: messageData)
+                                logger.info("환영메세지 저장완료")
+                            } catch{
+                                logger.error("환영메세지 저장실패: \(error.localizedDescription)")
+                            }
+                        }
                     } else{
                         state.messages = loadedMessages
+                        
+                        return .none
                     }
-                    return .none
                     
                 case .sendMessage:
                     let userMessage = Message(
@@ -116,26 +128,35 @@ struct ChattingRoomFeature {
                         let db = Firestore.firestore()
                         
                         do {
-                            let messageData: [String: Any] = [
+                            let _: [String: Any] = [
                                 "content" : userMessage.content,
                                 "isFromUser": true as Bool,
                                 "timestamp":Date()
-                                ]
+                            ]
                             
-                            _ = try await db.collection("chats")
-                                .document(roomId)
-                                .collection("messages")
-                                .addDocument(data: messageData)
+                            let roomSnapshout = try await db.collection("chatRooms").document(projectName)
+                                .getDocument()
+                            if let currentContent = roomSnapshout.data()?["content"] as? String,
+                               currentContent == "-" {
+                                try await db.collection("chatRooms")
+                                    .document(projectName)
+                                    .updateData([
+                                        "content": userMessage.content,
+                                        "recentEditedDate": FieldValue.serverTimestamp()
+                                    ])
+                                logger.info("첫 질문 저장완료")
+                            }
                         }
                         catch {
                             logger.error("유저메세지 저장 실패")
                         }
-                    
+                        
                         await send(.setAITyping(true))
-                        // API
+                            // API
                         do {
                             let question = AlanClient.Question(userMessage.content)
                             let answer = try await AlanClient.shared.question(question)
+                            
                             await send(.aIResponse(answer.content))
                         } catch {
                             logger.debug("Alan API Error")
@@ -155,15 +176,17 @@ struct ChattingRoomFeature {
                         let db = Firestore.firestore()
                         
                         let messageData: [String: Any] = [
-                                    "content": content,
-                                    "isFromUser": false as Bool,
-                                    "timestamp": Date()
-                                ]
+                            "content": content,
+                            "isFromUser": false as Bool,
+                            "timestamp": Date()
+                        ]
                         
                         _ = try? await db.collection("chats")
-                            .document(roomId)
+
+                            .document(projectName)
                             .collection("messages")
                             .addDocument(data: messageData)
+
                     }
                     
                 case .setAITyping(let isTyping):
