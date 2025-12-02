@@ -203,13 +203,17 @@ struct ProjectListFeature {
                     return .none
                 }
                 
+                let hasSummary = !(project.summary ?? "").isEmpty
+                
+                let initialTab: AudioDetailFeature.Tab = hasSummary ? .aiSummary : .script
+                
                 state.destination = .audioDetail(
-                    AudioDetailFeature.State(
-                        project: project,
-                        currentUser: state.currentUser
+                        AudioDetailFeature.State(
+                            project: project,
+                            currentUser: state.currentUser,
+                            selectedTab: initialTab
                     )
                 )
-                
                 return .none
                 
             case .favoriteButtonTapped(id: let projectId, let context):
@@ -355,7 +359,7 @@ struct ProjectListFeature {
             case let .aiSummaryRequested(projectId, transcript, ownerId, context):
                 return .run { [projectLocalDataClient, firebaseClient, context] send in
                     do {
-                        let chunks = splitTranscript(transcript, maxChunkLength: 1200)
+                        let chunks = splitTranscript(transcript, maxChunkLength: 1000)
                         
                         guard !chunks.isEmpty else {
                             print("[AISummary] 요약할 텍스트가 없습니다.")
