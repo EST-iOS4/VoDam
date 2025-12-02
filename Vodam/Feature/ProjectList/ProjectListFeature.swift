@@ -15,6 +15,11 @@ struct ProjectListFeature {
     @Dependency(\.firebaseClient) var firebaseClient
     @Dependency(\.fileCloudClient) var fileCloudClient
     
+    struct AISummaryProgressState: Equatable {
+        var progress: Double
+        var message: String?
+    }
+    
     @ObservableState
     struct State: Equatable {
         var projects: IdentifiedArrayOf<Project> = []
@@ -29,6 +34,7 @@ struct ProjectListFeature {
         
         var currentUser: User? = nil
         
+        var aiSummaryProgress: [String: AISummaryProgressState] = [:]
         @Presents var destination: Destination.State?
         
         var projectState: IdentifiedArrayOf<Project> {
@@ -86,6 +92,7 @@ struct ProjectListFeature {
         )
         case aiSummaryResponse(projectId: String, summary: String)
         case aiSummaryFailed(projectId: String)
+        case aiSummaryProgressUpdated(projectId: String, progress: Double, message: String?)
     }
     
     nonisolated enum ProjectListCancelID{ case loadProjects }
@@ -203,17 +210,26 @@ struct ProjectListFeature {
                     return .none
                 }
                 
+                let projectIdString = project.id.uuidString
                 let hasSummary = !(project.summary ?? "").isEmpty
+                let hasInProgress = state.aiSummaryProgress[projectIdString] != nil
                 
-                let initialTab: AudioDetailFeature.Tab = hasSummary ? .aiSummary : .script
+                let initialTab: AudioDetailFeature.Tab =
+                (hasSummary || hasInProgress) ? .aiSummary : .script
                 
-                state.destination = .audioDetail(
-                    AudioDetailFeature.State(
-                        project: project,
-                        currentUser: state.currentUser,
-                        selectedTab: initialTab
-                    )
+                var detailState = AudioDetailFeature.State(
+                    project: project,
+                    currentUser: state.currentUser,
+                    selectedTab: initialTab
                 )
+                
+                if let progressInfo = state.aiSummaryProgress[projectIdString] {
+                    detailState.aiSummary.isLoading = true
+                    detailState.aiSummary.progress = progressInfo.progress
+                    detailState.aiSummary.progressMessage = progressInfo.message
+                }
+                
+                state.destination = .audioDetail(detailState)
                 return .none
                 
             case .favoriteButtonTapped(id: let projectId, let context):
@@ -325,6 +341,13 @@ struct ProjectListFeature {
                 state.projects = IdentifiedArrayOf(uniqueElements: projects)
                 return .none
                 
+            case let .aiSummaryProgressUpdated(projectId, progress, message):
+                state.aiSummaryProgress[projectId] = AISummaryProgressState(
+                    progress: progress,
+                    message: message
+                )
+                return .none
+                
             case ._projectsResponse(.failure(let error)):
                 state.isLoading = false
                 state.refreshTrigger = nil
@@ -359,7 +382,27 @@ struct ProjectListFeature {
             case let .aiSummaryRequested(projectId, transcript, ownerId, context):
                 return .run { [projectLocalDataClient, firebaseClient, context, ownerId] send in
                     do {
-                        let chunks = await splitTranscript(transcript, maxChunkLength: 300)
+                        func updateProgress(_ value: Double, _ message: String) async {
+                            await send(
+                                .destination(
+                                    .presented(
+                                        .audioDetail(
+                                            .aiSummary(.updateProgress(value, message))
+                                        )
+                                    )
+                                )
+                            )
+                            
+                            await send(
+                                .aiSummaryProgressUpdated(
+                                    projectId: projectId,
+                                    progress: value,
+                                    message: message
+                                )
+                            )
+                        }
+                        
+                        let chunks = await splitTranscript(transcript, maxChunkLength: 800)
                         
                         guard !chunks.isEmpty else {
                             print("[AISummary] 요약할 텍스트가 없습니다.")
@@ -369,7 +412,7 @@ struct ProjectListFeature {
                         
                         print("[AISummary] 1단계: \(chunks.count)개 청크로 분할")
                         
-                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(0.05, "1단계 요약 시작..."))))))
+                        await updateProgress(0.05, "1단계 요약 시작...")
                         
                         var partialSummaries: [String] = []
                         let batchSize = 3
@@ -421,10 +464,10 @@ struct ProjectListFeature {
                             partialSummaries.append(contentsOf: batchSummaries)
                             
                             let progress = 0.05 + (Double(endIdx) / Double(chunks.count)) * 0.4
-                            await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(
+                            await updateProgress(
                                 progress,
                                 "1단계... \(endIdx)/\(chunks.count)"
-                            ))))))
+                            )
                             
                             if batchIndex < totalBatches - 1 {
                                 try? await Task.sleep(nanoseconds: 500_000_000)
@@ -439,13 +482,13 @@ struct ProjectListFeature {
                         
                         print("[AISummary] 2단계: \(summaryGroups.count)개 그룹으로 중간 요약")
                         
-                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(0.5, "2단계 통합 중..."))))))
+                        await updateProgress(0.5, "2단계 통합 중...")
                         
                         var intermediateSummaries: [String] = []
                         for (groupIndex, group) in summaryGroups.enumerated() {
                             let combinedGroup = group.joined(separator: " ")
                             
-                            let maxGroupLength = 300
+                            let maxGroupLength = 500
                             let limitedGroup: String
                             if combinedGroup.count > maxGroupLength {
                                 let endIdx = combinedGroup.index(combinedGroup.startIndex, offsetBy: maxGroupLength)
@@ -483,21 +526,21 @@ struct ProjectListFeature {
                             }
                             
                             let progress = 0.5 + (Double(groupIndex + 1) / Double(summaryGroups.count)) * 0.3
-                            await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(
+                            await updateProgress(
                                 progress,
                                 "2단계... \(groupIndex + 1)/\(summaryGroups.count)"
-                            ))))))
+                            )
                             
                             try? await Task.sleep(nanoseconds: 500_000_000)
                         }
                         
                         print("[AISummary] 2단계 완료: \(intermediateSummaries.count)개 중간 요약")
                         
-                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(0.85, "최종 요약 생성 중..."))))))
+                        await updateProgress(0.85, "최종 요약 생성 중...")
                         
                         let finalInput = intermediateSummaries.joined(separator: " ")
                         
-                        let maxFinalLength = 300
+                        let maxFinalLength = 800
                         let truncatedInput: String
                         if finalInput.count > maxFinalLength {
                             let endIndex = finalInput.index(finalInput.startIndex, offsetBy: maxFinalLength)
@@ -538,7 +581,7 @@ struct ProjectListFeature {
                             throw lastError ?? AlanClient.Error.networkError(NSError(domain: "FinalSummaryFailed", code: -1))
                         }
                         
-                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(0.95, "저장 중..."))))))
+                        await updateProgress(0.95, "저장 중...")
                         await send(.aiSummaryResponse(projectId: projectId, summary: summary))
                         
                         // Firebase 저장
@@ -587,15 +630,25 @@ struct ProjectListFeature {
                             print("[AISummary] Firebase 저장 완료")
                         }
                         
-                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(1.0, "완료!"))))))
+                        await updateProgress(1.0, "완료!")
                         
                     } catch {
+                        await send(
+                            .aiSummaryProgressUpdated(
+                                projectId: projectId,
+                                progress: 0,
+                                message: "요약 실패"
+                            )
+                        )
                         print("[AISummary] AI 요약 실패: \(error)")
                         await send(.aiSummaryFailed(projectId: projectId))
                     }
                 }
                 
             case let .aiSummaryResponse(projectId, summary):
+                
+                state.aiSummaryProgress[projectId] = nil
+                
                 if var destination = state.destination,
                    case var .audioDetail(detail) = destination,
                    detail.aiSummary.projectId == projectId {
@@ -612,6 +665,9 @@ struct ProjectListFeature {
                 return .none
                 
             case let .aiSummaryFailed(projectId):
+                
+                state.aiSummaryProgress[projectId] = nil
+                
                 if var destination = state.destination,
                    case var .audioDetail(detail) = destination,
                    detail.aiSummary.projectId == projectId {
