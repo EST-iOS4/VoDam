@@ -1,7 +1,3 @@
-//
-//  SpeechService.swift
-//
-
 import Speech
 import AVFoundation
 
@@ -63,7 +59,7 @@ class SpeechService: NSObject {
             
             let audioSession = AVAudioSession.sharedInstance()
             do {
-                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetoothHFP])
+                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetooth])
                 try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
             } catch {
                 print("🎧 AudioSession 오류:", error)
@@ -119,7 +115,6 @@ class SpeechService: NSObject {
             }
         }
     }
-    
     // MARK: - PAUSE
     func pauseTranscription() {
         guard audioEngine.isRunning else { return }
@@ -139,28 +134,38 @@ class SpeechService: NSObject {
     }
     
     // MARK: - STOP
+    private var isCleaningUp = false
+    
     func stopLiveTranscription() {
-        cleanupResources()
+        cleanupResources(deactivateSession: true)
         print("🛑 STT 완전 종료됨")
     }
     
-    private func cleanupResources() {
+    private func cleanupResources(deactivateSession: Bool = false) {
+        guard !isCleaningUp else { return }
+        isCleaningUp = true
+        
+        defer { isCleaningUp = false }
+        
         isStarted = false
         
-        recognitionRequest?.endAudio()
+        transcriptContinuation?.finish()
+        transcriptContinuation = nil
         
+        audioEngine.inputNode.removeTap(onBus: 0)
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        
+        recognitionRequest?.endAudio()
         recognitionTask?.cancel()
         recognitionTask = nil
         recognitionRequest = nil
         
-        if audioEngine.isRunning {
-            audioEngine.stop()
+        if deactivateSession {
+            DispatchQueue.global(qos: .background).async {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
         }
-        audioEngine.inputNode.removeTap(onBus: 0)
-        
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        
-        transcriptContinuation?.finish()
-        transcriptContinuation = nil
     }
 }
