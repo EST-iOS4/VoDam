@@ -15,16 +15,17 @@ private let chattingLogger = Logger(subsystem: "Vodam", category: "ChattingList"
 struct ChattingListFeature {
     @Dependency(\.firebaseClient) var firebaseClient
     
-    
     @ObservableState
     struct State: Equatable {
-        var chattingList: [ChattingInfo]
+        var chattingList: [ChattingInfo] = []
+        var path = StackState<ChattingRoomFeature.State>()
     }
     
-    enum Action: Equatable {
+    enum Action {
         case chattingTapped(ChattingInfo)
         case onAppear
         case updateList([ChattingInfo])
+        case path(StackAction<ChattingRoomFeature.State, ChattingRoomFeature.Action>)
     }
     
     var body: some Reducer<State, Action> {
@@ -41,13 +42,23 @@ struct ChattingListFeature {
                 
             case .chattingTapped(let chattingInfo):
                 print("선택한 채팅방 정보: \(chattingInfo)")
+                let roomState = ChattingRoomFeature.State(
+                    roomId: chattingInfo.id,
+                    title: chattingInfo.title
+                )
+                state.path.append(roomState)
                 return .none
                 
             case .updateList(let info):
                 state.chattingList = info
                 return .none
+                
+            case .path:
+                return .none
             }
+        }
+        .forEach(\.path, action: \.path) {
+            ChattingRoomFeature()
         }
     }
 }
-

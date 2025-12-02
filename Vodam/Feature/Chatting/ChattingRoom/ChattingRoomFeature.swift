@@ -116,8 +116,12 @@ struct ChattingRoomFeature {
                 }
                 
             case .sendMessage:
+                print("💬 [ChattingRoom] sendMessage tapped. current text = '\(state.messageText)'")
                 let trimmed = state.messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return .none }
+                guard !trimmed.isEmpty else {
+                    print("💬 [ChattingRoom] trimmed is empty, ignoring")
+                    return .none
+                }
                 
                 let userMessage = Message(
                     content: state.messageText,
@@ -126,47 +130,49 @@ struct ChattingRoomFeature {
                 state.messages.append(userMessage)
                 state.messageText = ""
                 
+                state.isAITyping = true
+                
                 return .run { [roomId = state.roomId, userMessage] send in
                     // 유저 메세지 저장
                     let db = Firestore.firestore()
                     
-                    do {
-                        let messageData : [String: Any] = [
-                            "content" : userMessage.content,
-                            "isFromUser": true,
-                            "timestamp": userMessage.timestamp
-                        ]
-                        
-                        
-                        _ = try await db.collection("chats")
-                            .document(roomId)
-                            .collection("messages")
-                            .addDocument(data: messageData)
-                        
-                        let base = userMessage.content
-                            .replacingOccurrences(of: "\n", with: " ")
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                        
-                        let short: String
-                        if base.count > 25 {
-                            short = String(base.prefix(25)) + "..."
-                        } else {
-                            short = base
+                    Task {
+                        do {
+                            let messageData : [String: Any] = [
+                                "content" : userMessage.content,
+                                "isFromUser": true,
+                                "timestamp": userMessage.timestamp
+                            ]
+                            
+                            
+                            _ = try await db.collection("chats")
+                                .document(roomId)
+                                .collection("messages")
+                                .addDocument(data: messageData)
+                            
+                            let base = userMessage.content
+                                .replacingOccurrences(of: "\n", with: " ")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                            
+                            let short: String
+                            if base.count > 25 {
+                                short = String(base.prefix(25)) + "..."
+                            } else {
+                                short = base
+                            }
+                            
+                            try await db.collection("chatRooms")
+                                .document(roomId)
+                                .updateData([
+                                    "content": short,
+                                    "recentEditedDate": FieldValue.serverTimestamp()
+                                ])
+                            
+                        } catch {
+                            logger.error("유저메세지 저장 실패")
                         }
-                        
-                        try await db.collection("chatRooms")
-                            .document(roomId)
-                            .updateData([
-                                "content": short,
-                                "recentEditedDate": FieldValue.serverTimestamp()
-                            ])
-                        
-                    } catch {
-                        logger.error("유저메세지 저장 실패")
                     }
                     
-                    await send(.setAITyping(true))
-                    // API
                     do {
                         let question = AlanClient.Question(userMessage.content)
                         let answer = try await AlanClient.shared.question(question)
@@ -219,6 +225,8 @@ struct ChattingRoomFeature {
                                 "content": short,
                                 "recentEditedDate": FieldValue.serverTimestamp()
                             ])
+                    } catch {
+                        logger.error("AI 메세지 저장 실패: \(error.localizedDescription)")
                     }
                 }
                 
