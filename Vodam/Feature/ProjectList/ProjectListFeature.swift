@@ -420,11 +420,25 @@ struct ProjectListFeature {
                             
                             let roomId = existingProject.id
                             let title = existingProject.name
+                        
+                            
+                            let base = summary
+                                .replacingOccurrences(of: "\n", with: "")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                            
+                            let short: String
+                            if base.count > 25 {
+                                short = String(base.prefix(25))
+                            } else {
+                                short = base
+                            }
+                            
+                            let preview = short + "의 방"
                             
                             try await firebaseClient.updateChatRoomPreview(
                                 roomId,
                                 title,
-                                summary
+                                preview
                                 )
                             
                             print("[AISummary] Firebase 저장 완료")
