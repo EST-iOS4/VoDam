@@ -119,7 +119,7 @@ struct ChattingRoomFeature {
                                 "timestamp":Date()
                                 ]
                             
-                            let ref = try await db.collection("chats")
+                            _ = try await db.collection("chats")
                                 .document(projectName)
                                 .collection("messages")
                                 .addDocument(data: messageData)
@@ -157,7 +157,7 @@ struct ChattingRoomFeature {
                                     "timestamp": Date()
                                 ]
                         
-                        let ref = try? await db.collection("chats")
+                        _ = try? await db.collection("chats")
                             .document(projectName)
                             .collection("messages")
                             .addDocument(data: messageData)
