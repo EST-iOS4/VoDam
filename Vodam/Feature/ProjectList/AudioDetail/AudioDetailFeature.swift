@@ -344,13 +344,15 @@ struct AudioDetailFeature {
                 return .none
                 
             case .chatButtonTapped:
-                let projectName = state.project.name
+                let project = state.project
+                let roomId = project.id.uuidString
+                let title = project.name
                     
                 state.destination = .chattingRoom(
-                    ChattingRoomFeature.State(projectName: projectName)
+                    ChattingRoomFeature.State(roomId: roomId, title: title)
                 )
                 return .run{ _ in
-                    try? await firebaseClient.createChatRoom(projectName)
+                    try? await firebaseClient.createChatRoom(roomId, title)
                 }
                 
             case .searchButtonTapped:

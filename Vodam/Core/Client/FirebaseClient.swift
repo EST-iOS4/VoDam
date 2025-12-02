@@ -30,7 +30,7 @@ struct FirebaseClient {
             async throws -> Void
     
     var createChatRoom:
-        @Sendable (_ projectName: String) async throws -> Void
+    @Sendable (_ roomId: String, _ title: String) async throws -> Void
     
     var listenToChatRooms:
     @Sendable () -> AsyncStream<[ChattingInfo]>
@@ -112,6 +112,7 @@ extension FirebaseClient: DependencyKey {
             },
             
             fetchProjects: { ownerId in
+                //메세지 로드
                 let db = Firestore.firestore()
                 let snapshot = try await db
                     .collection("users")
@@ -146,6 +147,7 @@ extension FirebaseClient: DependencyKey {
                 print("   - id: \(project.id)")
                 print("   - remoteAudioPath: \(data["remoteAudioPath"] ?? "nil")")
                 
+                //메세지 저장
                 try await db
                     .collection("users")
                     .document(ownerId)
@@ -168,18 +170,18 @@ extension FirebaseClient: DependencyKey {
                 print("[FirebaseClient] project 삭제 완료: ownerId=\(ownerId), id=\(projectId)")
             },
             
-            createChatRoom: { projectName in
+            createChatRoom: { roomId, title in
                 let db = Firestore.firestore()
                 
                 let data: [String: Any] = [
-                    "title" : projectName,
+                    "title" : title,
                     "content" : "목록에 보여질 초기 메세지 -> 다른내용으로 변경 예정",
                     "recentEditedDate" : FieldValue.serverTimestamp()
                 ]
                 
                 try await db
                     .collection("chatRooms")
-                    .document(projectName)
+                    .document(roomId)
                     .setData(data, merge: true) // 기존 데이터 유지
             },
             
@@ -235,7 +237,7 @@ extension FirebaseClient: DependencyKey {
             fetchProjects: { _ in [] },
             updateProject: { _, _ in },
             deleteProject: { _, _ in },
-            createChatRoom: { _ in },
+            createChatRoom: { _, _ in },
             listenToChatRooms: { AsyncStream { continuation in continuation.finish() } }
         )
     }
