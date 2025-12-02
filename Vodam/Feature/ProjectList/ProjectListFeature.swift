@@ -77,10 +77,19 @@ struct ProjectListFeature {
         case destination(PresentationAction<Destination.Action>)
         
         case userChanged(User?)
+        
+        case aiSummaryRequested(
+            ProjectId: String,
+            transcript: String,
+            ownerId: String?,
+            context: ModelContext
+        )
+        case aiSummaryResponse(projectId: String, summary: String)
+        case aiSummaryFailed(projectId: String)
     }
     
     nonisolated enum ProjectListCancelID{ case loadProjects }
-
+    
     var body: some Reducer<State, Action> {
         BindingReducer()
         
@@ -329,8 +338,126 @@ struct ProjectListFeature {
                 
             case .destination(.presented(.audioDetail(.delegate(.needsRefresh)))):
                 return .send(.refreshProjects)
-            
-            // ✅ 모든 audioDetail 액션은 그냥 통과
+                
+            case let .destination(.presented(.audioDetail(.aiSummary(.summarizeButtonTapped(context))))):
+                guard let destination = state.destination,
+                      case let .audioDetail(detailState) = destination
+                else { return .none }
+                
+                let transcript = detailState.aiSummary.transcript
+                let projectId = detailState.aiSummary.projectId
+                let ownerId = detailState.aiSummary.ownerId
+                
+                return .send(
+                    .aiSummaryRequested(ProjectId: projectId, transcript: transcript, ownerId: ownerId, context: context)
+                )
+                
+            case let .aiSummaryRequested(projectId, transcript, ownerId, context):
+                return .run { [projectLocalDataClient, firebaseClient] send in
+                    do {
+                        // 텍스트가 너무 길면 앞부분만 사용
+                        let maxLength = 2000
+                        let textToSummarize: String
+                        if transcript.count > maxLength {
+                            textToSummarize = String(transcript.prefix(maxLength)) +
+                            "...\n\n(문서 일부분 입니다.)"
+                        } else {
+                            textToSummarize = transcript
+                        }
+                        
+                        print("[AISummary] Alan AI 호출 시작")
+                        let question = AlanClient.Question(
+                            "다음 텍스트를 3개의 핵심 포인트로 3줄로 간결하게 요약해주세요:\n\n\(textToSummarize)"
+                        )
+                        
+                        let answer = try await AlanClient.shared.question(question)
+                        let summary = answer.content
+                        
+                        print("[AISummary] AI 요약 완료: \(summary.prefix(50))...")
+                        
+                        await send(.aiSummaryResponse(projectId: projectId, summary: summary))
+                        
+                        if let ownerId {
+                            print("[AISummary] Firebase에 요약본 저장 시작")
+                            
+                            // 로컬 DB에서 프로젝트 가져오기
+                            let allProjects = try await projectLocalDataClient.fetchAll(context, ownerId)
+                            
+                            guard let existingProject = allProjects.first(where: { $0.id == projectId }) else {
+                                print("[AISummary] 프로젝트를 찾을 수 없음: \(projectId)")
+                                return
+                            }
+                            
+                            // summary 필드 업데이트된 새 ProjectPayload 생성
+                            let updatedProject = ProjectPayload(
+                                id: existingProject.id,
+                                name: existingProject.name,
+                                creationDate: existingProject.creationDate,
+                                category: existingProject.category,
+                                isFavorite: existingProject.isFavorite,
+                                filePath: existingProject.filePath,
+                                fileLength: existingProject.fileLength,
+                                transcript: existingProject.transcript,
+                                summary: summary,  // 새 요약본
+                                ownerId: existingProject.ownerId,
+                                syncStatus: existingProject.syncStatus,
+                                remoteAudioPath: existingProject.remoteAudioPath
+                            )
+                            
+                            // Firebase 업데이트
+                            try await firebaseClient.updateProject(ownerId, updatedProject)
+                            
+                            // 로컬 DB 업데이트
+                            try await projectLocalDataClient.update(
+                                context,
+                                projectId,
+                                nil,  // name
+                                nil,  // isFavorite
+                                nil,  // transcript
+                                nil,  // syncStatus
+                                summary  // summary
+                            )
+                            
+                            print("[AISummary] Firebase 저장 완료")
+                        } else {
+                            print("[AISummary] 비회원 - Firebase 저장 생략")
+                        }
+                    } catch {
+                        print("[AISummary] AI 요약 실패: \(error)")
+                        await send(.aiSummaryFailed(projectId: projectId))
+                    }
+                }
+                
+            case let .aiSummaryResponse(projectId, summary):
+                if var destination = state.destination,
+                   case var .audioDetail(detail) = destination,
+                   detail.aiSummary.projectId == projectId {
+                    detail.aiSummary.summary = summary
+                    detail.aiSummary.isLoading = false
+                    
+                    destination = .audioDetail(detail)
+                    state.destination = destination
+                }
+                
+                if let index = state.projects.firstIndex(where: { $0.id.uuidString == projectId}) {
+                    state.projects[index].summary = summary
+                }
+                return .none
+                
+            case let .aiSummaryFailed(projectId):
+                if var destination = state.destination,
+                   case var .audioDetail(detail) = destination,
+                   detail.aiSummary.projectId == projectId {
+                    
+                    detail.aiSummary.isLoading = false
+                    detail.aiSummary.summary = "요약 생성에 실패했습니다."
+                    
+                    destination = .audioDetail(detail)
+                    state.destination = destination
+                }
+                return .none
+                
+                // ✅ 모든 audioDetail 액션은 그냥 통과
             case .destination(.presented(.audioDetail)):
                 return .none
                 

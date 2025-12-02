@@ -39,8 +39,8 @@ struct AISummaryFeature {
         case summarySaveFailedToFirebase(Error)
     }
     
-    @Dependency(\.firebaseClient) var firebaseClient
-    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
+//    @Dependency(\.firebaseClient) var firebaseClient
+//    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     
     var body: some Reducer<State, Action> {
         Reduce { state, action in
@@ -52,7 +52,8 @@ struct AISummaryFeature {
                 }
                 
                 state.isLoading = true
-                
+                return . none
+                /*
                 let transcript = state.transcript
                 let projectId = state.projectId
                 let ownerId = state.ownerId
@@ -141,7 +142,7 @@ struct AISummaryFeature {
                         await send(.summaryFailed(error))
                     }
                 }
-                
+                */
             case .summaryResponse(let summary):
                 state.isLoading = false
                 state.summary = summary
