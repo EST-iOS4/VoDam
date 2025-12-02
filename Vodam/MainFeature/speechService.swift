@@ -6,22 +6,26 @@ import Speech
 import AVFoundation
 
 class SpeechService: NSObject {
-
+    
     private let audioEngine = AVAudioEngine()
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
-
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "ko-KR"))
     
     private var transcriptContinuation: AsyncStream<String>.Continuation?
     
-    private var isStarted = false
-
+    private let queue = DispatchQueue(label: "com.app.speechService", qos: .userInitiated)
+    private var _isStarted = false
+    private var isStarted: Bool {
+        get { queue.sync { _isStarted } }
+        set { queue.sync { _isStarted = newValue } }
+    }
+    
     override init() {
         super.init()
         requestAuthorization()
     }
-
+    
     private func requestAuthorization() {
         SFSpeechRecognizer.requestAuthorization { status in
             switch status {
@@ -32,63 +36,79 @@ class SpeechService: NSObject {
             }
         }
     }
-
+    
     // MARK: - START
     func startLiveTranscription() -> AsyncStream<String> {
-        if isStarted, let _ = transcriptContinuation {
-            return AsyncStream { continuation in
-                continuation.onTermination = { _ in }
-            }
+        if isStarted {
+            stopLiveTranscription()
         }
-
+        
         isStarted = true
         
-        return AsyncStream { continuation in
+        return AsyncStream { [weak self] continuation in
+            guard let self = self else {
+                continuation.finish()
+                return
+            }
+            
+            continuation.onTermination = { [weak self] _ in
+                self?.cleanupResources()
+            }
+            
             self.transcriptContinuation = continuation
             
-            self.recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-            self.recognitionRequest?.shouldReportPartialResults = true
-
+            let request = SFSpeechAudioBufferRecognitionRequest()
+            request.shouldReportPartialResults = true
+            self.recognitionRequest = request
+            
             let audioSession = AVAudioSession.sharedInstance()
             do {
-                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: .defaultToSpeaker)
+                try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetoothHFP])
                 try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
             } catch {
                 print("🎧 AudioSession 오류:", error)
                 continuation.finish()
                 return
             }
-
-            // ✅ 오디오 세션 설정 후 inputNode 접근
-            let inputNode = self.audioEngine.inputNode
             
-            // ✅ 하드웨어 포맷 사용
+            let inputNode = self.audioEngine.inputNode
             let hardwareFormat = inputNode.inputFormat(forBus: 0)
             
             guard hardwareFormat.sampleRate > 0, hardwareFormat.channelCount > 0 else {
-                print("❌ 하드웨어 포맷 무효 - sampleRate: \(hardwareFormat.sampleRate), channels: \(hardwareFormat.channelCount)")
+                print("❌ 하드웨어 포맷 무효")
                 continuation.finish()
                 return
             }
             
-            print("✅ 오디오 포맷 - sampleRate: \(hardwareFormat.sampleRate), channels: \(hardwareFormat.channelCount)")
-            
             inputNode.removeTap(onBus: 0)
+            
             inputNode.installTap(onBus: 0, bufferSize: 1024, format: hardwareFormat) { buffer, _ in
-                self.recognitionRequest?.append(buffer)
+                request.append(buffer)
             }
-
-            self.recognitionTask = self.recognizer?.recognitionTask(with: self.recognitionRequest!) { result, error in
-                if let result {
-                    let transcript = result.bestTranscription.formattedString
-                    continuation.yield(transcript)
+            
+            guard let recognizer = self.recognizer else {
+                print("❌ Recognizer 없음")
+                continuation.finish()
+                return
+            }
+            
+            self.recognitionTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                if let result = result {
+                    self?.transcriptContinuation?.yield(result.bestTranscription.formattedString)
+                    
+                    if result.isFinal {
+                        self?.transcriptContinuation?.finish()
+                    }
                 }
                 
-                if let error {
+                if let error = error {
+                    let nsError = error as NSError
+                    guard nsError.domain != "kAFAssistantErrorDomain" || nsError.code != 216 else { return }
                     print("❌ STT 오류:", error.localizedDescription)
+                    self?.transcriptContinuation?.finish()
                 }
             }
-
+            
             do {
                 self.audioEngine.prepare()
                 try self.audioEngine.start()
@@ -99,45 +119,48 @@ class SpeechService: NSObject {
             }
         }
     }
+    
     // MARK: - PAUSE
     func pauseTranscription() {
-        if audioEngine.isRunning {
-            audioEngine.pause()
-            print("⏸️ STT 일시정지됨")
-        }
+        guard audioEngine.isRunning else { return }
+        audioEngine.pause()
+        print("⏸️ STT 일시정지됨")
     }
-
+    
     // MARK: - RESUME
     func resumeTranscription() {
-        if !audioEngine.isRunning {
-            do {
-                try audioEngine.start()
-                print("▶️ STT 재개됨")
-            } catch {
-                print("❌ STT 재개 오류:", error.localizedDescription)
-            }
+        guard !audioEngine.isRunning, isStarted else { return }
+        do {
+            try audioEngine.start()
+            print("▶️ STT 재개됨")
+        } catch {
+            print("❌ STT 재개 오류:", error.localizedDescription)
         }
     }
-
-    // MARK: - STOP (완전 종료)
+    
+    // MARK: - STOP
     func stopLiveTranscription() {
+        cleanupResources()
+        print("🛑 STT 완전 종료됨")
+    }
+    
+    private func cleanupResources() {
         isStarted = false
-
-        recognitionTask?.finish()
+        
+        recognitionRequest?.endAudio()
+        
         recognitionTask?.cancel()
         recognitionTask = nil
-
-        recognitionRequest?.endAudio()
         recognitionRequest = nil
-
+        
         if audioEngine.isRunning {
             audioEngine.stop()
         }
         audioEngine.inputNode.removeTap(onBus: 0)
         
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        
         transcriptContinuation?.finish()
         transcriptContinuation = nil
-        
-        print("🛑 STT 완전 종료됨")
     }
 }
