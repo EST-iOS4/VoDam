@@ -70,6 +70,9 @@ struct ChattingRoomView: View {
                         text: $store.messageText
                     )
                     .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        store.send(.sendMessage)
+                    }
                     
                     Button {
                         store.send(.sendMessage)
