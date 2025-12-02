@@ -140,20 +140,6 @@ struct ChattingRoomFeature {
                             .collection("messages")
                             .addDocument(data: messageData)
                         
-                        //                            let roomSnapshout = try await db.collection("chatRooms").document(projectName)
-                        //                                .getDocument()
-                        //                            if let currentContent = roomSnapshout.data()?["content"] as? String,
-                        //                               currentContent == "-" {
-                        //                                try await db.collection("chatRooms")
-                        //                                    .document(projectName)
-                        //                                    .updateData([
-                        //                                        "content": userMessage.content,
-                        //                                        "recentEditedDate": FieldValue.serverTimestamp()
-                        //                                    ])
-                        //                                logger.info("첫 질문 저장완료")
-                        //                            }
-                        //                        }
-                        
                         let base = userMessage.content
                             .replacingOccurrences(of: "\n", with: " ")
                             .trimmingCharacters(in: .whitespacesAndNewlines)
