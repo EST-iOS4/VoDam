@@ -540,6 +540,9 @@ struct ProjectListFeature {
                                 return
                             }
                             
+                            let roomId = existingProject.id
+                            let title = existingProject.name
+                            
                             let updatedProject = ProjectPayload(
                                 id: existingProject.id,
                                 name: existingProject.name,
@@ -567,8 +570,8 @@ struct ProjectListFeature {
                             
                             try await firebaseClient.updateChatRoomPreview(
                                 ownerId,
-                                existingProject.id,
-                                existingProject.name,
+                                roomId,
+                                title,
                                 preview
                             )
                             
