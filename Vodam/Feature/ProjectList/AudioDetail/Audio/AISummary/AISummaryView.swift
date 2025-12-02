@@ -26,12 +26,18 @@ struct AISummaryView: View {
     }
     private var loadingView: some View {
         VStack(spacing: 20) {
-            ProgressView()
-                .scaleEffect(1.5)
+            ProgressView(value: store.progress)
+                .progressViewStyle(.linear)
+                .padding(.horizontal, 40)
             
-            Text("AI가 요약 중입니다...")
+            Text(store.progressMessage ?? "AI가 요약 중입니다...")
                 .font(.headline)
                 .foregroundColor(.secondary)
+            
+            Text("\(Int(store.progress * 100))%")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.blue)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
