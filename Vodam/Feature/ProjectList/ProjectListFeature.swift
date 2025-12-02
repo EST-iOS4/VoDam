@@ -418,6 +418,15 @@ struct ProjectListFeature {
                                 summary  // summary
                             )
                             
+                            let roomId = existingProject.id
+                            let title = existingProject.name
+                            
+                            try await firebaseClient.updateChatRoomPreview(
+                                roomId,
+                                title,
+                                summary
+                                )
+                            
                             print("[AISummary] Firebase 저장 완료")
                         } else {
                             print("[AISummary] 비회원 - Firebase 저장 생략")
