@@ -68,6 +68,7 @@ struct AppFeature {
                 state.user = user
                 state.main.currentUser = user
                 state.list.currentUser = user
+                state.chat.currentUser = user
                 return .none
                 
             case .startTab(let tab):
@@ -76,13 +77,16 @@ struct AppFeature {
                 
             case .main(.userLoaded(let user)):
                 state.user = user
+                state.main.currentUser = user
                 state.list.currentUser = user
+                state.chat.currentUser = user
                 return .send(.list(.userChanged(user)))
                 
             case .main(.delegate(.userLoggedIn(let user))):
                 state.user = user
                 state.main.currentUser = user
                 state.list.currentUser = user
+                state.chat.currentUser = user
                 print("[AppFeature] 로그인 완료: \(user.name), ownerId: \(user.ownerId)")
                 return .send(.list(.userChanged(user)))
                 
@@ -90,12 +94,16 @@ struct AppFeature {
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
+                state.chat.currentUser = nil
+                state.chat.chattingList = []
                 return .send(.list(.userChanged(nil)))
                 
             case .main(.settings(.presented(.delegate(.deleteAccountCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
+                state.chat.currentUser = nil
+                state.chat.chattingList = [] 
                 return .send(.list(.userChanged(nil)))
                 
             case .main(.delegate(.projectSaved)):
