@@ -54,7 +54,7 @@ struct AudioDetailFeature {
         init(project: Project, currentUser: User?) {
             self.project = project
             self.currentUser = currentUser
-            self.selectedTab = .aiSummary
+            self.selectedTab = .script
             self.isFavorite = project.isFavorite
             
             var transcriptText = project.transcript ?? "아직 받아온 스크립트가 없습니다."
@@ -104,8 +104,8 @@ struct AudioDetailFeature {
         case delegate(DelegateAction)
         
         case onAppear
-        case onDisappear
-        case viewWillDisappear
+//        case onDisappear
+//        case viewWillDisappear
         case playButtonTapped
         case backwardButtonTapped
         case forwardButtonTapped
@@ -344,13 +344,15 @@ struct AudioDetailFeature {
                 return .none
                 
             case .chatButtonTapped:
-                let projectName = state.project.name
+                let project = state.project
+                let roomId = project.id.uuidString
+                let title = project.name
                     
                 state.destination = .chattingRoom(
-                    ChattingRoomFeature.State(projectName: projectName)
+                    ChattingRoomFeature.State(roomId: roomId, title: title)
                 )
                 return .run{ _ in
-                    try? await firebaseClient.createChatRoom(projectName)
+                    try? await firebaseClient.createChatRoom(roomId, title)
                 }
                 
             case .searchButtonTapped:
@@ -419,19 +421,19 @@ struct AudioDetailFeature {
                 )
                 return .none
                 
-            case .onDisappear:
-                print("[AudioDetail] onDisappear - 플레이어 정리하지 않음 (뒤로가기)")
-                return .none
+//            case .onDisappear:
+//                print("[AudioDetail] onDisappear - 플레이어 정리하지 않음 (뒤로가기)")
+//                return .none
                 
-            case .viewWillDisappear:
-                print("[AudioDetail] viewWillDisappear - 재생 일시정지")
-                
-                if state.isPlaying, let player = state.player {
-                    player.pause()
-                    state.isPlaying = false
-                    print("[AudioDetail] 재생 일시정지 완료")
-                }
-                return .none
+//            case .viewWillDisappear:
+//                print("[AudioDetail] viewWillDisappear - 재생 일시정지")
+//                
+//                if state.isPlaying, let player = state.player {
+//                    player.pause()
+//                    state.isPlaying = false
+//                    print("[AudioDetail] 재생 일시정지 완료")
+//                }
+//                return .none
                 
             case .deleteProjectConfirmed:
                 guard let context = state.pendingDeletionContext else {
