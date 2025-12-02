@@ -116,6 +116,9 @@ struct ChattingRoomFeature {
                 }
                 
             case .sendMessage:
+                let trimmed = state.messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return .none }
+                
                 let userMessage = Message(
                     content: state.messageText,
                     isFromUser: true
@@ -123,7 +126,7 @@ struct ChattingRoomFeature {
                 state.messages.append(userMessage)
                 state.messageText = ""
                 
-                return .run { [roomId = state.roomId] send in
+                return .run { [roomId = state.roomId, userMessage] send in
                     // 유저 메세지 저장
                     let db = Firestore.firestore()
                     
