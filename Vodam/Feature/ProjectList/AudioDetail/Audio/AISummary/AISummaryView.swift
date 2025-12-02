@@ -75,17 +75,17 @@ struct AISummaryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    private func summaryTextView(_ summary: String) -> some View {
-        if let attributed = try? AttributedString(markdown: summary) {
-            Text(attributed)
-                .font(.body)
-                .lineSpacing(6)
-        } else {
-            Text(summary)
-                .font(.body)
-                .lineSpacing(6)
-        }
-    }
+//    private func summaryTextView(_ summary: String) -> some View {
+//        if let attributed = try? AttributedString(markdown: summary) {
+//            Text(attributed)
+//                .font(.body)
+//                .lineSpacing(6)
+//        } else {
+//            Text(summary)
+//                .font(.body)
+//                .lineSpacing(6)
+//        }
+//    }
     
     @ViewBuilder
     private func summaryContent(_ summary: String) -> some View {
@@ -113,7 +113,7 @@ struct AISummaryView: View {
                 }
                 .padding(.bottom, 8)
                 
-                summaryTextView(summary)
+                MarkdownTextView(summary, font: .body, linSpacing: 6)
             }
             .padding()
         }
