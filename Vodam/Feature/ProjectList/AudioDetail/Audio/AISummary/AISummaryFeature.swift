@@ -47,28 +47,32 @@ struct AISummaryFeature {
             switch action {
             case .summarizeButtonTapped(let context):
                 
-                if let existingSummary = state.summary, !existingSummary.isEmpty {
-                    print("[AISummary] 기존 요약본 사용 - API 호출 생략")
+                guard !state.isLoading else {
                     return .none
                 }
                 
                 state.isLoading = true
+                
                 let transcript = state.transcript
                 let projectId = state.projectId
                 let ownerId = state.ownerId
                 
-                return .run { [projectLocalDataClient, firebaseClient] send in
+                
+                return .run { [transcript, projectId, ownerId] send in
                     do {
                         // 텍스트가 너무 길면 앞부분만 사용
                         let maxLength = 2000
-                        let textToSummarize = transcript.count > maxLength
-                        ? String(transcript.prefix(maxLength)) + "...\n\n(문서의 일부입니다)"
-                        : transcript
+                        let content: String
+                        if transcript.count > maxLength {
+                            let index = transcript.index(transcript.startIndex, offsetBy: maxLength)
+                            content = String(transcript[..<index] + "\n\n(문서의 일부분입니다.)")
+                        } else {
+                            content = transcript
+                        }
                         
                         print("[AISummary] Alan AI 호출 시작")
-                        
                         let question = AlanClient.Question(
-                            "다음 텍스트를 3개의 핵심 포인트로 3줄로 간결하게 요약해주세요:\n\n\(textToSummarize)"
+                            "다음 텍스트를 3개의 핵심 포인트로 3줄로 간결하게 요약해주세요:\n\n\(content)"
                         )
                         
                         let answer = try await AlanClient.shared.question(question)
@@ -127,6 +131,7 @@ struct AISummaryFeature {
                                 print("[AISummary] Firebase 저장 실패: \(error)")
                                 await send(.summarySaveFailedToFirebase(error))
                             }
+                            
                         } else {
                             print("[AISummary] 비회원 - Firebase 저장 생략")
                         }
