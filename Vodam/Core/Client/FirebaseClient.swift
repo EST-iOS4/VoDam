@@ -173,7 +173,7 @@ extension FirebaseClient: DependencyKey {
                 
                 let data: [String: Any] = [
                     "title" : projectName,
-                    "content" : "목록에 보여질 초기 메세지 -> 다른내용으로 변경 예정",
+                    "content" : "-",
                     "recentEditedDate" : FieldValue.serverTimestamp()
                 ]
                 

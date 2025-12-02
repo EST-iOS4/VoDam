@@ -96,7 +96,6 @@ struct ChattingRoomFeature {
                                 "isFromUser": false as Bool,
                                 "timestamp": Date()
                             ]
-                            
                             do{
                                 try await db.collection("chats")
                                     .document(projectName)
@@ -126,16 +125,24 @@ struct ChattingRoomFeature {
                         let db = Firestore.firestore()
                         
                         do {
-                            let messageData: [String: Any] = [
+                            let _: [String: Any] = [
                                 "content" : userMessage.content,
                                 "isFromUser": true as Bool,
                                 "timestamp":Date()
                             ]
                             
-                            let ref = try await db.collection("chats")
-                                .document(projectName)
-                                .collection("messages")
-                                .addDocument(data: messageData)
+                            let roomSnapshout = try await db.collection("chatRooms").document(projectName)
+                                .getDocument()
+                            if let currentContent = roomSnapshout.data()?["content"] as? String,
+                               currentContent == "-" {
+                                try await db.collection("chatRooms")
+                                    .document(projectName)
+                                    .updateData([
+                                        "content": userMessage.content,
+                                        "recentEditedDate": FieldValue.serverTimestamp()
+                                    ])
+                                logger.info("첫 질문 저장완료")
+                            }
                         }
                         catch {
                             logger.error("유저메세지 저장 실패")
@@ -147,8 +154,6 @@ struct ChattingRoomFeature {
                             let question = AlanClient.Question(userMessage.content)
                             let answer = try await AlanClient.shared.question(question)
                             
-                                // 마크다운제거 추가
-                                // let removeMarkdown
                             await send(.aIResponse(answer.content))
                         } catch {
                             logger.debug("Alan API Error")
@@ -173,7 +178,7 @@ struct ChattingRoomFeature {
                             "timestamp": Date()
                         ]
                         
-                        let ref = try? await db.collection("chats")
+                        _ = try? await db.collection("chats")
                             .document(projectName)
                             .collection("messages")
                             .addDocument(data: messageData)
