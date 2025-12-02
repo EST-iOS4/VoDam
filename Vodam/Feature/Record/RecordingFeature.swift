@@ -166,7 +166,7 @@ struct RecordingFeature {
                     // ✅ 녹음 완전히 종료되도록 대기 후 URL 가져오기
                     .run { [recorder] send in
                         // 녹음 중지
-                        let url = recorder.stopRecording()
+                        let url = await recorder.stopRecording()
                         
                         // ✅ 파일이 완전히 쓰여질 때까지 대기
                         try? await Task.sleep(for: .milliseconds(500))

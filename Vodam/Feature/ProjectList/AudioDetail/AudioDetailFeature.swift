@@ -104,8 +104,8 @@ struct AudioDetailFeature {
         case delegate(DelegateAction)
         
         case onAppear
-        case onDisappear
-        case viewWillDisappear
+//        case onDisappear
+//        case viewWillDisappear
         case playButtonTapped
         case backwardButtonTapped
         case forwardButtonTapped
@@ -419,19 +419,19 @@ struct AudioDetailFeature {
                 )
                 return .none
                 
-            case .onDisappear:
-                print("[AudioDetail] onDisappear - 플레이어 정리하지 않음 (뒤로가기)")
-                return .none
+//            case .onDisappear:
+//                print("[AudioDetail] onDisappear - 플레이어 정리하지 않음 (뒤로가기)")
+//                return .none
                 
-            case .viewWillDisappear:
-                print("[AudioDetail] viewWillDisappear - 재생 일시정지")
-                
-                if state.isPlaying, let player = state.player {
-                    player.pause()
-                    state.isPlaying = false
-                    print("[AudioDetail] 재생 일시정지 완료")
-                }
-                return .none
+//            case .viewWillDisappear:
+//                print("[AudioDetail] viewWillDisappear - 재생 일시정지")
+//                
+//                if state.isPlaying, let player = state.player {
+//                    player.pause()
+//                    state.isPlaying = false
+//                    print("[AudioDetail] 재생 일시정지 완료")
+//                }
+//                return .none
                 
             case .deleteProjectConfirmed:
                 guard let context = state.pendingDeletionContext else {
