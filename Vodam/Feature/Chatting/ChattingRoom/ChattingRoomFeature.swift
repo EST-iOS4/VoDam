@@ -59,16 +59,30 @@ struct ChattingRoomFeature {
                                 .order(by: "timestamp", descending: false)
                                 .getDocuments()
                             
+                            logger.debug("📦 총 문서 개수: \(snapshot.documents.count)")
+                            
                             let messages = snapshot.documents.compactMap { doc -> Message? in
-                                var message = try? doc.data(as: Message.self)
-                                message?.id = doc.documentID
-                                return message
+                                print("📄 문서 ID: \(doc.documentID)")
+                                print("📄 문서 데이터: \(doc.data())")
+                                
+                                do {
+                                    var message = try doc.data(as: Message.self)
+                                    message.id = doc.documentID
+                                    print("✅ 디코딩 성공: \(message.content)")
+                                    return message
+                                } catch {
+                                    print("❌ 디코딩 실패: \(error)")
+                                    print("❌ 실패한 데이터: \(doc.data())")
+                                    return nil
+                                }
                             }
                             
+                            print("🎯 성공적으로 로드된 메시지: \(messages.count)개")
                             await send(.loadMessages(messages))
                             
                         } catch {
-                            logger.error("Failed to load messages")
+                            logger.error("Failed to load messages: \(error.localizedDescription)")
+                            print("🔥 Firebase 로드 에러: \(error)")
                             await send(.loadMessages([]))
                         }
                     }
@@ -87,7 +101,6 @@ struct ChattingRoomFeature {
                     return .none
                     
                 case .sendMessage:
-                    logger.debug("♨️1")
                     let userMessage = Message(
                         content: state.messageText,
                         isFromUser: true
@@ -96,22 +109,20 @@ struct ChattingRoomFeature {
                     state.messageText = ""
                     
                     return .run { [projectName = state.projectName] send in
-                        logger.debug("♨️2")
                             // 유저 메세지 저장
                         let db = Firestore.firestore()
                         
                         do {
                             let messageData: [String: Any] = [
                                 "content" : userMessage.content,
-                                "isFromUser": true,
-                                "timestamp": FieldValue.serverTimestamp()
-                            ]
+                                "isFromUser": true as Bool,
+                                "timestamp":Date()
+                                ]
                             
                             let ref = try await db.collection("chats")
                                 .document(projectName)
                                 .collection("messages")
                                 .addDocument(data: messageData)
-                            logger.debug("♨️3")
                         }
                         catch {
                             logger.error("유저메세지 저장 실패")
@@ -138,10 +149,18 @@ struct ChattingRoomFeature {
                     state.messages.append(aIMessage)
                         // AI 메세지 저장
                     return .run{ [projectName = state.projectName] _ in
-                        try? await db.collection("chats")
+                        let db = Firestore.firestore()
+                        
+                        let messageData: [String: Any] = [
+                                    "content": content,
+                                    "isFromUser": false as Bool,
+                                    "timestamp": Date()
+                                ]
+                        
+                        let ref = try? await db.collection("chats")
                             .document(projectName)
                             .collection("messages")
-                            .addDocument(from: aIMessage)
+                            .addDocument(data: messageData)
                     }
                     
                 case .setAITyping(let isTyping):
