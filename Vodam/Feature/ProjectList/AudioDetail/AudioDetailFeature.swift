@@ -54,7 +54,7 @@ struct AudioDetailFeature {
         init(project: Project, currentUser: User?) {
             self.project = project
             self.currentUser = currentUser
-            self.selectedTab = .aiSummary
+            self.selectedTab = .script
             self.isFavorite = project.isFavorite
             
             var transcriptText = project.transcript ?? "아직 받아온 스크립트가 없습니다."
