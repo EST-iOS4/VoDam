@@ -116,6 +116,9 @@ struct ChattingRoomFeature {
                 }
                 
             case .sendMessage:
+                let trimmed = state.messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return .none }
+                
                 let userMessage = Message(
                     content: state.messageText,
                     isFromUser: true
@@ -123,7 +126,7 @@ struct ChattingRoomFeature {
                 state.messages.append(userMessage)
                 state.messageText = ""
                 
-                return .run { [roomId = state.roomId] send in
+                return .run { [roomId = state.roomId, userMessage] send in
                     // 유저 메세지 저장
                     let db = Firestore.firestore()
                     
@@ -139,20 +142,6 @@ struct ChattingRoomFeature {
                             .document(roomId)
                             .collection("messages")
                             .addDocument(data: messageData)
-                        
-                        //                            let roomSnapshout = try await db.collection("chatRooms").document(projectName)
-                        //                                .getDocument()
-                        //                            if let currentContent = roomSnapshout.data()?["content"] as? String,
-                        //                               currentContent == "-" {
-                        //                                try await db.collection("chatRooms")
-                        //                                    .document(projectName)
-                        //                                    .updateData([
-                        //                                        "content": userMessage.content,
-                        //                                        "recentEditedDate": FieldValue.serverTimestamp()
-                        //                                    ])
-                        //                                logger.info("첫 질문 저장완료")
-                        //                            }
-                        //                        }
                         
                         let base = userMessage.content
                             .replacingOccurrences(of: "\n", with: " ")
