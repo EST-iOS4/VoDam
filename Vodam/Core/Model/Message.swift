@@ -9,7 +9,7 @@
 import FirebaseFirestore
 import Foundation
 
-nonisolated struct Message: Identifiable, Codable,Equatable {
+struct Message: Identifiable, Codable,Equatable {
     var id: String?
     var content: String
     var isFromUser: Bool
