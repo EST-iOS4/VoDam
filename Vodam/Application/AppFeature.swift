@@ -81,21 +81,22 @@ struct AppFeature {
                 
             case .main(.delegate(.userLoggedIn(let user))):
                 state.user = user
+                state.main.currentUser = user
                 state.list.currentUser = user
                 print("[AppFeature] 로그인 완료: \(user.name), ownerId: \(user.ownerId)")
-                return .none
+                return .send(.list(.userChanged(user)))
                 
             case .main(.settings(.presented(.delegate(.logoutCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
-                return .send(.list(.refreshProjects))
+                return .send(.list(.userChanged(nil)))
                 
             case .main(.settings(.presented(.delegate(.deleteAccountCompleted)))):
                 state.user = nil
                 state.main.currentUser = nil
                 state.list.currentUser = nil
-                return .send(.list(.refreshProjects))
+                return .send(.list(.userChanged(nil)))
                 
             case .main(.delegate(.projectSaved)):
                 print("프로젝트 저장 완료 - ProjectList 새로고침")
