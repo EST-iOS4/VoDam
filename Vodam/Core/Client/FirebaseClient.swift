@@ -177,8 +177,7 @@ extension FirebaseClient: DependencyKey {
                 let db = Firestore.firestore()
                 
                 let data: [String: Any] = [
-                    "title" : projectName,
-                    "content" : "-",
+                    "title" : title,
                     "recentEditedDate" : FieldValue.serverTimestamp()
                 ]
                 
