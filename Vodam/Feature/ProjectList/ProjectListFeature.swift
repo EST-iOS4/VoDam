@@ -208,10 +208,10 @@ struct ProjectListFeature {
                 let initialTab: AudioDetailFeature.Tab = hasSummary ? .aiSummary : .script
                 
                 state.destination = .audioDetail(
-                        AudioDetailFeature.State(
-                            project: project,
-                            currentUser: state.currentUser,
-                            selectedTab: initialTab
+                    AudioDetailFeature.State(
+                        project: project,
+                        currentUser: state.currentUser,
+                        selectedTab: initialTab
                     )
                 )
                 return .none
@@ -359,7 +359,7 @@ struct ProjectListFeature {
             case let .aiSummaryRequested(projectId, transcript, ownerId, context):
                 return .run { [projectLocalDataClient, firebaseClient, context] send in
                     do {
-                        let chunks = splitTranscript(transcript, maxChunkLength: 1000)
+                        let chunks = await splitTranscript(transcript, maxChunkLength: 1000)
                         
                         guard !chunks.isEmpty else {
                             print("[AISummary] 요약할 텍스트가 없습니다.")
@@ -369,41 +369,82 @@ struct ProjectListFeature {
                         
                         print("[AISummary] 총 \(chunks.count)개 청크로 분할")
                         
-                        let partialSummaries: [String]
+                        let batchSize = 3
+                        let totalBatches = (chunks.count + batchSize - 1) / batchSize
                         
-                        if chunks.count == 1 {
-                            print("[AISummary] 단일 청크 요약 호출")
-                            let question = AlanClient.Question(
-                                "다음 텍스트를 3개의 핵심 포인트로 3줄로 간결하게 요약해주세요:\n\n\(chunks[0])"
-                            )
-                            let answer = try await AlanClient.shared.question(question)
-                            partialSummaries = [answer.content]
-                        } else {
-                            print("[AISummary] \(chunks.count)개 청크 병렬 요약 시작")
-                            partialSummaries = try await withThrowingTaskGroup(of: (Int, String).self) { group in
-                                for (index, chunk) in chunks.enumerated() {
+                        print("[AISummary] 배치 병렬 처리 시작 - 배치 크기: \(batchSize), 총 배치 수: \(totalBatches)")
+                        
+                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(0.0, "요약 시작..."))))))
+                        
+                        var allPartialSummaries: [String] = []
+                        
+                        for batchIndex in 0..<totalBatches {
+                            let startIdx = batchIndex * batchSize
+                            let endIdx = min(startIdx + batchSize, chunks.count)
+                            let batchChunks = Array(chunks[startIdx..<endIdx])
+                            
+                            print("[AISummary] 배치 \(batchIndex + 1)/\(totalBatches) 처리 중 (\(batchChunks.count)개 청크)")
+                            
+                            let batchSummaries = try await withThrowingTaskGroup(of: (Int, String).self) { group in
+                                for (localIndex, chunk) in batchChunks.enumerated() {
+                                    let globalIndex = startIdx + localIndex
+                                    
                                     group.addTask {
                                         let q = AlanClient.Question(
-                                            """
-                                            다음은 긴 문서의 일부입니다. 이 부분만 3개의 핵심 포인트로 간결하게 요약해주세요:
-                                            
-                                            \(chunk)
-                                            """
+                                                           """
+                                                           다음은 긴 문서의 일부입니다. 이 부분만 3개의 핵심 포인트로 간결하게 요약해주세요:
+                                                           
+                                                           \(chunk)
+                                                           """
                                         )
-                                        let a = try await AlanClient.shared.question(q)
-                                        return (index, a.content)
+                                        var lastError: Error?
+                                        for attempt in 1...2 {
+                                            do {
+                                                let answer = try await AlanClient.shared.question(q)
+                                                print("[AISummary] 청크 \(globalIndex + 1)/\(chunks.count) 완료 (시도 \(attempt)/2)")
+                                                return (globalIndex, answer.content)
+                                            } catch {
+                                                lastError = error
+                                                print("[AISummary] 청크 \(globalIndex + 1) 실패 (시도 \(attempt)/2): \(error)")
+                                                if attempt < 2 {
+                                                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1초 대기
+                                                }
+                                            }
+                                        }
+                                        
+                                        // 재시도 후에도 실패하면 에러 throw
+                                        throw lastError ?? AlanClient.Error.networkError(NSError(domain: "Unknown", code: -1))
                                     }
                                 }
                                 
-                                var results = Array(repeating: "", count: chunks.count)
-                                for try await (index, summary) in group {
-                                    results[index] = summary
+                                var results: [(Int, String)] = []
+                                for try await result in group {
+                                    results.append(result)
                                 }
-                                return results
+                                return results.sorted(by: { $0.0 < $1.0 }).map { $0.1 }
+                            }
+                            
+                            
+                            allPartialSummaries.append(contentsOf: batchSummaries)
+                            
+
+                            let progressRatio = Double(endIdx) / Double(chunks.count)
+                            let progressPercent = Int(progressRatio * 70)
+                            await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(
+                                progressRatio * 0.7,
+                                "요약 중... \(endIdx)/\(chunks.count) (\(progressPercent)%)"
+                            ))))))
+                            
+                            if batchIndex < totalBatches - 1 {
+                                try? await Task.sleep(nanoseconds: 500_000_000)
                             }
                         }
                         
-                        let combined = partialSummaries.joined(separator: "\n\n---\n\n")
+                        print("[AISummary] 모든 부분 요약 완료 - 총 \(allPartialSummaries.count)개")
+                        
+                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(0.75, "최종 요약 생성 중..."))))))
+                        
+                        let combined = allPartialSummaries.joined(separator: "\n\n---\n\n")
                         
                         let maxFinalLength = 1800
                         let finalInput: String
@@ -427,11 +468,30 @@ struct ProjectListFeature {
                         )
                         
                         print("[AISummary] 최종 요약 호출 시작")
-                        let finalAnswer = try await AlanClient.shared.question(finalQuestion)
-                        let summary = finalAnswer.content
+                        var finalSummary: String?
+                        var lastError: Error?
                         
-                        print("[AISummary] 최종 요약 완료: \(summary.prefix(50))...")
+                        for attempt in 1...2 {
+                            do {
+                                let finalAnswer = try await AlanClient.shared.question(finalQuestion)
+                                finalSummary = finalAnswer.content
+                                print("[AISummary] 최종 요약 완료 (시도 \(attempt)/2): \(finalSummary!.prefix(50))...")
+                                break
+                            } catch {
+                                lastError = error
+                                print("[AISummary] 최종 요약 실패 (시도 \(attempt)/2): \(error)")
+                                if attempt < 2 {
+                                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2초 대기
+                                }
+                            }
+                        }
                         
+                        guard let summary = finalSummary else {
+                            throw lastError ?? AlanClient.Error.networkError(NSError(domain: "FinalSummaryFailed", code: -1))
+                        }
+                        
+                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(0.9, "저장 중..."))))))
+  
                         await send(.aiSummaryResponse(projectId: projectId, summary: summary))
                         
                         if let ownerId {
@@ -497,6 +557,8 @@ struct ProjectListFeature {
                         } else {
                             print("[AISummary] 비회원 - Firebase 저장 생략")
                         }
+                        
+                        await send(.destination(.presented(.audioDetail(.aiSummary(.updateProgress(1.0, "완료!"))))))
                         
                     } catch {
                         print("[AISummary] AI 요약 실패: \(error)")
