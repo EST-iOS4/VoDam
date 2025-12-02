@@ -26,6 +26,10 @@ struct ScriptFeature {
             return currentResultIndex + 1
         }
         
+        var isPlaceholder: Bool {
+            text == ScriptFeature.placeholderText
+        }
+        
         init(text: String = "This is the script content.") {
             self.text = text
         }
@@ -37,6 +41,8 @@ struct ScriptFeature {
             lhs.totalResults == rhs.totalResults
         }
     }
+    
+    static let placeholderText = "아직 받아온 스크립트가 없습니다."
 
     enum Action {
         case setText(String)
@@ -44,6 +50,11 @@ struct ScriptFeature {
         case clearSearch
         case nextResult
         case previousResult
+        case delegate(DelegateAction)
+        
+        enum DelegateAction {
+            case seekToProgress(Double)
+        }
     }
 
     var body: some Reducer<State, Action> {
@@ -93,6 +104,9 @@ struct ScriptFeature {
             case .previousResult:
                 guard !state.searchResults.isEmpty else { return .none }
                 state.currentResultIndex = (state.currentResultIndex - 1 + state.searchResults.count) % state.searchResults.count
+                return .none
+                
+            case .delegate:
                 return .none
             }
         }

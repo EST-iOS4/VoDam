@@ -10,6 +10,8 @@ import ComposableArchitecture
 
 struct ScriptView: View {
     let store: StoreOf<ScriptFeature>
+    private let preRollProgressOffset: Double = 0.01
+    private let preRollSkipCharacterThreshold: Int = 5
     
     var body: some View {
         ScrollViewReader { proxy in
@@ -35,24 +37,24 @@ struct ScriptView: View {
     
     @ViewBuilder
     private var highlightedText: some View {
-        if store.searchText.isEmpty || store.searchResults.isEmpty {
+        if store.isPlaceholder {
             Text(store.text)
-                .foregroundColor(.primary)
+                .foregroundColor(.secondary)
         } else {
-            highlightedContentView
-        }
-    }
-    
-    @ViewBuilder
-    private var highlightedContentView: some View {
-        let components = buildHighlightComponents(
-            text: store.text,
-            results: store.searchResults,
-            currentIndex: store.currentResultIndex
-        )
-        
-        VStack(alignment: .leading, spacing: 0) {
-            FlowLayout(components: components)
+            let components = splitComponentsByWhitespace(
+                buildHighlightComponents(
+                    text: store.text,
+                    results: store.searchResults,
+                    currentIndex: store.currentResultIndex
+                )
+            )
+            
+            FlowLayout(
+                components: components,
+                isInteractionEnabled: true
+            ) { component in
+                handleTap(on: component)
+            }
         }
     }
     
@@ -63,6 +65,7 @@ struct ScriptView: View {
     ) -> [HighlightComponent] {
         var components: [HighlightComponent] = []
         var lastEndIndex = text.startIndex
+        var currentOffset = 0
         
         for (index, range) in results.enumerated() {
             if lastEndIndex < range.lowerBound {
@@ -70,8 +73,10 @@ struct ScriptView: View {
                 components.append(HighlightComponent(
                     text: normalText,
                     type: .normal,
-                    id: "normal_\(index)"
+                    id: "normal_\(index)",
+                    offset: currentOffset
                 ))
+                currentOffset += normalText.count
             }
             
             let highlightedText = String(text[range])
@@ -79,8 +84,10 @@ struct ScriptView: View {
             components.append(HighlightComponent(
                 text: highlightedText,
                 type: isCurrent ? .current : .highlighted,
-                id: "result_\(index)"
+                id: "result_\(index)",
+                offset: currentOffset
             ))
+            currentOffset += highlightedText.count
             
             lastEndIndex = range.upperBound
         }
@@ -90,11 +97,80 @@ struct ScriptView: View {
             components.append(HighlightComponent(
                 text: remainingText,
                 type: .normal,
-                id: "remaining"
+                id: "remaining",
+                offset: currentOffset
             ))
         }
         
         return components
+    }
+    
+    private func splitComponentsByWhitespace(_ components: [HighlightComponent]) -> [HighlightComponent] {
+        var result: [HighlightComponent] = []
+        
+        for component in components {
+            let text = component.text
+            var localStart = text.startIndex
+            var localOffset = 0
+            var partIndex = 0
+            
+            func appendPart(from start: String.Index, to end: String.Index) {
+                guard start < end else { return }
+                let substring = String(text[start..<end])
+                let offset = component.offset + localOffset
+                result.append(
+                    HighlightComponent(
+                        text: substring,
+                        type: component.type,
+                        id: "\(component.id)_\(partIndex)",
+                        offset: offset
+                    )
+                )
+                partIndex += 1
+                localOffset += substring.count
+            }
+            
+            for index in text.indices {
+                if text[index].isWhitespace || text[index].isNewline {
+                    appendPart(from: localStart, to: index)
+                    
+                    let nextIndex = text.index(after: index)
+                    let whitespace = String(text[index..<nextIndex])
+                    let offset = component.offset + localOffset
+                    result.append(
+                        HighlightComponent(
+                            text: whitespace,
+                            type: component.type,
+                            id: "\(component.id)_space_\(partIndex)",
+                            offset: offset
+                        )
+                    )
+                    partIndex += 1
+                    localOffset += whitespace.count
+                    localStart = nextIndex
+                }
+            }
+            
+            appendPart(from: localStart, to: text.endIndex)
+        }
+        
+        return result
+    }
+    
+    private func handleTap(on component: HighlightComponent) {
+        guard !store.isPlaceholder else { return }
+        
+        let totalLength = max(store.text.count, 1)
+        
+        let midpoint = component.offset + (component.text.count / 2)
+        
+        let baseProgress = min(max(Double(midpoint) / Double(totalLength), 0), 1)
+        let isNearStart = component.offset < preRollSkipCharacterThreshold
+        let progress = isNearStart
+        ? baseProgress
+        : max(baseProgress - preRollProgressOffset, 0)
+        
+        store.send(.delegate(.seekToProgress(progress)))
     }
 }
 
@@ -102,6 +178,7 @@ private struct HighlightComponent: Identifiable {
     let text: String
     let type: HighlightType
     let id: String
+    let offset: Int
     
     enum HighlightType {
         case normal
@@ -112,9 +189,21 @@ private struct HighlightComponent: Identifiable {
 
 private struct FlowLayout: View {
     let components: [HighlightComponent]
+    let isInteractionEnabled: Bool
+    let onTap: (HighlightComponent) -> Void
     
     var body: some View {
         Text(attributedString)
+            .environment(\.openURL, OpenURLAction { url in
+                guard isInteractionEnabled,
+                      url.scheme == "seek",
+                      let targetId = url.host,
+                      let component = components.first(where: { $0.id == targetId })
+                else { return .systemAction }
+                
+                onTap(component)
+                return .handled
+            })
     }
     
     private var attributedString: AttributedString {
@@ -134,6 +223,9 @@ private struct FlowLayout: View {
                 attributed.backgroundColor = .orange
             }
             
+            if isInteractionEnabled {
+                attributed.link = URL(string: "seek://\(component.id)")
+            }
             result += attributed
         }
         
