@@ -17,7 +17,7 @@ struct ChattingListView: View {
                 NavigationLink {
                     ChattingRoomView(
                         store: Store(
-                            initialState: ChattingRoomFeature.State(projectName: chattingInfo.title),
+                            initialState: ChattingRoomFeature.State(roomId: chattingInfo.id, title: chattingInfo.title),
                             reducer: { ChattingRoomFeature() }
                         )
                     )

@@ -21,11 +21,14 @@ struct ChattingRoomFeature {
         var messageText: String = ""
         var messages: [Message] = []
         var isAITyping: Bool = false
-        var projectName: String
+        
+        var roomId:String
+        var title:String
         
             // 채팅방 고유ID & API client_id
-        init (projectName: String){
-            self.projectName = projectName
+        init (roomId: String, title: String){
+            self.roomId = roomId
+            self.title = title
         }
     }
     
@@ -51,10 +54,10 @@ struct ChattingRoomFeature {
                     return .none
                     
                 case .onAppear:
-                    return .run { [projectName = state.projectName] send in
+                    return .run { [roomId = state.roomId] send in
                         do {
                             let snapshot = try await db.collection("chats")
-                                .document(projectName)
+                                .document(roomId)
                                 .collection("messages")
                                 .order(by: "timestamp", descending: false)
                                 .getDocuments()
@@ -83,7 +86,7 @@ struct ChattingRoomFeature {
                 case .loadMessages(let loadedMessages):
                     if loadedMessages.isEmpty{
                         let dummyMessage = Message(
-                            content: "안녕하세요! 오늘 \(state.projectName)에 대해 무엇을 도와드릴까요?",
+                            content: "안녕하세요! 오늘 \(state.title)에 대해 무엇을 도와드릴까요?",
                             isFromUser: false,
                             timestamp: Date()
                         )
@@ -120,7 +123,7 @@ struct ChattingRoomFeature {
                     state.messages.append(userMessage)
                     state.messageText = ""
                     
-                    return .run { [projectName = state.projectName] send in
+                    return .run { [roomId = state.roomId] send in
                             // 유저 메세지 저장
                         let db = Firestore.firestore()
                         
@@ -169,7 +172,7 @@ struct ChattingRoomFeature {
                     )
                     state.messages.append(aIMessage)
                         // AI 메세지 저장
-                    return .run{ [projectName = state.projectName] _ in
+                    return .run{ [roomId = state.roomId] _ in
                         let db = Firestore.firestore()
                         
                         let messageData: [String: Any] = [
@@ -179,9 +182,11 @@ struct ChattingRoomFeature {
                         ]
                         
                         _ = try? await db.collection("chats")
+
                             .document(projectName)
                             .collection("messages")
                             .addDocument(data: messageData)
+
                     }
                     
                 case .setAITyping(let isTyping):

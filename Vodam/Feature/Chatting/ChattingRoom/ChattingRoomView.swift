@@ -70,7 +70,7 @@ struct ChattingRoomView: View {
             }
             .padding()
         }
-        .navigationTitle(store.projectName)
+        .navigationTitle(store.title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             store.send(.onAppear)
@@ -99,7 +99,12 @@ struct MessageRow: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(message.content)
+//                   Text(message.content)
+                    MarkdownTextView(
+                        message.content,
+                        font: .body,
+                        linSpacing: 4
+                    )
                         .padding(12)
                         .background(Color.gray.opacity(0.2))
                         .cornerRadius(16)
