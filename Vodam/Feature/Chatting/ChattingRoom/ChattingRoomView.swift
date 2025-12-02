@@ -70,7 +70,7 @@ struct ChattingRoomView: View {
             }
             .padding()
         }
-        .navigationTitle(store.projectName)
+        .navigationTitle(store.title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             store.send(.onAppear)
