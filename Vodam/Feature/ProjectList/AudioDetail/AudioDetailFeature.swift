@@ -60,12 +60,12 @@ struct AudioDetailFeature {
             var transcriptText = project.transcript ?? ""
             
             if transcriptText.isEmpty {
-                    if project.category == .pdf {
-                        transcriptText = "PDF에서 추출한 스크립트가 없습니다."
-                    } else {
-                        transcriptText = "아직 받아온 스크립트가 없습니다."
-                    }
+                if project.category == .pdf {
+                    transcriptText = "PDF에서 추출한 스크립트가 없습니다."
+                } else {
+                    transcriptText = "아직 받아온 스크립트가 없습니다."
                 }
+            }
             
             self.script = ScriptFeature.State(text: transcriptText)
             
@@ -321,7 +321,7 @@ struct AudioDetailFeature {
                 
             case .seek(let progress):
                 guard let player = state.player,
-                        let item = player.currentItem else { return .none }
+                      let item = player.currentItem else { return .none }
                 let clampedProgress = min(max(progress, 0), 1)
                 let duration = item.asset.duration
                 let targetTime = CMTimeGetSeconds(duration) * clampedProgress
@@ -343,8 +343,26 @@ struct AudioDetailFeature {
                 let title = project.name
                 
                 guard let ownerId = state.currentUser?.ownerId else {
-                    print("[AudioDetail] chatButtonTapped: currentUser.ownerId 없음 - 채팅방 생성 안 함")
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("로그인이 필요합니다.")
+                        } actions: {
+                            ButtonState(role: .cancel) {
+                                TextState("확인")
+                            }
+                        } message: {
+                            TextState("로그인 후 채팅을 이용할 수 있습니다.")
+                        }
+                    )
                     return .none
+                }
+                
+                state.destination = .chattingRoom(
+                    ChattingRoomFeature.State(ownerId: ownerId, roomId: roomId, title: title)
+                )
+                return .run { _ in
+                    try? await firebaseClient.createChatRoom(ownerId, roomId, title)
+                    
                 }
                 
                 state.destination = .chattingRoom(
