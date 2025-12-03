@@ -50,17 +50,14 @@ struct AppView: View {
             }
             .tag(AppFeature.State.Tab.chat)
         }
-        // ✅ 탭 전환 시 AVAudioSession 정리
         .onChange(of: store.startTab) { oldTab, newTab in
             print("[AppView] 탭 전환: \(oldTab) → \(newTab)")
             
-            // 메인 탭으로 전환할 때 (녹음할 수 있는 탭)
             if newTab == .main {
                 cleanupAudioSession()
             }
         }
         .onChange(of: store.user) { oldValue, newValue in
-            // 사용자 변경 시 Firebase 동기화 (어느 탭에서든 실행됨)
             if oldValue?.ownerId != newValue?.ownerId {
                 FirebaseSyncHelper.handleUserChange(
                     oldValue: oldValue,
@@ -77,22 +74,18 @@ struct AppView: View {
         }
     }
     
-    // ✅ AVAudioSession 정리 함수
     private func cleanupAudioSession() {
         do {
             let session = AVAudioSession.sharedInstance()
             
-            // 현재 카테고리 확인
             let currentCategory = session.category
             print("[AppView] 현재 AVAudioSession 카테고리: \(currentCategory)")
             
-            // playback 모드였다면 비활성화
             if currentCategory == .playback {
                 try session.setActive(false, options: .notifyOthersOnDeactivation)
                 print("[AppView] ✅ AVAudioSession 비활성화 완료")
             }
             
-            // 녹음을 위해 record 카테고리로 준비 (options 없이)
             try session.setCategory(.record, mode: .default, options: [])
             print("[AppView] ✅ AVAudioSession을 record 모드로 설정")
             
