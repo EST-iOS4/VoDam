@@ -287,6 +287,9 @@ struct ChattingRoomFeature {
             case .alert(.presented(.confirmExit)):
                 let ownerId = state.ownerId
                 let roomId = state.roomId
+                
+                state.alert = nil
+                
                 return .run { [firebaseClient] send in
                     do {
                         try await firebaseClient.deleteChatRoom(ownerId, roomId)
