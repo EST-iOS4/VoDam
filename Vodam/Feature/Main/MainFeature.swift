@@ -8,6 +8,10 @@
 import ComposableArchitecture
 import Foundation
 
+private enum MainOnboardingKey {
+    static let hasSeenProfileIntro = "hasSeenProfileIntro_v1"
+}
+
 @Reducer
 struct MainFeature {
     
@@ -39,11 +43,12 @@ struct MainFeature {
         case userLoaded(User?)
         
         case delegate(Delegate)
+        case loginProvidersShouldPresent
         
         enum Delegate: Equatable {
-            case projectSaved(String)      // 프로젝트 저장 완료
-            case syncCompleted(String)     // 동기화 완료
-            case userLoggedIn(User)        // 로그인 완료
+            case projectSaved(String)
+            case syncCompleted(String)
+            case userLoggedIn(User)
         }
     }
     
@@ -72,14 +77,19 @@ struct MainFeature {
                 
             case .userLoaded(let user):
                 state.currentUser = user
+                
+                let defaults = UserDefaults.standard
+                let hasSeenIntro = defaults.bool(forKey: MainOnboardingKey.hasSeenProfileIntro)
+                
+                if !hasSeenIntro, state.profileFlow == nil {
+                    state.profileFlow = ProfileFlowFeature.State()
+                    defaults.set(true, forKey: MainOnboardingKey.hasSeenProfileIntro)
+                }
+                
                 return .none
                 
             case .profileButtonTapped:
-                if let user = state.currentUser {
-                    state.settings = SettingsFeature.State(user: user)
-                } else {
-                    state.profileFlow = ProfileFlowFeature.State()
-                }
+                state.settings = SettingsFeature.State(user: state.currentUser)
                 return .none
                 
             case .settings(.presented(.delegate(.userUpdated(let user)))):
@@ -88,22 +98,17 @@ struct MainFeature {
                     await userStorageClient.save(user)
                 }
                 
-            case .settings(
-                .presented(.delegate(.loggedOut(let isSuccess)))
-            ):
+            case .settings(.presented(.delegate(.loggedOut(let isSuccess)))):
                 if isSuccess {
                     let _ = state.currentUser?.ownerId
                     state.currentUser = nil
                     return .run { _ in
                         await userStorageClient.clear()
                     }
-                    // 재로그인 시 데이터를 다시 볼 수 있도록 유지
                 }
                 return .none
                 
-            case .settings(
-                .presented(.delegate(.accountDeleted(let isSuccess)))
-            ):
+            case .settings(.presented(.delegate(.accountDeleted(let isSuccess)))):
                 if isSuccess {
                     state.currentUser = nil
                     return .run { _ in
@@ -112,30 +117,33 @@ struct MainFeature {
                 }
                 return .none
                 
-            case .profileFlow(.presented(.guestButtonTapped)):
+            case .profileFlow(.presented(.delegate(.guestSelected))):
                 state.profileFlow = nil
-                state.settings = SettingsFeature.State(user: nil)
                 return .run { _ in
                     await userStorageClient.clear()
                 }
                 
-            case .profileFlow(.presented(.loginButtonTapped)):
+            case .profileFlow(.presented(.delegate(.loginRequested))):
                 state.profileFlow = nil
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
                 
-            case .profileFlow(.presented(.cancelButtonTapped)):
+            case .profileFlow(.presented(.delegate(.dismiss))):
                 state.profileFlow = nil
+                return .none
+                
+            case .loginProvidersShouldPresent:
+                state.profileFlow = nil
+                state.loginProviders = LoginProvidersFeature.State()
                 return .none
                 
             case .dismissProfileSheet:
                 state.profileFlow = nil
-                return .none
+                return .run { _ in
+                    await userStorageClient.clear()
+                }
                 
-                // 통합 로그인 (카카오/애플/구글 통합)
-            case .loginProviders(
-                .presented(.delegate(.login(let isSuccess, let user)))
-            ):
+            case .loginProviders(.presented(.delegate(.login(let isSuccess, let user)))):
                 if isSuccess, let user {
                     state.currentUser = user
                     state.settings = SettingsFeature.State(user: user)
@@ -145,8 +153,6 @@ struct MainFeature {
                         await userStorageClient.save(user)
                         await send(.delegate(.userLoggedIn(user)))
                     }
-                } else {
-                    // 로그인 실패 또는 취소 (이미 LoginProvidersFeature에서 로그 출력)
                 }
                 return .none
                 
@@ -154,7 +160,7 @@ struct MainFeature {
                 state.settings = nil
                 state.loginProviders = LoginProvidersFeature.State()
                 return .none
-
+                
             case .recording(.delegate(let delegateAction)):
                 switch delegateAction {
                 case .projectSaved(let projectId):
@@ -162,7 +168,7 @@ struct MainFeature {
                 case .syncCompleted(let projectId):
                     return .send(.delegate(.syncCompleted(projectId)))
                 }
-
+                
             case .fileButton(.delegate(let delegateAction)):
                 switch delegateAction {
                 case .projectSaved(let projectId):
@@ -170,7 +176,7 @@ struct MainFeature {
                 case .syncCompleted(let projectId):
                     return .send(.delegate(.syncCompleted(projectId)))
                 }
-
+                
             case .pdfButton(.delegate(let delegateAction)):
                 switch delegateAction {
                 case .projectSaved(let projectId):
