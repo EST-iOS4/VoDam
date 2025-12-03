@@ -29,7 +29,6 @@ struct RecordingView: View {
             
             VStack(spacing: 24) {
                 
-                // 상태별 버튼
                 controls(
                     status: store.status,
                     onStart: { store.send(.startTapped) },
@@ -37,12 +36,10 @@ struct RecordingView: View {
                     onStop: { store.send(.stopTapped) }
                 )
                 
-                // 상태 텍스트
                 Text(store.status.localizedText)
                     .font(.headline)
                     .foregroundColor(.black)
                 
-                // 녹음 시간 표시
                 Text(formatTime(store.elapsedSeconds))
                     .font(.system(size: 32, weight: .medium))
                     .monospacedDigit()
@@ -53,12 +50,8 @@ struct RecordingView: View {
         .frame(height: 240)
         .padding(.horizontal, 20)
         
-        // ✅ fileURL과 finalTranscript 둘 다 준비되면 저장 시작
-        .onChange(of: store.fileURL) { oldValue, newValue in
-            if let url = newValue,
-               store.status == .finishing,
-               store.finalTranscript != nil || store.liveTranscript.isEmpty {
-                print("🎤 녹음 파일 저장 시작: \(url.path)")
+        .onChange(of: store.fileURL) { _, newValue in
+            if let url = newValue, store.status == .finishing {
                 store.send(.saveRecording(url, store.lastRecordedLength, ownerId, modelContext))
             }
         }

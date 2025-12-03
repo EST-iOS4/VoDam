@@ -7,11 +7,22 @@
 
 import SwiftUI
 import ComposableArchitecture
+import UIKit
 
 struct ScriptView: View {
     let store: StoreOf<ScriptFeature>
     
+    private let largeTextThreshold = 3000
+    
     var body: some View {
+        if store.text.count > largeTextThreshold {
+            LargeScriptTextView(text: store.text)
+        } else {
+            smallTextBody
+        }
+    }
+    
+    private var smallTextBody: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -138,5 +149,30 @@ private struct FlowLayout: View {
         }
         
         return result
+    }
+}
+
+struct LargeScriptTextView: UIViewRepresentable {
+    let text: String
+    
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.isEditable = false
+        textView.isSelectable = true
+        textView.isScrollEnabled = true
+        textView.showsVerticalScrollIndicator = true
+        textView.showsHorizontalScrollIndicator = false
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        textView.font = UIFont.preferredFont(forTextStyle: .body)
+        textView.backgroundColor = .clear
+        textView.textColor = .label
+        textView.alwaysBounceVertical = true
+        return textView
+    }
+    
+    func updateUIView(_ uiView: UITextView, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
     }
 }
