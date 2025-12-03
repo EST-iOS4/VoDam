@@ -21,13 +21,12 @@ struct ChattingListView: View {
                         .listRowSeparator(.hidden)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.black, lineWidth: 1)
+                                .stroke(Color.primary, lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
             }
             .listStyle(.plain)
-            .background(Color.white)
             .padding(.horizontal, 10)
             .onAppear {
                 print("뷰 호출됨!")
