@@ -73,6 +73,7 @@ struct ProjectListView: View {
     private var emptyView: some View {
         VStack(spacing: 16) {
             Text("저장된 프로젝트가 없습니다.")
+                .font(AppFont.pretendardBold(size: 16))
                 .foregroundColor(.secondary)
             
             if store.currentUser != nil {
