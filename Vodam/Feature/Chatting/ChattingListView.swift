@@ -10,61 +10,48 @@ import SwiftUI
 
 struct ChattingListView: View {
     @Bindable var store: StoreOf<ChattingListFeature>
-    
+
     var body: some View {
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
-            ZStack {
-                Color(.systemBackground)
-                    .ignoresSafeArea()
-                
-                if store.chattingList.isEmpty {
-                    emptyView
-                } else {
-                    ChattingListView
+            if store.chattingList.isEmpty{
+                EmptyView()
+                    .onAppear{
+                        store.send(.onAppear)
+                    }
+            } else{
+                List(store.chattingList) { chattingInfo in
+                    Button {
+                        store.send(.chattingTapped(chattingInfo))
+                    } label: {
+                        ChattingItemView(chattingInfo: chattingInfo)
+                            .listRowSeparator(.hidden)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.primary, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.plain)
+                .padding(.horizontal, 10)
+                .onAppear {
+                    print("뷰 호출됨!")
+                    store.send(.onAppear)
                 }
             }
-            .onAppear {
-                print("뷰 호출됨!")
-                store.send(.onAppear)
-            }
-            
         } destination: { store in
             ChattingRoomView(store: store)
         }
     }
-    
-    private var ChattingListView: some View {
-        List {
-            ForEach(store.chattingList) { chattingInfo in
-                Button {
-                    store.send(.chattingTapped(chattingInfo))
-                } label: {
-                    ChattingItemView(chattingInfo: chattingInfo)
-                        .listRowSeparator(.hidden)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.secondary.opacity(0.6), lineWidth: 1)
-                        )
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-            .onDelete { indexSet in
-                store.send(.delete(indexSet))
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .padding(.horizontal, 10)
-    }
-    
-    private var emptyView: some View {
-        VStack(spacing: 16) {
-            Text("저장된 채팅이 없습니다.")
+}
+
+struct EmptyView: View{
+    var body: some View{
+        VStack{
+            Text("저장된 리스트가 없습니다.")
+                .font(AppFont.pretendardBold(size: 16))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
-
