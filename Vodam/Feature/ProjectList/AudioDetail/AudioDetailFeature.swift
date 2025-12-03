@@ -54,7 +54,7 @@ struct AudioDetailFeature {
         init(project: Project, currentUser: User?, selectedTab: Tab = .script) {
             self.project = project
             self.currentUser = currentUser
-            self.selectedTab = .script
+            self.selectedTab = selectedTab
             self.isFavorite = project.isFavorite
             
             var transcriptText = project.transcript ?? ""
@@ -340,11 +340,17 @@ struct AudioDetailFeature {
                 return .none
                 
             case .seek(let progress):
-                guard let player = state.player, let item = player.currentItem
-                else { return .none }
+                guard let player = state.player,
+                        let item = player.currentItem else { return .none }
+                let clampedProgress = min(max(progress, 0), 1)
                 let duration = item.asset.duration
-                let targetTime = CMTimeGetSeconds(duration) * progress
+                let targetTime = CMTimeGetSeconds(duration) * clampedProgress
                 player.seek(to: CMTime(seconds: targetTime, preferredTimescale: 1))
+                
+                if !targetTime.isNaN && !targetTime.isInfinite {
+                    state.currentTime = formatTime(targetTime)
+                    state.progress = clampedProgress
+                }
                 return .none
                 
             case .setTotalTime(let timeString):
@@ -398,6 +404,13 @@ struct AudioDetailFeature {
                 state.project.isFavorite = state.isFavorite
                 state.destination = nil
                 return .send(.delegate(.needsRefresh))
+                
+            case .script(.delegate(.seekToProgress(let progress))):
+                guard state.project.category != .pdf else { return .none }
+                let clampedProgress = min(max(progress, 0), 1)
+                state.selectedTab = .script
+                state.progress = clampedProgress
+                return .send(.seek(clampedProgress))
                 
             case .script, .aiSummary, .binding, .destination, .delegate:
                 return .none
