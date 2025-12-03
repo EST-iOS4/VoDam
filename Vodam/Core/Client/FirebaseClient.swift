@@ -13,21 +13,20 @@ import Foundation
 struct FirebaseClient {
     var deleteAllForUser: @Sendable (_ ownerId: String) async throws -> Void
     
-    // MARK: - Project Functions
+    var upsertUserProfile: @Sendable (_ user: User) async throws -> User
+    var fetchUserProfile: @Sendable (_ ownerId: String) async throws -> User?
+    
     var uploadProjects:
-    @Sendable (_ ownerId: String, _ projects: [ProjectPayload])
-    async throws -> Void
+    @Sendable (_ ownerId: String, _ projects: [ProjectPayload]) async throws -> Void
     
     var fetchProjects:
     @Sendable (_ ownerId: String) async throws -> [ProjectPayload]
     
     var updateProject:
-    @Sendable (_ ownerId: String, _ project: ProjectPayload)
-    async throws -> Void
+    @Sendable (_ ownerId: String, _ project: ProjectPayload) async throws -> Void
     
     var deleteProject:
-    @Sendable (_ ownerId: String, _ projectId: String)
-    async throws -> Void
+    @Sendable (_ ownerId: String, _ projectId: String) async throws -> Void
     
     var createChatRoom:
     @Sendable (_ ownerId: String, _ roomId: String, _ title: String) async throws -> Void
@@ -86,6 +85,93 @@ extension FirebaseClient: DependencyKey {
                 
                 print("[FirebaseClient] deleteAllForUser 완료: ownerId=\(ownerId), recordings=\(recordingsSnapshot.documents.count)개, projects=\(projectsSnapshot.documents.count)개 삭제")
             },
+            
+            upsertUserProfile: { user in
+                let db = Firestore.firestore()
+                let ref = db.collection("users").document(user.ownerId)
+                
+                let snapshot = try await ref.getDocument()
+                var existing: [String: Any] = snapshot.data() ?? [:]
+                
+                if !user.name.isEmpty {
+                    existing["name"] = user.name
+                } else if existing["name"] == nil {
+                    existing["name"] = "Apple User"
+                }
+                
+                if let email = user.email, !email.isEmpty {
+                    existing["email"] = email
+                }
+                
+                existing["ownerId"] = user.ownerId
+                existing["provider"] = user.provider.rawValue
+                
+                if let urlString = user.profileImageURL?.absoluteString {
+                    existing["profileImageURL"] = urlString
+                }
+                
+                existing["updatedAt"] = FieldValue.serverTimestamp()
+                if snapshot.exists == false {
+                    existing["createdAt"] = FieldValue.serverTimestamp()
+                }
+                
+                try await ref.setData(existing, merge: true)
+                
+                let name = (existing["name"] as? String) ?? user.name
+                let email = existing["email"] as? String ?? user.email
+                let providerRaw = existing["provider"] as? String ?? user.provider.rawValue
+                let provider = AuthProvider(rawValue: providerRaw) ?? user.provider
+                
+                let profileImageURLString = existing["profileImageURL"] as? String
+                let profileImageURL = profileImageURLString.flatMap { URL(string: $0) }
+                
+                let finalUser = User(
+                    id: user.id,
+                    name: name,
+                    email: email,
+                    provider: provider,
+                    profileImageURL: profileImageURL,
+                    localProfileImageData: user.localProfileImageData
+                )
+                return finalUser
+            },
+            
+            fetchUserProfile: { ownerId in
+                let db = Firestore.firestore()
+                let ref = db.collection("users").document(ownerId)
+                let snapshot = try await ref.getDocument()
+                
+                guard let data = snapshot.data() else {
+                    return nil
+                }
+                
+                let name = data["name"] as? String ?? "Apple User"
+                let email = data["email"] as? String
+                
+                let providerRaw = data["provider"] as? String ?? AuthProvider.apple.rawValue
+                let provider = AuthProvider(rawValue: providerRaw) ?? .apple
+                
+                let profileImageURLString = data["profileImageURL"] as? String
+                let profileImageURL = profileImageURLString.flatMap { URL(string: $0) }
+                
+                let components = ownerId.split(separator: ":", maxSplits: 1).map(String.init)
+                let idPart: String
+                if components.count == 2 {
+                    idPart = components[1]
+                } else {
+                    idPart = ownerId
+                }
+                
+                return User(
+                    id: idPart,
+                    name: name,
+                    email: email,
+                    provider: provider,
+                    profileImageURL: profileImageURL,
+                    localProfileImageData: nil
+                )
+            },
+
             
             // MARK: - Project Functions Implementation
             uploadProjects: { ownerId, projects in
@@ -256,6 +342,8 @@ extension FirebaseClient: DependencyKey {
     static var testValue: FirebaseClient {
         .init(
             deleteAllForUser: { _ in },
+            upsertUserProfile: { user in user },
+                    fetchUserProfile: { _ in nil },
             uploadProjects: { _, _ in },
             fetchProjects: { _ in [] },
             updateProject: { _, _ in },
