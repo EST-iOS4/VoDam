@@ -18,18 +18,29 @@ struct ProfileFlowFeature {
         case loginButtonTapped
         case cancelButtonTapped
         case guestButtonTapped
+        
+        case delegate(Delegate)
+        
+        enum Delegate: Equatable {
+            case dismiss
+            case loginRequested
+            case guestSelected
+        }
     }
     
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
             case .loginButtonTapped:
-                return .none
+                return .send(.delegate(.loginRequested))
                 
             case .cancelButtonTapped:
-                return .none
+                return .send(.delegate(.dismiss))
                 
             case .guestButtonTapped:
+                return .send(.delegate(.guestSelected))
+                
+            case .delegate:
                 return .none
             }
         }

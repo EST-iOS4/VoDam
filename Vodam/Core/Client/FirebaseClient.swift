@@ -36,6 +36,9 @@ struct FirebaseClient {
     
     var listenToChatRooms:
     @Sendable (_ ownerId: String) -> AsyncStream<[ChattingInfo]>
+    
+    var deleteChatRoom:
+    @Sendable (_ ownerId: String, _ roomId: String) async throws -> Void
 }
 
 extension FirebaseClient: DependencyKey {
@@ -69,6 +72,13 @@ extension FirebaseClient: DependencyKey {
                 let recordingsRef = userRef.collection("recordings")
                 let recordingsSnapshot = try await recordingsRef.getDocuments()
                 
+                let chatRoomsRef = userRef.collection("chatRooms")
+                let chatRoomsSnapshot = try await chatRoomsRef.getDocuments()
+                
+                let chatsRef = userRef.collection("chats")
+                let chatsSnapshot = try await chatsRef.getDocuments()
+                
+                
                 let batch = db.batch()
                 
                 for doc in recordingsSnapshot.documents {
@@ -77,6 +87,21 @@ extension FirebaseClient: DependencyKey {
                 
                 for doc in projectsSnapshot.documents {
                     batch.deleteDocument(doc.reference)
+                }
+                
+                for doc in chatRoomsSnapshot.documents {
+                    batch.deleteDocument(doc.reference)
+                }
+                
+                for chatDoc in chatsSnapshot.documents {
+                    let messagesSnapshot = try await chatDoc.reference
+                        .collection("messages")
+                        .getDocuments()
+                    
+                    for messageDoc in messagesSnapshot.documents {
+                        batch.deleteDocument(messageDoc.reference)
+                    }
+                    batch.deleteDocument(chatDoc.reference)
                 }
                 
                 batch.deleteDocument(userRef)
@@ -335,7 +360,36 @@ extension FirebaseClient: DependencyKey {
                         print("[FirebaseClient] 채팅목록 리스너 해제")
                     }
                 }
-            }
+            },
+            
+            deleteChatRoom: { ownerId, roomId in
+                let db = Firestore.firestore()
+                let userRef = db.collection("users").document(ownerId)
+                
+                try await userRef
+                    .collection("chatRooms")
+                    .document(roomId)
+                    .delete()
+                
+                let chatDocRef = userRef
+                    .collection("chats")
+                    .document(roomId)
+                
+                let messagesSnapshot = try await chatDocRef
+                    .collection("messages")
+                    .getDocuments()
+                
+                
+                let batch = db.batch()
+                for messageDoc in messagesSnapshot.documents {
+                    batch.deleteDocument(messageDoc.reference)
+                }
+                
+                batch.deleteDocument(chatDocRef)
+                try await batch.commit()
+                
+                print("[FirebaseClient] deleteChatRoom 완료: ownerId=\(ownerId), roomId=\(roomId)")
+            },
         )
     }
     
@@ -350,7 +404,8 @@ extension FirebaseClient: DependencyKey {
             deleteProject: { _, _ in },
             createChatRoom: { _, _, _ in },
             updateChatRoomPreview: { _, _, _, _ in },
-            listenToChatRooms: { _ in AsyncStream { continuation in continuation.finish() } }
+            listenToChatRooms: { _ in AsyncStream { continuation in continuation.finish() } },
+            deleteChatRoom: { _, _ in }
         )
     }
 }
@@ -431,7 +486,7 @@ extension ProjectPayload {
             summary: summary,
             ownerId: data["ownerId"] as? String,
             syncStatus: syncStatus,
-            remoteAudioPath: remoteAudioPath  // ✅ 읽기 추가
+            remoteAudioPath: remoteAudioPath 
         )
     }
 }

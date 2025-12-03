@@ -54,15 +54,18 @@ struct AudioDetailView: View {
             store.send(.onAppear)
         }
         
-//        .onDisappear {
-//            store.send(.viewWillDisappear)
-//        }
+        //        .onDisappear {
+        //            store.send(.viewWillDisappear)
+        //        }
         .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
         .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
             ChattingRoomView(store: $0)
         }
         .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
             ProjectTitleEditView(store: $0)
+        }
+        .onDisappear {
+            store.send(.clearAlert)
         }
     }
     
@@ -258,6 +261,7 @@ struct AudioDetailView: View {
             Button(action: { store.send(.favoriteButtonTapped(context)) }) {
                 Image(systemName: store.isFavorite ? "star.fill" : "star")
                     .font(.title)
+                    .foregroundColor(.yellow)
             }
         }
         .padding(.bottom)
@@ -278,9 +282,9 @@ struct AudioDetailView: View {
                 HStack {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
                         .font(.title2)
+                        .foregroundColor(.yellow)
                     Text(store.isFavorite ? "즐겨찾기에서 제거" : "즐겨찾기에 추가")
                 }
-                .foregroundColor(.blue)
             }
             .padding(.bottom, 20)
         }
