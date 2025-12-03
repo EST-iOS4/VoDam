@@ -9,6 +9,7 @@ import ComposableArchitecture
 import Speech
 import SwiftUI
 import SwiftData
+import AVFoundation
 
 @Reducer
 struct FileButtonFeature {
@@ -23,14 +24,11 @@ struct FileButtonFeature {
         var title: String = "파일 가져오기"
         var selectedFileURL: URL?
         var isImporterPresented: Bool = false
-        
-        // STT 상태
         var isTranscribing: Bool = false
         var transcript: String = ""
         var errorMessage: String?
-        
-        // 저장된 프로젝트 ID
         var savedProjectId: String?
+        var progress: Double = 0
     }
     
     enum Action: Equatable {
@@ -38,17 +36,16 @@ struct FileButtonFeature {
         case importerPresented(Bool)
         case fileImported(Result<URL, FileImportError>)
         
-        // STT
         case startSTT(URL)
         case sttResponse(Result<String, STTError>)
         
-        // 저장
-        case saveFile(URL, String?, ModelContext, String?)  // url, transcript, context, ownerId
+        case saveFile(URL, String?, ModelContext, String?)
         case fileSaved(String)
         case fileSaveFailed(String)
         case syncCompleted(String)
         
         case delegate(Delegate)
+        case sttProgressUpdated(Double)
         
         enum Delegate: Equatable {
             case projectSaved(String)
@@ -68,7 +65,6 @@ struct FileButtonFeature {
         Reduce { state, action in
             switch action {
                 
-                // 파일 선택 클릭
             case .tapped:
                 state.isImporterPresented = true
                 return .none
@@ -77,13 +73,11 @@ struct FileButtonFeature {
                 state.isImporterPresented = isPresented
                 return .none
                 
-                // 파일 선택 후
             case .fileImported(let result):
                 switch result {
                 case .success(let url):
                     print("📁 선택된 파일:", url)
                     state.selectedFileURL = url
-                    // 선택됨 → STT 실행
                     return .send(.startSTT(url))
                     
                 case .failure:
@@ -91,19 +85,24 @@ struct FileButtonFeature {
                     return .none
                 }
                 
-                // STT 시작
             case .startSTT(let url):
                 state.isTranscribing = true
+                state.progress = 0
                 print("🎤 STT 시작: \(url.lastPathComponent)")
                 return .run { [url, sttClient] send in
-                    let result = await sttClient.transcribe(url)
+                    let result = await sttClient.transcribe(url) { progress in
+                        await send(.sttProgressUpdated(progress))
+                    }
                     await send(.sttResponse(result))
                 }
+            case .sttProgressUpdated(let progress):
+                state.progress = progress
+                return .none
                 
-                // STT 결과 전달
+                
             case .sttResponse(let result):
                 state.isTranscribing = false
-                print("🎤 STT 종료")
+                state.progress = 0
                 
                 switch result {
                 case .success(let text):
@@ -117,26 +116,21 @@ struct FileButtonFeature {
                 }
                 return .none
                 
-                // 저장 로직
             case .saveFile(let url, let transcript, let context, let ownerId):
                 return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
-                        // 1. 파일을 Documents로 복사
                         guard let storedPath = await copyFileToDocuments(from: url) else {
                             await send(.fileSaveFailed("파일 저장 실패"))
                             return
                         }
                         
-                        // 2. 파일 이름 생성
                         let fileName = url.deletingPathExtension().lastPathComponent
                         
-                        // 3. 파일 길이 계산 (오디오 파일인 경우)
                         var fileLength: Int? = nil
                         if let duration = await getAudioDuration(url: URL(fileURLWithPath: storedPath)) {
                             fileLength = Int(duration)
                         }
                         
-                        // 4. SwiftData에 저장 - MainActor에서 실행
                         let payload = try await MainActor.run {
                             try projectLocalDataClient.save(
                                 context,
@@ -152,7 +146,6 @@ struct FileButtonFeature {
                         
                         await send(.fileSaved(payload.id))
                         
-                        // 5. 로그인 유저라면 클라우드 업로드
                         if let ownerId {
                             let localURL = URL(fileURLWithPath: storedPath)
                             
@@ -178,7 +171,6 @@ struct FileButtonFeature {
                             
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
                             
-                            // MainActor에서 실행
                             try await MainActor.run {
                                 try projectLocalDataClient.updateSyncStatus(
                                     context,
@@ -224,7 +216,6 @@ struct FileButtonFeature {
         }
     }
     
-    // MARK: - Helper
     private func copyFileToDocuments(from url: URL) -> String? {
         let fileManager = FileManager.default
         guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
@@ -236,7 +227,6 @@ struct FileButtonFeature {
         }
         
         do {
-            // Security-scoped resource 접근
             guard url.startAccessingSecurityScopedResource() else {
                 print("Security scoped resource 접근 실패")
                 return nil
@@ -257,5 +247,3 @@ struct FileButtonFeature {
         return CMTimeGetSeconds(duration)
     }
 }
-
-import AVFoundation
