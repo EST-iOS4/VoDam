@@ -54,7 +54,15 @@ actor SpeechService {
     private func setupTranscriptionOnMain() async {
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            try audioSession.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetooth])
+            #if compiler(>=6.2)    // Xcode 26, Swift 6.2 이상
+            let options: AVAudioSession.CategoryOptions = [.defaultToSpeaker, .allowBluetoothHFP]
+            #else                  // 예전 Xcode (allowBluetoothHFP 없음)
+            let options: AVAudioSession.CategoryOptions = [.defaultToSpeaker, .allowBluetooth]
+            #endif
+            
+            try audioSession.setCategory(.playAndRecord,
+                                         mode: .measurement,
+                                         options: options)
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             print("AudioSession 오류:", error)
@@ -82,7 +90,7 @@ actor SpeechService {
         
         await self.updateEngineAndRequest(engine: engine, request: request)
         
-        guard let recognizer = self.recognizer else {
+        guard let recognizer = await recognizer else {
             print("Recognizer 없음")
             await finishStream()
             return

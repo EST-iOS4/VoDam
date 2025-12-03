@@ -10,6 +10,7 @@ import Foundation
 import ComposableArchitecture
 import OSLog
 
+@MainActor
 @Reducer
 struct ChattingRoomFeature {
     @Dependency(\.firebaseClient) var firebaseClient
@@ -75,6 +76,7 @@ struct ChattingRoomFeature {
             case .onAppear:
                 return .run { [ownerId = state.ownerId, roomId = state.roomId] send in
                     do {
+                        let db = Firestore.firestore()
                         let snapshot = try await db.collection("users")
                             .document(ownerId)
                             .collection("chats")
@@ -82,22 +84,43 @@ struct ChattingRoomFeature {
                             .collection("messages")
                             .order(by: "timestamp", descending: false)
                             .getDocuments()
-                        
+
                         logger.debug("📦 총 문서 개수: \(snapshot.documents.count)")
-                        
-                        let messages = snapshot.documents.compactMap { doc -> Message? in
-                            
-                            do {
-                                var message = try doc.data(as: Message.self)
-                                message.id = doc.documentID
-                                return message
-                            } catch {
+
+                        let messages: [Message] = snapshot.documents.compactMap { doc in
+                            let data = doc.data()
+
+                            guard let content = data["content"] as? String else {
                                 return nil
                             }
+
+                            let isFromUser: Bool
+                            if let boolValue = data["isFromUser"] as? Bool {
+                                isFromUser = boolValue
+                            } else if let intValue = data["isFromUser"] as? Int {
+                                isFromUser = intValue != 0
+                            } else {
+                                isFromUser = false
+                            }
+
+                            let timestamp: Date
+                            if let ts = data["timestamp"] as? Timestamp {
+                                timestamp = ts.dateValue()
+                            } else if let date = data["timestamp"] as? Date {
+                                timestamp = date
+                            } else {
+                                timestamp = Date()
+                            }
+
+                            return Message(
+                                id: doc.documentID,
+                                content: content,
+                                isFromUser: isFromUser,
+                                timestamp: timestamp
+                            )
                         }
-                        
+
                         await send(.loadMessages(messages))
-                        
                     } catch {
                         logger.error("Failed to load messages: \(error.localizedDescription)")
                         await send(.loadMessages([]))
