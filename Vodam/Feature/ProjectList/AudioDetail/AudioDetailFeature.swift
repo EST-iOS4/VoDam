@@ -54,7 +54,7 @@ struct AudioDetailFeature {
         init(project: Project, currentUser: User?, selectedTab: Tab = .script) {
             self.project = project
             self.currentUser = currentUser
-            self.selectedTab = .script
+            self.selectedTab = selectedTab
             self.isFavorite = project.isFavorite
             
             var transcriptText = project.transcript ?? ""
