@@ -70,6 +70,17 @@ struct ChattingListFeature {
                 
             case .updateList(let info):
                 state.chattingList = info
+                if let top = state.path.last {
+                    let roomId = top.roomId
+                    
+                    let stillExists = info.contains { chattingInfo in
+                        chattingInfo.id == roomId
+                    }
+                    
+                    if !stillExists {
+                        state.path = .init()
+                    }
+                }
                 return .none
                 
             case .delete(let indexSet):

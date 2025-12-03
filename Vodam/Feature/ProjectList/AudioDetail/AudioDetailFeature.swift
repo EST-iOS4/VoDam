@@ -509,6 +509,12 @@ struct AudioDetailFeature {
                                         ownerId,
                                         projectIdString
                                     )
+                                    do {
+                                        try await firebaseClient.deleteChatRoom(ownerId, projectIdString)
+                                        print("연관 채팅방 삭제 완료: \(projectIdString)")
+                                    } catch {
+                                        print("연관 채팅방 삭제 실패(계속 진행): \(error)")
+                                    }
                                 } catch {
                                     print("Firebase 삭제 실패 (계속 진행): \(error)")
                                 }

@@ -312,6 +312,12 @@ struct ProjectListFeature {
                                 ownerId,
                                 projectIdString
                             )
+                            do {
+                                try await firebaseClient.deleteChatRoom(ownerId, projectIdString)
+                                print("연관 채팅방 삭제 완료: \(projectIdString)")
+                            } catch {
+                                print("연관 채팅방 삭제 실패(계속 진행): \(error)")
+                            }
                         }
                         print("프로젝트 삭제 완료: \(projectIdString)")
                     } catch {
@@ -457,13 +463,13 @@ struct ProjectListFeature {
                                 }
                                 
                                 var results: [(Int, String)] = []
-
+                                
                                 for await (index, text) in group {
                                     if let text {
                                         results.append((index, text))
                                     }
                                 }
-
+                                
                                 return results
                                     .sorted { $0.0 < $1.0 }
                                     .map { $0.1 }
