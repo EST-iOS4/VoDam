@@ -27,13 +27,17 @@ struct PDFButtonView: View {
             ZStack {
                 // 카드 배경
                 RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.white)
-                    .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
+                    .fill(Color(.secondarySystemBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
+                    .shadow(color: Color.primary.opacity(0.5), radius: 6, x: 0, y: 4)
 
                 // 내부 UI
                 HStack(spacing: 20) {
 
-                    // 아이콘 (FileButtonView와 동일한 구조로 수정)
+                    // 아이콘
                     Image(systemName: "doc.richtext.fill")
                         .foregroundColor(.white)
                         .font(.system(size: 24))
@@ -43,7 +47,7 @@ struct PDFButtonView: View {
                                 .fill(Color.red)
                         )
                         .shadow(
-                            color: .black.opacity(0.15),
+                            color: Color.primary.opacity(0.15),
                             radius: 3,
                             x: 0,
                             y: 2
@@ -53,12 +57,12 @@ struct PDFButtonView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(viewStore.title)
                             .font(.headline)
-                            .foregroundColor(.black)
+                            .foregroundColor(.primary)
 
                         if viewStore.isProcessing {
                             Text("텍스트 추출 중...")
                                 .font(.caption)
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                         }
 
                     }
@@ -98,7 +102,6 @@ struct PDFButtonView: View {
             }
             .onChange(of: viewStore.selectedPDFURL) { _, newValue in
                 guard let url = newValue else { return }
-                // Feature의 savePDF 액션 호출
                 viewStore.send(.savePDF(url, context, ownerId))
             }
         }
