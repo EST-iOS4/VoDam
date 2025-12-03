@@ -54,6 +54,8 @@ struct FileButtonFeature {
         case loginRequiredTapped
         case alert(PresentationAction<Alert>)
         
+        case clearAlert
+        
         case delegate(Delegate)
         
         enum Delegate: Equatable {
@@ -238,6 +240,10 @@ struct FileButtonFeature {
                 } message: {
                     TextState("로그인 후 이용할 수 있습니다.")
                 }
+                return .none
+                
+            case .clearAlert:
+                state.alert = nil
                 return .none
                 
             case .alert:
