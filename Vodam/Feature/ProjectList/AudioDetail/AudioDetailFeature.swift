@@ -114,6 +114,8 @@ struct AudioDetailFeature {
         case _setupPlayerWithURL(URL)
         case _playerReady(AVPlayer, Double)
         
+        case clearAlert
+        
         enum DelegateAction {
             case needsRefresh
             case didDeleteProject
@@ -360,17 +362,15 @@ struct AudioDetailFeature {
                 state.destination = .chattingRoom(
                     ChattingRoomFeature.State(ownerId: ownerId, roomId: roomId, title: title)
                 )
-                return .run { _ in
+                return .run { [firebaseClient] _ in
                     try? await firebaseClient.createChatRoom(ownerId, roomId, title)
-                    
                 }
                 
-                state.destination = .chattingRoom(
-                    ChattingRoomFeature.State(ownerId: ownerId, roomId: roomId, title: title)
-                )
-                return .run{ _ in
-                    try? await firebaseClient.createChatRoom(ownerId, roomId, title)
+            case .clearAlert:
+                if case .alert = state.destination {
+                    state.destination = nil
                 }
+                return .none
                 
             case .searchButtonTapped:
                 state.isSearching = true

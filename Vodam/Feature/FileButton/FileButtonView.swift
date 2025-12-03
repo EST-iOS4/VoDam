@@ -44,6 +44,9 @@ struct FileButtonView: View {
         }
         // Feature 쪽 AlertState 사용
         .alert($store.scope(state: \.alert, action: \.alert))
+        .onDisappear {
+            store.send(.clearAlert)
+        }
     }
     
     // MARK: - Button Content
@@ -76,9 +79,9 @@ struct FileButtonView: View {
         .padding(.horizontal, 20)
         .onTapGesture {
             if ownerId == nil {
-                store.send(.loginRequiredTapped)   // ✅ 비로그인 → Alert
+                store.send(.loginRequiredTapped)
             } else {
-                store.send(.tapped)                // ✅ 로그인 → 기존 동작
+                store.send(.tapped)
             }
         }
         .fileImporter(
