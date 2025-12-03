@@ -123,7 +123,7 @@ struct MainFeature {
                 
             case .profileFlow(.presented(.guestButtonTapped)):
                 state.profileFlow = nil
-                state.settings = SettingsFeature.State(user: nil)
+//                state.settings = SettingsFeature.State(user: nil)
                 return .run { _ in
                     await userStorageClient.clear()
                 }
