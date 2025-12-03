@@ -80,7 +80,7 @@ struct MainFeature {
                 let defaults = UserDefaults.standard
                     let hasSeenIntro = defaults.bool(forKey: MainOnboardingKey.hasSeenProfileIntro)
 
-                    if !hasSeenIntro {
+                if !hasSeenIntro, state.profileFlow == nil {
                         state.profileFlow = ProfileFlowFeature.State()
                         defaults.set(true, forKey: MainOnboardingKey.hasSeenProfileIntro)
                     }
