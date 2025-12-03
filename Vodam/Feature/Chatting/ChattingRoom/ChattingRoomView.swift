@@ -1,74 +1,101 @@
-    //
-    //  ChattingRoomView.swift
-    //  Vodam
-    //
-    //  Created by EunYoung Wang on 11/24/25.
-    //
+//
+//  ChattingRoomView.swift
+//  Vodam
+//
+//  Created by EunYoung Wang on 11/24/25.
+//
 
 import SwiftUI
 import ComposableArchitecture
 
 struct ChattingRoomView: View {
     @Bindable var store: StoreOf<ChattingRoomFeature>
-        // @Environment(\.dismiss) var dismiss
+    // @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        VStack(spacing: 0) {
-            // MARK: - 메시지 리스트
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(store.messages, id: \.uniqueId) { message in
-                            MessageRow(message: message)
-                                .id(message.uniqueId)
-                        }
-                        if store.isAITyping{
-                            HStack{
-                                LoadingBubbleView()
-                                Spacer()
-                            }
-                            .id("ai_typing_bubble")
-                        }
-                    }
-                    .padding()
-                }
-                .onChange(of: store.messages) { _, newMessage in
-                    guard let lastId = newMessage.last?.uniqueId else { return }
-                    Task{
-                        try? await Task.sleep(for: .milliseconds(100))
-                        withAnimation {
-                            proxy.scrollTo(lastId, anchor: .bottom)
-                        }
-                    }
-                }
-                .onChange(of: store.isAITyping){_, isTyping in
-                    if isTyping {
-                        Task{
-                            try? await Task.sleep(for: .milliseconds(250))
-                            withAnimation {
-                                proxy.scrollTo("ai_typing_bubble", anchor: .bottom)
-                            }
-                        }
-                    }
-                }
-            }
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
             
-            // MARK: - 입력창
-            HStack(spacing: 12) {
-                TextField(
-                    "메시지를 입력하세요",
-                    text: $store.messageText
-                )
-                .textFieldStyle(.roundedBorder)
-                
-                Button {
-                    store.send(.sendMessage)
-                } label: {
-                    Image(systemName: "arrow.up.circle")
-                        .foregroundColor(.blue)
+            VStack(spacing: 0) {
+                // MARK: - 메시지 리스트
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(store.messages, id: \.uniqueId) { message in
+                                MessageRow(message: message)
+                                    .id(message.uniqueId)
+                            }
+                            
+                            if store.isAITyping{
+                                HStack{
+                                    LoadingBubbleView()
+                                    Spacer()
+                                }
+                                .id("ai_typing_bubble")
+                            }
+                            Color.clear
+                                .frame(height: 1)
+                                .id("bottom")
+                        }
+                        .padding()
+                    }
+                    
+                    .onChange(of: store.messages) { oldValue, newValue in
+                        guard newValue.count > oldValue.count else { return }
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo("bottom", anchor: .bottom)
+                        }
+                    }
+                    .onChange(of: store.isAITyping){ _, isTyping in
+                        guard isTyping else { return }
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo("bottom", anchor: .bottom)
+                        }
+                    }
+                    
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation {
+                                proxy.scrollTo("bottom", anchor: .bottom)
+                            }
+                        }
+                    }
                 }
+                
+                // MARK: - 입력창
+                HStack(spacing: 12) {
+                    TextField(
+                        "메시지를 입력하세요",
+                        text: $store.messageText
+                    )
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        store.send(.sendMessage)
+                    }
+                    
+                    Button {
+                        store.send(.sendMessage)
+                    } label: {
+                        Image(systemName: "arrow.up.circle")
+                            .font(.system(size: 28))
+                            .foregroundColor(
+                                store.messageText.trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                ).isEmpty
+                                ? .gray
+                                : .blue
+                            )
+                    }
+                    .disabled(
+                        store.messageText.trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        ).isEmpty
+                    )
+                }
+                .padding()
+                .background(.ultraThinMaterial)
             }
-            .padding()
         }
         .navigationTitle(store.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -77,6 +104,7 @@ struct ChattingRoomView: View {
         }
     }
 }
+
 
 // MARK: - 메시지 행
 struct MessageRow: View {
@@ -99,15 +127,14 @@ struct MessageRow: View {
                 }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-//                   Text(message.content)
                     MarkdownTextView(
                         message.content,
                         font: .body,
                         linSpacing: 4
                     )
-                        .padding(12)
-                        .background(Color.gray.opacity(0.2))
-                        .cornerRadius(16)
+                    .padding(12)
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(16)
                     Text(format(message.timestamp))
                         .font(.system(size: 14))
                         .foregroundColor(.gray)

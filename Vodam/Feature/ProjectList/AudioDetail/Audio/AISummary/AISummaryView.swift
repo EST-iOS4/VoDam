@@ -26,12 +26,18 @@ struct AISummaryView: View {
     }
     private var loadingView: some View {
         VStack(spacing: 20) {
-            ProgressView()
-                .scaleEffect(1.5)
+            ProgressView(value: store.progress)
+                .progressViewStyle(.linear)
+                .padding(.horizontal, 40)
             
-            Text("AI가 요약 중입니다...")
+            Text(store.progressMessage ?? "AI가 요약 중입니다...")
                 .font(.headline)
                 .foregroundColor(.secondary)
+            
+            Text("\(Int(store.progress * 100))%")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.blue)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -74,18 +80,6 @@ struct AISummaryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
-//    private func summaryTextView(_ summary: String) -> some View {
-//        if let attributed = try? AttributedString(markdown: summary) {
-//            Text(attributed)
-//                .font(.body)
-//                .lineSpacing(6)
-//        } else {
-//            Text(summary)
-//                .font(.body)
-//                .lineSpacing(6)
-//        }
-//    }
     
     @ViewBuilder
     private func summaryContent(_ summary: String) -> some View {

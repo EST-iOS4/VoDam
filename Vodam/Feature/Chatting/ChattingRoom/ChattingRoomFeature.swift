@@ -22,11 +22,13 @@ struct ChattingRoomFeature {
         var messages: [Message] = []
         var isAITyping: Bool = false
         
+        var ownerId: String
         var roomId:String
         var title:String
         
         // 채팅방 고유ID & API client_id
-        init (roomId: String, title: String){
+        init (ownerId: String, roomId: String, title: String){
+            self.ownerId = ownerId
             self.roomId = roomId
             self.title = title
         }
@@ -54,9 +56,11 @@ struct ChattingRoomFeature {
                 return .none
                 
             case .onAppear:
-                return .run { [roomId = state.roomId] send in
+                return .run { [ownerId = state.ownerId, roomId = state.roomId] send in
                     do {
-                        let snapshot = try await db.collection("chats")
+                        let snapshot = try await db.collection("users")
+                            .document(ownerId)
+                            .collection("chats")
                             .document(roomId)
                             .collection("messages")
                             .order(by: "timestamp", descending: false)
@@ -92,7 +96,7 @@ struct ChattingRoomFeature {
                     )
                     state.messages = [dummyMessage]
                     
-                    return .run{[roomId = state.roomId, dummyMessage] _ in
+                    return .run{[ownerId = state.ownerId, roomId = state.roomId, dummyMessage] _ in
                         let db = Firestore.firestore()
                         let messageData: [String: Any] = [
                             "content": dummyMessage.content,
@@ -100,7 +104,9 @@ struct ChattingRoomFeature {
                             "timestamp": dummyMessage.timestamp
                         ]
                         do{
-                            try await db.collection("chats")
+                            try await db.collection("users")
+                                .document(ownerId)
+                                .collection("chats")
                                 .document(roomId)
                                 .collection("messages")
                                 .addDocument(data: messageData)
@@ -116,8 +122,12 @@ struct ChattingRoomFeature {
                 }
                 
             case .sendMessage:
+                print("💬 [ChattingRoom] sendMessage tapped. current text = '\(state.messageText)'")
                 let trimmed = state.messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return .none }
+                guard !trimmed.isEmpty else {
+                    print("💬 [ChattingRoom] trimmed is empty, ignoring")
+                    return .none
+                }
                 
                 let userMessage = Message(
                     content: state.messageText,
@@ -126,47 +136,54 @@ struct ChattingRoomFeature {
                 state.messages.append(userMessage)
                 state.messageText = ""
                 
-                return .run { [roomId = state.roomId, userMessage] send in
+                state.isAITyping = true
+                
+                return .run { [ownerId = state.ownerId, roomId = state.roomId, title = state.title, userMessage] send in
                     // 유저 메세지 저장
                     let db = Firestore.firestore()
                     
-                    do {
-                        let messageData : [String: Any] = [
-                            "content" : userMessage.content,
-                            "isFromUser": true,
-                            "timestamp": userMessage.timestamp
-                        ]
-                        
-                        
-                        _ = try await db.collection("chats")
-                            .document(roomId)
-                            .collection("messages")
-                            .addDocument(data: messageData)
-                        
-                        let base = userMessage.content
-                            .replacingOccurrences(of: "\n", with: " ")
-                            .trimmingCharacters(in: .whitespacesAndNewlines)
-                        
-                        let short: String
-                        if base.count > 25 {
-                            short = String(base.prefix(25)) + "..."
-                        } else {
-                            short = base
+                    Task {
+                        do {
+                            let messageData : [String: Any] = [
+                                "content" : userMessage.content,
+                                "isFromUser": true,
+                                "timestamp": userMessage.timestamp
+                            ]
+                            
+                            
+                            _ = try await db.collection("users")
+                                .document(ownerId)
+                                .collection("chats")
+                                .document(roomId)
+                                .collection("messages")
+                                .addDocument(data: messageData)
+                            
+                            let base = userMessage.content
+                                .replacingOccurrences(of: "\n", with: " ")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                            
+                            let short: String
+                            if base.count > 25 {
+                                short = String(base.prefix(25)) + "..."
+                            } else {
+                                short = base
+                            }
+                            
+                            try await db.collection("users")
+                                .document(ownerId)
+                                .collection("chatRooms")
+                                .document(roomId)
+                                .updateData([
+                                    "title": title,
+                                    "content": short,
+                                    "recentEditedDate": FieldValue.serverTimestamp()
+                                ])
+                            
+                        } catch {
+                            logger.error("유저메세지 저장 실패")
                         }
-                        
-                        try await db.collection("chatRooms")
-                            .document(roomId)
-                            .updateData([
-                                "content": short,
-                                "recentEditedDate": FieldValue.serverTimestamp()
-                            ])
-                        
-                    } catch {
-                        logger.error("유저메세지 저장 실패")
                     }
                     
-                    await send(.setAITyping(true))
-                    // API
                     do {
                         let question = AlanClient.Question(userMessage.content)
                         let answer = try await AlanClient.shared.question(question)
@@ -186,7 +203,7 @@ struct ChattingRoomFeature {
                 )
                 state.messages.append(aIMessage)
                 // AI 메세지 저장
-                return .run{ [roomId = state.roomId, aIMessage] _ in
+                return .run{ [ownerId = state.ownerId, roomId = state.roomId, title = state.title, aIMessage] _ in
                     let db = Firestore.firestore()
                     
                     let messageData: [String: Any] = [
@@ -196,8 +213,9 @@ struct ChattingRoomFeature {
                     ]
                     
                     do {
-                        _ = try? await db.collection("chats")
-                        
+                        _ = try? await db.collection("users")
+                            .document(ownerId)
+                            .collection("chats")
                             .document(roomId)
                             .collection("messages")
                             .addDocument(data: messageData)
@@ -213,12 +231,17 @@ struct ChattingRoomFeature {
                             short = base
                         }
                         
-                        try await db.collection("chatRooms")
+                        try await db.collection("users")
+                            .document(ownerId)
+                            .collection("chatRooms")
                             .document(roomId)
                             .updateData([
+                                "title": title,
                                 "content": short,
                                 "recentEditedDate": FieldValue.serverTimestamp()
                             ])
+                    } catch {
+                        logger.error("AI 메세지 저장 실패: \(error.localizedDescription)")
                     }
                 }
                 
