@@ -17,30 +17,47 @@ struct ChattingListView: View {
                 Color(.systemBackground)
                     .ignoresSafeArea()
                 
-                List(store.chattingList) { chattingInfo in
-                    Button {
-                        store.send(.chattingTapped(chattingInfo))
-                    } label: {
-                        ChattingItemView(chattingInfo: chattingInfo)
-                            .listRowSeparator(.hidden)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.secondary.opacity(0.6), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, 10)
-                .onAppear {
-                    print("뷰 호출됨!")
-                    store.send(.onAppear)
+                if store.chattingList.isEmpty {
+                    emptyView
+                } else {
+                    ChattingListView
                 }
             }
+            .onAppear {
+                print("뷰 호출됨!")
+                store.send(.onAppear)
+            }
+            
         } destination: { store in
             ChattingRoomView(store: store)
-            
         }
     }
+    
+    private var ChattingListView: some View {
+        List(store.chattingList) { chattingInfo in
+            Button {
+                store.send(.chattingTapped(chattingInfo))
+            } label: {
+                ChattingItemView(chattingInfo: chattingInfo)
+                    .listRowSeparator(.hidden)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.secondary.opacity(0.6), lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .padding(.horizontal, 10)
+    }
+    
+    private var emptyView: some View {
+        VStack(spacing: 16) {
+            Text("저장된 채팅이 없습니다.")
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
+
