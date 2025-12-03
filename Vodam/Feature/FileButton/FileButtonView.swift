@@ -17,7 +17,7 @@ struct FileButtonView: View {
         self.store = store
         self.ownerId = ownerId
     }
-
+    
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
             VStack(spacing: 16) {
@@ -29,21 +29,17 @@ struct FileButtonView: View {
                         .padding(.horizontal, 20)
                 }
             }
-            // STT 완료 후 저장 처리
             .onChange(of: viewStore.isTranscribing) { wasTranscribing, isTranscribing in
-                // STT가 완료되었고 (false), 선택된 파일이 있고, 에러가 없을 때
                 if !isTranscribing && wasTranscribing,
                    let url = viewStore.selectedFileURL,
                    viewStore.errorMessage == nil {
                     let transcript = viewStore.transcript.isEmpty ? nil : viewStore.transcript
-                    // Feature의 saveFile 액션 호출
                     viewStore.send(.saveFile(url, transcript, context, ownerId))
                 }
             }
         }
     }
     
-    // MARK: - Button Content
     @ViewBuilder
     private func buttonContent(_ viewStore: ViewStoreOf<FileButtonFeature>) -> some View {
         ZStack {
@@ -55,7 +51,7 @@ struct FileButtonView: View {
                     x: 0,
                     y: 4
                 )
-
+            
             HStack(spacing: 20) {
                 iconView
                 
@@ -121,9 +117,14 @@ struct FileButtonView: View {
                 .foregroundColor(.black)
             
             if viewStore.isTranscribing {
-                Text("변환 중...")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                HStack(spacing: 8) {
+                    ProgressView(value: viewStore.progress)
+                        .frame(width: 100)
+                    
+                    Text("\(Int(viewStore.progress * 100))%")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
             }
         }
     }
