@@ -99,9 +99,19 @@ struct ChattingRoomView: View {
         }
         .navigationTitle(store.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar{
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    store.send(.deleteButtonTapped)
+                } label: {
+                    Image(systemName: "door.right.hand.open")
+                }
+            }
+        }
         .onAppear {
             store.send(.onAppear)
         }
+        .alert($store.scope(state: \.alert, action: \.alert))
     }
 }
 

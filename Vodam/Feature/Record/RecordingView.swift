@@ -13,6 +13,8 @@ struct RecordingView: View {
     
     let ownerId: String?
     
+    @State private var isGuestLimitAlertPresented = false
+    
     init(
         store: StoreOf<RecordingFeature>,
         ownerId: String?
@@ -24,26 +26,30 @@ struct RecordingView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: Color.primary.opacity(0.5), radius: 6, x: 0, y: 4)
             
             VStack(spacing: 24) {
                 
                 controls(
                     status: store.status,
-                    onStart: { store.send(.startTapped) },
+                    onStart: { handleStartTapped() },
                     onPause: { store.send(.pauseTapped) },
                     onStop: { store.send(.stopTapped) }
                 )
                 
                 Text(store.status.localizedText)
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                 
                 Text(formatTime(store.elapsedSeconds))
                     .font(.system(size: 32, weight: .medium))
                     .monospacedDigit()
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
             }
             .padding(.vertical, 40)
         }
@@ -54,6 +60,14 @@ struct RecordingView: View {
             if let url = newValue, store.status == .finishing {
                 store.send(.saveRecording(url, store.lastRecordedLength, ownerId, modelContext))
             }
+        }
+        .alert(
+            "게스트는 녹음을 최대 3개까지 저장할 수 있습니다.",
+            isPresented: $isGuestLimitAlertPresented
+        ) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text("기존 녹음을 삭제하거나 로그인 후 이용해주세요.")
         }
     }
     
@@ -69,18 +83,18 @@ struct RecordingView: View {
         case .ready:
             Button(action: onStart) {
                 Image(systemName: "mic.fill")
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(.systemBackground))
                     .frame(width: 56, height: 56)
-                    .background(Circle().fill(Color.black))
+                    .background(Circle().fill(Color.primary))
             }
             
         case .recording:
             HStack(spacing: 32) {
                 Button(action: onPause) {
                     Image(systemName: "pause.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(.systemBackground))
                         .frame(width: 56, height: 56)
-                        .background(Circle().fill(Color.black))
+                        .background(Circle().fill(Color.primary))
                 }
                 Button(action: onStop) {
                     Image(systemName: "stop.fill")
@@ -94,9 +108,9 @@ struct RecordingView: View {
             HStack(spacing: 32) {
                 Button(action: onStart) {
                     Image(systemName: "play.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(.systemBackground))
                         .frame(width: 56, height: 56)
-                        .background(Circle().fill(Color.black))
+                        .background(Circle().fill(Color.primary))
                 }
                 Button(action: onStop) {
                     Image(systemName: "stop.fill")
@@ -108,7 +122,7 @@ struct RecordingView: View {
             
         case .finishing:
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .black))
+                .progressViewStyle(CircularProgressViewStyle(tint: .primary))
                 .frame(width: 56, height: 56)
         }
     }
@@ -119,5 +133,29 @@ struct RecordingView: View {
         let m = (seconds % 3600) / 60
         let s = seconds % 60
         return String(format: "%02d:%02d:%02d", h, m, s)
+    }
+    
+    private func handleStartTapped() {
+        if ownerId != nil {
+            store.send(.startTapped)
+            return
+        }
+
+        do {
+            let descriptor = FetchDescriptor<ProjectModel>()
+            let allProjects = try modelContext.fetch(descriptor)
+
+            let guestAudioProjects = allProjects.filter { project in
+                project.ownerId == nil && project.category == .audio
+            }
+
+            if guestAudioProjects.count >= 3 {
+                isGuestLimitAlertPresented = true
+                return
+            }
+        } catch {
+            print("[RecordingView] SwiftData fetch 실패: \(error)")
+        }
+        store.send(.startTapped)
     }
 }

@@ -17,6 +17,8 @@ struct MainView: View {
     @Dependency(\.firebaseClient) private var firebaseClient
     @Dependency(\.fileCloudClient) private var fileCloudClient
     
+    @State private var isProfileFlowPresented = false
+    
     init(store: StoreOf<MainFeature>) {
         self.store = store
     }
@@ -37,13 +39,12 @@ struct MainView: View {
             ) { loginProvidersStore in
                 LoginProvidersView(store: loginProvidersStore)
             }
-            .sheet(
-                store: store.scope(
-                    state: \.$profileFlow,
-                    action: \.profileFlow
-                )
-            ) { profileStore in
-                profileSheetContent(profileStore)
+            .sheet(isPresented: $isProfileFlowPresented) {
+                if let profileStore = store.scope(state: \.profileFlow, action: \.profileFlow.presented) {
+                    ProfileFlowView(store: profileStore)
+                        .presentationDetents([.fraction(0.4)])
+                        .presentationDragIndicator(.visible)
+                }
             }
             .navigationDestination(
                 store: store.scope(
@@ -56,12 +57,15 @@ struct MainView: View {
             .onAppear {
                 store.send(.onAppear)
             }
+            .onChange(of: store.profileFlow) { _, newValue in
+                isProfileFlowPresented = (newValue != nil)
+            }
     }
     
     // MARK: - Content View
     @ViewBuilder
     private var contentView: some View {
-        VStack {
+        VStack(spacing: 16) {
             RecordingView(
                 store: store.scope(
                     state: \.recording,
@@ -88,6 +92,7 @@ struct MainView: View {
             
             Spacer()
         }
+        .padding(.top, 16)
     }
     
     // MARK: - Profile Button
@@ -110,15 +115,5 @@ struct MainView: View {
                     .foregroundColor(.gray)
             }
         }
-    }
-    
-    // MARK: - Profile Sheet Content
-    @ViewBuilder
-    private func profileSheetContent(
-        _ profileStore: StoreOf<ProfileFlowFeature>
-    ) -> some View {
-        ProfileFlowView(store: profileStore)
-            .presentationDetents([.fraction(0.4)])
-            .presentationDragIndicator(.visible)
     }
 }
