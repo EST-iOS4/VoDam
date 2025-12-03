@@ -14,16 +14,21 @@ struct ChattingItemView: View {
         VStack(alignment: .leading, spacing: 15) {
             HStack {
                 Text(chattingInfo.title)
-                    .font(.system(size: 12, weight: .medium))
-                Spacer()
-                Text(chattingInfo.recentEditedDate.formatted())
-                    .font(.system(size: 12, weight: .medium))
+                    .font(AppFont.pretendardBold(size: 18))
             }
-            Text(chattingInfo.content)
-                .font(.system(size: 12, weight: .medium))
-            Spacer()
+            HStack{
+                Text(chattingInfo.content)
+                    .font(AppFont.pretendardRegular(size: 15))
+            }
+            HStack{
+                Spacer()
+                VStack{
+                    Text(chattingInfo.formattedDate)
+                        .font(AppFont.pretendardSemiBold(size: 13))
+                }
+            }
         }
         .frame(height: 77)
-        .padding(.init(top: 8, leading: 9, bottom: 8, trailing: 9))
+        .padding(.init(top: 15, leading: 9, bottom: 8, trailing: 9))
     }
 }

@@ -15,6 +15,11 @@ struct ProjectListFeature {
     @Dependency(\.firebaseClient) var firebaseClient
     @Dependency(\.fileCloudClient) var fileCloudClient
     
+    struct AISummaryProgressState: Equatable {
+        var progress: Double
+        var message: String?
+    }
+    
     @ObservableState
     struct State: Equatable {
         var projects: IdentifiedArrayOf<Project> = []
@@ -29,6 +34,7 @@ struct ProjectListFeature {
         
         var currentUser: User? = nil
         
+        var aiSummaryProgress: [String: AISummaryProgressState] = [:]
         @Presents var destination: Destination.State?
         
         var projectState: IdentifiedArrayOf<Project> {
@@ -77,10 +83,20 @@ struct ProjectListFeature {
         case destination(PresentationAction<Destination.Action>)
         
         case userChanged(User?)
+        
+        case aiSummaryRequested(
+            ProjectId: String,
+            transcript: String,
+            ownerId: String?,
+            context: ModelContext
+        )
+        case aiSummaryResponse(projectId: String, summary: String)
+        case aiSummaryFailed(projectId: String)
+        case aiSummaryProgressUpdated(projectId: String, progress: Double, message: String?)
     }
     
     nonisolated enum ProjectListCancelID{ case loadProjects }
-
+    
     var body: some Reducer<State, Action> {
         BindingReducer()
         
@@ -194,13 +210,26 @@ struct ProjectListFeature {
                     return .none
                 }
                 
-                state.destination = .audioDetail(
-                    AudioDetailFeature.State(
-                        project: project,
-                        currentUser: state.currentUser
-                    )
+                let projectIdString = project.id.uuidString
+                let hasSummary = !(project.summary ?? "").isEmpty
+                let hasInProgress = state.aiSummaryProgress[projectIdString] != nil
+                
+                let initialTab: AudioDetailFeature.Tab =
+                (hasSummary || hasInProgress) ? .aiSummary : .script
+                
+                var detailState = AudioDetailFeature.State(
+                    project: project,
+                    currentUser: state.currentUser,
+                    selectedTab: initialTab
                 )
                 
+                if let progressInfo = state.aiSummaryProgress[projectIdString] {
+                    detailState.aiSummary.isLoading = true
+                    detailState.aiSummary.progress = progressInfo.progress
+                    detailState.aiSummary.progressMessage = progressInfo.message
+                }
+                
+                state.destination = .audioDetail(detailState)
                 return .none
                 
             case .favoriteButtonTapped(id: let projectId, let context):
@@ -312,6 +341,13 @@ struct ProjectListFeature {
                 state.projects = IdentifiedArrayOf(uniqueElements: projects)
                 return .none
                 
+            case let .aiSummaryProgressUpdated(projectId, progress, message):
+                state.aiSummaryProgress[projectId] = AISummaryProgressState(
+                    progress: progress,
+                    message: message
+                )
+                return .none
+                
             case ._projectsResponse(.failure(let error)):
                 state.isLoading = false
                 state.refreshTrigger = nil
@@ -320,6 +356,7 @@ struct ProjectListFeature {
                 
             case .userChanged(let user):
                 state.currentUser = user
+                state.destination = nil
                 return .send(.refreshProjects)
                 
             case .destination(.presented(.audioDetail(.delegate(.didDeleteProject)))):
@@ -328,8 +365,321 @@ struct ProjectListFeature {
                 
             case .destination(.presented(.audioDetail(.delegate(.needsRefresh)))):
                 return .send(.refreshProjects)
-            
-            // ✅ 모든 audioDetail 액션은 그냥 통과
+                
+            case let .destination(.presented(.audioDetail(.aiSummary(.summarizeButtonTapped(context))))):
+                guard let destination = state.destination,
+                      case let .audioDetail(detailState) = destination
+                else { return .none }
+                
+                let transcript = detailState.aiSummary.transcript
+                let projectId = detailState.aiSummary.projectId
+                let ownerId = detailState.aiSummary.ownerId
+                
+                return .send(
+                    .aiSummaryRequested(ProjectId: projectId, transcript: transcript, ownerId: ownerId, context: context)
+                )
+                
+            case let .aiSummaryRequested(projectId, transcript, ownerId, context):
+                return .run { [projectLocalDataClient, firebaseClient, context, ownerId] send in
+                    do {
+                        func updateProgress(_ value: Double, _ message: String) async {
+                            await send(
+                                .destination(
+                                    .presented(
+                                        .audioDetail(
+                                            .aiSummary(.updateProgress(value, message))
+                                        )
+                                    )
+                                )
+                            )
+                            
+                            await send(
+                                .aiSummaryProgressUpdated(
+                                    projectId: projectId,
+                                    progress: value,
+                                    message: message
+                                )
+                            )
+                        }
+                        
+                        let chunks = await splitTranscript(transcript, maxChunkLength: 8000)
+                        
+                        guard !chunks.isEmpty else {
+                            print("[AISummary] 요약할 텍스트가 없습니다.")
+                            await send(.aiSummaryFailed(projectId: projectId))
+                            return
+                        }
+                        
+                        print("[AISummary] 1단계: \(chunks.count)개 청크로 분할")
+                        
+                        await updateProgress(0.05, "1단계 요약 시작...")
+                        
+                        var partialSummaries: [String] = []
+                        let batchSize = 3
+                        let totalBatches = (chunks.count + batchSize - 1) / batchSize
+                        
+                        for batchIndex in 0..<totalBatches {
+                            let startIdx = batchIndex * batchSize
+                            let endIdx = min(startIdx + batchSize, chunks.count)
+                            let batchChunks = Array(chunks[startIdx..<endIdx])
+                            
+                            let batchSummaries = try await withThrowingTaskGroup(of: (Int, String).self) { group in
+                                for (localIndex, chunk) in batchChunks.enumerated() {
+                                    let globalIndex = startIdx + localIndex
+                                    
+                                    group.addTask {
+                                        let q = AlanClient.Question(
+                                                """
+                                                다음을 1-2문장으로 핵심만 요약:
+                                                
+                                                \(chunk)
+                                                """
+                                        )
+                                        
+                                        var lastError: Error?
+                                        for attempt in 1...2 {
+                                            do {
+                                                let answer = try await AlanClient.shared.question(q)
+                                                print("[AISummary] 청크 \(globalIndex + 1) 완료")
+                                                return (globalIndex, answer.content)
+                                            } catch {
+                                                lastError = error
+                                                print("[AISummary] 청크 \(globalIndex + 1) 실패 (시도 \(attempt)/2)")
+                                                if attempt < 2 {
+                                                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                                                }
+                                            }
+                                        }
+                                        throw lastError ?? AlanClient.Error.networkError(NSError(domain: "Unknown", code: -1))
+                                    }
+                                }
+                                
+                                var results: [(Int, String)] = []
+                                for try await result in group {
+                                    results.append(result)
+                                }
+                                return results.sorted(by: { $0.0 < $1.0 }).map { $0.1 }
+                            }
+                            
+                            partialSummaries.append(contentsOf: batchSummaries)
+                            
+                            let progress = 0.05 + (Double(endIdx) / Double(chunks.count)) * 0.4
+                            await updateProgress(
+                                progress,
+                                "1단계... \(endIdx)/\(chunks.count)"
+                            )
+                            
+                            if batchIndex < totalBatches - 1 {
+                                try? await Task.sleep(nanoseconds: 500_000_000)
+                            }
+                        }
+                        
+                        print("[AISummary] 1단계 완료: \(partialSummaries.count)개 요약")
+                        
+                        let summaryGroups = stride(from: 0, to: partialSummaries.count, by: 5).map {
+                            Array(partialSummaries[$0..<min($0 + 5, partialSummaries.count)])
+                        }
+                        
+                        print("[AISummary] 2단계: \(summaryGroups.count)개 그룹으로 중간 요약")
+                        
+                        await updateProgress(0.5, "2단계 통합 중...")
+                        
+                        var intermediateSummaries: [String] = []
+                        for (groupIndex, group) in summaryGroups.enumerated() {
+                            let combinedGroup = group.joined(separator: " ")
+                            
+                            let maxGroupLength = 1000
+                            let limitedGroup: String
+                            if combinedGroup.count > maxGroupLength {
+                                let endIdx = combinedGroup.index(combinedGroup.startIndex, offsetBy: maxGroupLength)
+                                limitedGroup = String(combinedGroup[..<endIdx])
+                            } else {
+                                limitedGroup = combinedGroup
+                            }
+                            
+                            let q = AlanClient.Question(
+                                    """
+                                    다음 요약들을 2-3문장으로 통합:
+                                    
+                                    \(combinedGroup)
+                                    """
+                            )
+                            
+                            var lastError: Error?
+                            for attempt in 1...2 {
+                                do {
+                                    let answer = try await AlanClient.shared.question(q)
+                                    intermediateSummaries.append(answer.content)
+                                    print("[AISummary] 2단계 그룹 \(groupIndex + 1) 완료")
+                                    break
+                                } catch {
+                                    lastError = error
+                                    print("[AISummary] 2단계 그룹 \(groupIndex + 1) 실패 (시도 \(attempt)/2)")
+                                    if attempt < 2 {
+                                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                                    }
+                                }
+                            }
+                            
+                            if intermediateSummaries.count <= groupIndex {
+                                throw lastError ?? AlanClient.Error.networkError(NSError(domain: "IntermediateFailed", code: -1))
+                            }
+                            
+                            let progress = 0.5 + (Double(groupIndex + 1) / Double(summaryGroups.count)) * 0.3
+                            await updateProgress(
+                                progress,
+                                "2단계... \(groupIndex + 1)/\(summaryGroups.count)"
+                            )
+                            
+                            try? await Task.sleep(nanoseconds: 500_000_000)
+                        }
+                        
+                        print("[AISummary] 2단계 완료: \(intermediateSummaries.count)개 중간 요약")
+                        
+                        await updateProgress(0.85, "최종 요약 생성 중...")
+                        
+                        let finalInput = intermediateSummaries.joined(separator: " ")
+                        
+                        let maxFinalLength = 1000
+                        let truncatedInput: String
+                        if finalInput.count > maxFinalLength {
+                            let endIndex = finalInput.index(finalInput.startIndex, offsetBy: maxFinalLength)
+                            truncatedInput = String(finalInput[..<endIndex])
+                        } else {
+                            truncatedInput = finalInput
+                        }
+                        
+                        print("[AISummary] 최종 요약 입력 크기: \(truncatedInput.count) 문자")
+                        
+                        let finalQuestion = AlanClient.Question(
+                                """
+                                다음을 3줄로 핵심 정리:
+                                
+                                \(truncatedInput)
+                                """
+                        )
+                        
+                        var finalSummary: String?
+                        var lastError: Error?
+                        
+                        for attempt in 1...3 {
+                            do {
+                                let finalAnswer = try await AlanClient.shared.question(finalQuestion)
+                                finalSummary = finalAnswer.content
+                                print("[AISummary] 최종 요약 완료")
+                                break
+                            } catch {
+                                lastError = error
+                                print("[AISummary] 최종 요약 실패 (시도 \(attempt)/3): \(error)")
+                                if attempt < 3 {
+                                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                                }
+                            }
+                        }
+                        
+                        guard let summary = finalSummary else {
+                            throw lastError ?? AlanClient.Error.networkError(NSError(domain: "FinalSummaryFailed", code: -1))
+                        }
+                        
+                        await updateProgress(0.95, "저장 중...")
+                        await send(.aiSummaryResponse(projectId: projectId, summary: summary))
+                        
+                        // Firebase 저장
+                        if let ownerId {
+                            let allProjects = try await projectLocalDataClient.fetchAll(context, ownerId)
+                            guard let existingProject = allProjects.first(where: { $0.id == projectId }) else {
+                                print("[AISummary] 프로젝트를 찾을 수 없음: \(projectId)")
+                                return
+                            }
+                            
+                            let roomId = existingProject.id
+                            let title = existingProject.name
+                            
+                            let updatedProject = ProjectPayload(
+                                id: existingProject.id,
+                                name: existingProject.name,
+                                creationDate: existingProject.creationDate,
+                                category: existingProject.category,
+                                isFavorite: existingProject.isFavorite,
+                                filePath: existingProject.filePath,
+                                fileLength: existingProject.fileLength,
+                                transcript: existingProject.transcript,
+                                summary: summary,
+                                ownerId: existingProject.ownerId,
+                                syncStatus: existingProject.syncStatus,
+                                remoteAudioPath: existingProject.remoteAudioPath
+                            )
+                            
+                            try await firebaseClient.updateProject(ownerId, updatedProject)
+                            try await projectLocalDataClient.update(context, projectId, nil, nil, nil, nil, summary)
+                            
+                            // 채팅방 프리뷰 업데이트
+                            let base = summary
+                                .replacingOccurrences(of: "\n", with: "")
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                            let short = base.count > 25 ? String(base.prefix(25)) : base
+                            let preview = short + "의 방"
+                            
+                            try await firebaseClient.updateChatRoomPreview(
+                                ownerId,
+                                roomId,
+                                title,
+                                preview
+                            )
+                            
+                            print("[AISummary] Firebase 저장 완료")
+                        }
+                        
+                        await updateProgress(1.0, "완료!")
+                        
+                    } catch {
+                        await send(
+                            .aiSummaryProgressUpdated(
+                                projectId: projectId,
+                                progress: 0,
+                                message: "요약 실패"
+                            )
+                        )
+                        print("[AISummary] AI 요약 실패: \(error)")
+                        await send(.aiSummaryFailed(projectId: projectId))
+                    }
+                }
+                
+            case let .aiSummaryResponse(projectId, summary):
+                
+                state.aiSummaryProgress[projectId] = nil
+                
+                if var destination = state.destination,
+                   case var .audioDetail(detail) = destination,
+                   detail.aiSummary.projectId == projectId {
+                    detail.aiSummary.summary = summary
+                    detail.aiSummary.isLoading = false
+                    
+                    destination = .audioDetail(detail)
+                    state.destination = destination
+                }
+                
+                if let index = state.projects.firstIndex(where: { $0.id.uuidString == projectId}) {
+                    state.projects[index].summary = summary
+                }
+                return .none
+                
+            case let .aiSummaryFailed(projectId):
+                
+                state.aiSummaryProgress[projectId] = nil
+                
+                if var destination = state.destination,
+                   case var .audioDetail(detail) = destination,
+                   detail.aiSummary.projectId == projectId {
+                    
+                    detail.aiSummary.isLoading = false
+                    detail.aiSummary.summary = "요약 생성에 실패했습니다."
+                    
+                    destination = .audioDetail(detail)
+                    state.destination = destination
+                }
+                return .none
+                
             case .destination(.presented(.audioDetail)):
                 return .none
                 
@@ -416,4 +766,27 @@ extension ProjectListFeature {
             print("[ProjectList] ⚠️ Storage 고아 파일 정리 실패: \(error)")
         }
     }
+}
+
+fileprivate func splitTranscript(_ text: String, maxChunkLength: Int ) -> [String] {
+    guard !text.isEmpty else {
+        return []
+    }
+    
+    var result: [String] = []
+    var startIndex = text.startIndex
+    
+    while startIndex < text.endIndex {
+        let endIndex = text.index(
+            startIndex,
+            offsetBy: maxChunkLength,
+            limitedBy: text.endIndex
+        ) ?? text.endIndex
+        
+        let chunk = String(text[startIndex..<endIndex])
+        result.append(chunk)
+        startIndex = endIndex
+    }
+    
+    return result
 }
