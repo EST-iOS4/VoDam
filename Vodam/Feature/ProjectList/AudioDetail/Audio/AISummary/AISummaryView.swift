@@ -15,7 +15,7 @@ struct AISummaryView: View {
     
     var body: some View {
         Group {
-            if store.isLoading {
+            if store.isLoading && (store.summary == nil || store.progress < 1.0) {
                 loadingView
             } else if let summary = store.summary {
                 summaryContent(summary)
