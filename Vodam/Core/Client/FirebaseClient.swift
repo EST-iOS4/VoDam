@@ -431,7 +431,7 @@ extension ProjectPayload {
             summary: summary,
             ownerId: data["ownerId"] as? String,
             syncStatus: syncStatus,
-            remoteAudioPath: remoteAudioPath  // ✅ 읽기 추가
+            remoteAudioPath: remoteAudioPath 
         )
     }
 }
