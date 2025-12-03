@@ -10,31 +10,37 @@ import SwiftUI
 
 struct ChattingListView: View {
     @Bindable var store: StoreOf<ChattingListFeature>
-
+    
     var body: some View {
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
-            List(store.chattingList) { chattingInfo in
-                Button {
-                    store.send(.chattingTapped(chattingInfo))
-                } label: {
-                    ChattingItemView(chattingInfo: chattingInfo)
-                        .listRowSeparator(.hidden)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.black, lineWidth: 1)
-                        )
+            ZStack {
+                Color(.systemBackground)
+                    .ignoresSafeArea()
+                
+                List(store.chattingList) { chattingInfo in
+                    Button {
+                        store.send(.chattingTapped(chattingInfo))
+                    } label: {
+                        ChattingItemView(chattingInfo: chattingInfo)
+                            .listRowSeparator(.hidden)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.black, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
-            .listStyle(.plain)
-            .background(Color.white)
-            .padding(.horizontal, 10)
-            .onAppear {
-                print("뷰 호출됨!")
-                store.send(.onAppear)
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .padding(.horizontal, 10)
+                .onAppear {
+                    print("뷰 호출됨!")
+                    store.send(.onAppear)
+                }
             }
         } destination: { store in
             ChattingRoomView(store: store)
+            
         }
     }
 }
