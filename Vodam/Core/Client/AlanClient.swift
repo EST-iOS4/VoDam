@@ -46,7 +46,7 @@ struct AlanClient: AlanLLMInterface {
             throw AlanClient.Error.invalidURL
         }
         
-        logger.info("API 요청: \(url.absoluteString, privacy: .public)")
+//        logger.info("API 요청: \(url.absoluteString, privacy: .public)")
         
         do {
             let (data, response) = try await urlSession.data(from: url)

@@ -8,6 +8,7 @@
 import ComposableArchitecture
 import Foundation
 import OSLog
+import SwiftUI
 
 private let chattingLogger = Logger(subsystem: "Vodam", category: "ChattingList")
 
@@ -21,12 +22,15 @@ struct ChattingListFeature {
         var path = StackState<ChattingRoomFeature.State>()
         
         var currentUser: User? = nil
+        
+        
     }
     
     enum Action {
         case chattingTapped(ChattingInfo)
         case onAppear
         case updateList([ChattingInfo])
+        case delete(IndexSet)
         case path(StackAction<ChattingRoomFeature.State, ChattingRoomFeature.Action>)
     }
     
@@ -66,6 +70,47 @@ struct ChattingListFeature {
                 
             case .updateList(let info):
                 state.chattingList = info
+                if let top = state.path.last {
+                    let roomId = top.roomId
+                    
+                    let stillExists = info.contains { chattingInfo in
+                        chattingInfo.id == roomId
+                    }
+                    
+                    if !stillExists {
+                        state.path = .init()
+                    }
+                }
+                return .none
+                
+            case .delete(let indexSet):
+                guard let ownerId = state.currentUser?.ownerId else {
+                    chattingLogger.error("로그인 유저 없음 (삭제 불가)")
+                    return .none
+                }
+                
+                let targets = indexSet.compactMap { index -> ChattingInfo? in
+                    guard state.chattingList.indices.contains(index) else {
+                        return nil
+                    }
+                    return state.chattingList[index]
+                }
+                
+                state.chattingList.remove(atOffsets: indexSet)
+                
+                return .run { [firebaseClient] _ in
+                    for info in targets {
+                        do {
+                            try await firebaseClient.deleteChatRoom(ownerId, info.id)
+                            await chattingLogger.debug("채팅방 삭제 완료: \(info.id)")
+                        } catch {
+                            await chattingLogger.debug("채팅방 삭제 실패 : \(error.localizedDescription)")
+                        }
+                    }
+                }
+                
+            case .path(.element(id: _, action: .delegate(.didDeleteRoom))):
+                state.path = .init()
                 return .none
                 
             case .path:
