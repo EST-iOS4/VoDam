@@ -72,8 +72,28 @@ struct AppFeature {
                 return .none
                 
             case .startTab(let tab):
-                state.startTab = tab
-                return .none
+                let previous = state.startTab
+                    state.startTab = tab
+
+                    if tab == .chat {
+                        if case .some(.audioDetail(var audioState)) = state.list.destination {
+                            audioState.destination = nil
+                            state.list.destination = .audioDetail(audioState)
+                        }
+                    }
+
+                    if tab == .list {
+                        state.chat.path = .init()
+                    }
+
+                    if tab == .main {
+                        state.chat.path = .init()
+                        if case .some(.audioDetail(var audioState)) = state.list.destination {
+                            audioState.destination = nil
+                            state.list.destination = .audioDetail(audioState)
+                        }
+                    }
+                    return .none
                 
             case .main(.userLoaded(let user)):
                 state.user = user

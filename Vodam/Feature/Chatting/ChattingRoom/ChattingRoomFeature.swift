@@ -12,8 +12,9 @@ import OSLog
 
 @Reducer
 struct ChattingRoomFeature {
+    @Dependency(\.firebaseClient) var firebaseClient
     
-    nonisolated private let logger = Logger(subsystem: "ChattingRoomFeature", category: "Domain")
+    private let logger = Logger(subsystem: "ChattingRoomFeature", category: "Domain")
     
     // MARK: - State
     @ObservableState
@@ -25,6 +26,8 @@ struct ChattingRoomFeature {
         var ownerId: String
         var roomId:String
         var title:String
+        
+        @Presents var alert: AlertState<Action.Alert>?
         
         // 채팅방 고유ID & API client_id
         init (ownerId: String, roomId: String, title: String){
@@ -42,6 +45,20 @@ struct ChattingRoomFeature {
         case loadMessages([Message])
         case aIResponse(String)
         case setAITyping(Bool)
+        
+        case deleteButtonTapped
+        
+        case alert(PresentationAction<Alert>)
+        case delegate(DelegateAction)
+        
+        enum Alert: Equatable {
+            case confirmExit
+        }
+        
+        enum DelegateAction: Equatable {
+            case didDeleteRoom
+        }
+        
     }
     
     let db = Firestore.firestore()
@@ -58,6 +75,7 @@ struct ChattingRoomFeature {
             case .onAppear:
                 return .run { [ownerId = state.ownerId, roomId = state.roomId] send in
                     do {
+                        let db = Firestore.firestore()
                         let snapshot = try await db.collection("users")
                             .document(ownerId)
                             .collection("chats")
@@ -65,22 +83,43 @@ struct ChattingRoomFeature {
                             .collection("messages")
                             .order(by: "timestamp", descending: false)
                             .getDocuments()
-                        
+
                         logger.debug("📦 총 문서 개수: \(snapshot.documents.count)")
-                        
-                        let messages = snapshot.documents.compactMap { doc -> Message? in
-                            
-                            do {
-                                var message = try doc.data(as: Message.self)
-                                message.id = doc.documentID
-                                return message
-                            } catch {
+
+                        let messages: [Message] = snapshot.documents.compactMap { doc in
+                            let data = doc.data()
+
+                            guard let content = data["content"] as? String else {
                                 return nil
                             }
+
+                            let isFromUser: Bool
+                            if let boolValue = data["isFromUser"] as? Bool {
+                                isFromUser = boolValue
+                            } else if let intValue = data["isFromUser"] as? Int {
+                                isFromUser = intValue != 0
+                            } else {
+                                isFromUser = false
+                            }
+
+                            let timestamp: Date
+                            if let ts = data["timestamp"] as? Timestamp {
+                                timestamp = ts.dateValue()
+                            } else if let date = data["timestamp"] as? Date {
+                                timestamp = date
+                            } else {
+                                timestamp = Date()
+                            }
+
+                            return Message(
+                                id: doc.documentID,
+                                content: content,
+                                isFromUser: isFromUser,
+                                timestamp: timestamp
+                            )
                         }
-                        
+
                         await send(.loadMessages(messages))
-                        
                     } catch {
                         logger.error("Failed to load messages: \(error.localizedDescription)")
                         await send(.loadMessages([]))
@@ -247,6 +286,45 @@ struct ChattingRoomFeature {
                 
             case .setAITyping(let isTyping):
                 state.isAITyping = isTyping
+                return .none
+                
+            case .deleteButtonTapped:
+                state.alert = AlertState {
+                    TextState("채팅 나가기")
+                } actions: {
+                    ButtonState(
+                        role: .destructive,
+                        action: .confirmExit
+                    ) {
+                        TextState("예")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("아니오")
+                    }
+                } message: {
+                    TextState("나가겠습니까?")
+                }
+                return .none
+                
+            case .alert(.presented(.confirmExit)):
+                let ownerId = state.ownerId
+                let roomId = state.roomId
+                
+                state.alert = nil
+                
+                return .run { [firebaseClient] send in
+                    do {
+                        try await firebaseClient.deleteChatRoom(ownerId, roomId)
+                        await send(.delegate(.didDeleteRoom))
+                    } catch {
+                        logger.error("채팅방 삭제 실패: \(error.localizedDescription)")
+                    }
+                }
+                
+            case .alert:
+                return .none
+                
+            case .delegate:
                 return .none
             }
         }

@@ -86,17 +86,18 @@ struct SettingView: View {
 
     // MARK: - 로그아웃 시 로컬 데이터 삭제
     private func deleteLocalDataForLogout(ownerId: String) async {
-        do {
-            print("로그아웃 - 로컬 데이터 삭제 시작: \(ownerId)")
-            
-            // 로컬 SwiftData만 삭제 (Firebase Storage는 유지)
-            try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
-            
-            print("로그아웃 - 로컬 데이터 삭제 완료: \(ownerId)")
-            
-        } catch {
-            print("로그아웃 - 로컬 데이터 삭제 실패: \(error)")
-        }
+//        do {
+//            print("로그아웃 - 로컬 데이터 삭제 시작: \(ownerId)")
+//            
+//            // 로컬 SwiftData만 삭제 (Firebase Storage는 유지)
+//            try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
+//            
+//            print("로그아웃 - 로컬 데이터 삭제 완료: \(ownerId)")
+//            
+//        } catch {
+//            print("로그아웃 - 로컬 데이터 삭제 실패: \(error)")
+//        }
+        print("로그아웃 - 로컬 데이터 유지 (ownerId: \(ownerId)")
     }
 
     @ViewBuilder

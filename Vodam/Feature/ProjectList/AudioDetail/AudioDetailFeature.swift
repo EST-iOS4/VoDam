@@ -60,32 +60,12 @@ struct AudioDetailFeature {
             var transcriptText = project.transcript ?? ""
             
             if transcriptText.isEmpty {
-                    if project.category == .pdf {
-                        transcriptText = "PDF에서 추출한 스크립트가 없습니다."
-                    } else {
-                        transcriptText = "아직 받아온 스크립트가 없습니다."
-                    }
+                if project.category == .pdf {
+                    transcriptText = "PDF에서 추출한 스크립트가 없습니다."
+                } else {
+                    transcriptText = "아직 받아온 스크립트가 없습니다."
                 }
-            
-//            if project.category == .pdf, transcriptText.isEmpty {
-//                if let filePath = project.filePath,
-//                   FileManager.default.fileExists(atPath: filePath) {
-//                    print("PDF텍스트 추출")
-//                    
-//                    let pdfURL = URL(fileURLWithPath: filePath)
-//                    if let extractedText = PDFTextExtractor.extractText(from: pdfURL) {
-//                        transcriptText = extractedText
-//                        print("[AudioDetail] PDF 텍스트 추출 완료: \(extractedText.count)자")
-//                    } else {
-//                        transcriptText = "PDF에서 텍스트를 추출할 수 없습니다."
-//                        print("[AudioDetail] PDF 텍스트 추출 실패")
-//                    }
-//                }
-//            }
-//            
-//            if transcriptText.isEmpty {
-//                transcriptText = "아직 받아온 스크립트가 없습니다."
-//            }
+            }
             
             self.script = ScriptFeature.State(text: transcriptText)
             
@@ -134,6 +114,8 @@ struct AudioDetailFeature {
         case _setupPlayerWithURL(URL)
         case _playerReady(AVPlayer, Double)
         
+        case clearAlert
+        
         enum DelegateAction {
             case needsRefresh
             case didDeleteProject
@@ -174,9 +156,9 @@ struct AudioDetailFeature {
                 
                 print("[AudioDetail] 로컬 파일 없음 - Firebase에서 다운로드 시도")
                 
-                guard let remotePath = state.project.remoteAudioPath ?? state.project.filePath,
+                guard let remotePath = state.project.remoteAudioPath,
                       !remotePath.isEmpty else {
-                    print("[AudioDetail] remotePath 없음 - 재생 불가")
+                    print("[AudioDetail] remoteAudioPath 없음 - 원격 다운로드 생략")
                     return .none
                 }
                 
@@ -341,7 +323,7 @@ struct AudioDetailFeature {
                 
             case .seek(let progress):
                 guard let player = state.player,
-                        let item = player.currentItem else { return .none }
+                      let item = player.currentItem else { return .none }
                 let clampedProgress = min(max(progress, 0), 1)
                 let duration = item.asset.duration
                 let targetTime = CMTimeGetSeconds(duration) * clampedProgress
@@ -363,16 +345,32 @@ struct AudioDetailFeature {
                 let title = project.name
                 
                 guard let ownerId = state.currentUser?.ownerId else {
-                    print("[AudioDetail] chatButtonTapped: currentUser.ownerId 없음 - 채팅방 생성 안 함")
+                    state.destination = .alert(
+                        AlertState {
+                            TextState("로그인이 필요합니다.")
+                        } actions: {
+                            ButtonState(role: .cancel) {
+                                TextState("확인")
+                            }
+                        } message: {
+                            TextState("로그인 후 채팅을 이용할 수 있습니다.")
+                        }
+                    )
                     return .none
                 }
                 
                 state.destination = .chattingRoom(
                     ChattingRoomFeature.State(ownerId: ownerId, roomId: roomId, title: title)
                 )
-                return .run{ _ in
+                return .run { [firebaseClient] _ in
                     try? await firebaseClient.createChatRoom(ownerId, roomId, title)
                 }
+                
+            case .clearAlert:
+                if case .alert = state.destination {
+                    state.destination = nil
+                }
+                return .none
                 
             case .searchButtonTapped:
                 state.isSearching = true
@@ -405,12 +403,25 @@ struct AudioDetailFeature {
                 state.destination = nil
                 return .send(.delegate(.needsRefresh))
                 
+            case .destination(.presented(.chattingRoom(.delegate(.didDeleteRoom)))):
+                // navigationDestination에 걸린 chattingRoom state를 nil로 → 뒤로 가기
+                state.destination = nil
+                return .none
+                
             case .script(.delegate(.seekToProgress(let progress))):
                 guard state.project.category != .pdf else { return .none }
                 let clampedProgress = min(max(progress, 0), 1)
                 state.selectedTab = .script
                 state.progress = clampedProgress
-                return .send(.seek(clampedProgress))
+                
+                if !state.isPlaying {
+                    return .merge(
+                        .send(.seek(clampedProgress)),
+                        .send(.playButtonTapped)
+                    )
+                } else {
+                    return .send(.seek(clampedProgress))
+                }
                 
             case .script, .aiSummary, .binding, .destination, .delegate:
                 return .none
@@ -506,6 +517,12 @@ struct AudioDetailFeature {
                                         ownerId,
                                         projectIdString
                                     )
+                                    do {
+                                        try await firebaseClient.deleteChatRoom(ownerId, projectIdString)
+                                        print("연관 채팅방 삭제 완료: \(projectIdString)")
+                                    } catch {
+                                        print("연관 채팅방 삭제 실패(계속 진행): \(error)")
+                                    }
                                 } catch {
                                     print("Firebase 삭제 실패 (계속 진행): \(error)")
                                 }

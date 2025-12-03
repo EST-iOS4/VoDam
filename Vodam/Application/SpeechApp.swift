@@ -35,7 +35,7 @@ struct VodamApp: App {
                     }
                 )
             )
-            
+            .environment(\.font, AppFont.pretendardRegular(size: 16))
             .onOpenURL { url in
                 if AuthApi.isKakaoTalkLoginUrl(url) {
                     _ = AuthController.handleOpenUrl(url: url)
