@@ -25,7 +25,7 @@ struct ChattingListView: View {
                             .listRowSeparator(.hidden)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.black, lineWidth: 1)
+                                    .stroke(Color.secondary.opacity(0.6), lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
