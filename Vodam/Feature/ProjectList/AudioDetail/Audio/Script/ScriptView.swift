@@ -18,7 +18,11 @@ struct ScriptView: View {
     
     var body: some View {
         if store.text.count > largeTextThreshold {
-            LargeScriptTextView(text: store.text)
+            LargeScriptTextView(
+                text: store.text,
+                searchResults: store.searchResults,
+                currentResultIndex: store.currentResultIndex
+            )
         } else {
             smallTextBody
         }
@@ -246,6 +250,8 @@ private struct FlowLayout: View {
 
 struct LargeScriptTextView: UIViewRepresentable {
     let text: String
+    let searchResults: [Range<String.Index>]
+    let currentResultIndex: Int
     
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -255,16 +261,49 @@ struct LargeScriptTextView: UIViewRepresentable {
         textView.showsVerticalScrollIndicator = true
         textView.showsHorizontalScrollIndicator = false
         textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-        textView.font = UIFont.preferredFont(forTextStyle: .body)
         textView.backgroundColor = .clear
-        textView.textColor = .label
         textView.alwaysBounceVertical = true
         return textView
     }
     
     func updateUIView(_ uiView: UITextView, context: Context) {
-        if uiView.text != text {
-            uiView.text = text
+        let attributedString = NSMutableAttributedString(
+            string: text,
+            attributes: [
+                .font: UIFont.preferredFont(forTextStyle: .body),
+                .foregroundColor: UIColor.label
+            ]
+        )
+        
+        // 검색 결과 하이라이트 적용
+        for (index, range) in searchResults.enumerated() {
+            let nsRange = NSRange(range, in: text)
+            
+            if index == currentResultIndex {
+                // 현재 선택된 결과 - 주황색
+                attributedString.addAttributes([
+                    .backgroundColor: UIColor.orange,
+                    .foregroundColor: UIColor.black
+                ], range: nsRange)
+            } else {
+                // 다른 검색 결과 - 노란색
+                attributedString.addAttributes([
+                    .backgroundColor: UIColor.yellow,
+                    .foregroundColor: UIColor.black
+                ], range: nsRange)
+            }
+        }
+        
+        uiView.attributedText = attributedString
+        
+        // 현재 결과로 스크롤
+        if !searchResults.isEmpty, currentResultIndex < searchResults.count {
+            let currentRange = searchResults[currentResultIndex]
+            let nsRange = NSRange(currentRange, in: text)
+            
+            DispatchQueue.main.async {
+                uiView.scrollRangeToVisible(nsRange)
+            }
         }
     }
 }
