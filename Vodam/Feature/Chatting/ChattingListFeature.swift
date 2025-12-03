@@ -22,6 +22,8 @@ struct ChattingListFeature {
         var path = StackState<ChattingRoomFeature.State>()
         
         var currentUser: User? = nil
+        
+        
     }
     
     enum Action {

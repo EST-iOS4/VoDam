@@ -13,11 +13,13 @@ struct FileButtonView: View {
     let store: StoreOf<FileButtonFeature>
     let ownerId: String?
     
+    @State private var isLoginAlertPresented = false
+    
     init(store: StoreOf<FileButtonFeature>, ownerId: String? = nil) {
         self.store = store
         self.ownerId = ownerId
     }
-
+    
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
             VStack(spacing: 16) {
@@ -40,6 +42,11 @@ struct FileButtonView: View {
                     viewStore.send(.saveFile(url, transcript, context, ownerId))
                 }
             }
+            .alert("로그인이 필요합니다.", isPresented: $isLoginAlertPresented) {
+                Button("확인", role: .cancel) { }
+            } message: {
+                Text("로그인 후 이용할 수 있습니다.")
+            }
         }
     }
     
@@ -55,7 +62,7 @@ struct FileButtonView: View {
                     x: 0,
                     y: 4
                 )
-
+            
             HStack(spacing: 20) {
                 iconView
                 
@@ -73,7 +80,11 @@ struct FileButtonView: View {
         .frame(height: 80)
         .padding(.horizontal, 20)
         .onTapGesture {
-            viewStore.send(.tapped)
+            if ownerId == nil {
+                isLoginAlertPresented = true
+            } else {
+                viewStore.send(.tapped)
+            }
         }
         .fileImporter(
             isPresented: viewStore.binding(
