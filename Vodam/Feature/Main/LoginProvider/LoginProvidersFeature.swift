@@ -37,17 +37,20 @@ struct LoginProvidersFeature {
     @Dependency(\.googleAuthClient) var googleAuthClient
     @Dependency(\.appleAuthClient) var appleAuthClient
     @Dependency(\.userStorageClient) var userStorageClient
+    @Dependency(\.firebaseClient) var firebaseClient
 
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
 
             case .providerTapped(let provider):
-                return .run {
-                    [
-                        userStorageClient, kakaoAuthClient, appleAuthClient,
-                        googleAuthClient
-                    ] send in
+                return .run { [
+                    userStorageClient,
+                    kakaoAuthClient,
+                    appleAuthClient,
+                    googleAuthClient,
+                    firebaseClient
+                ] send in
                     do {
                         let rawUser: User
 
@@ -66,26 +69,39 @@ struct LoginProvidersFeature {
                         print("[LoginProviders] rawUser:", rawUser)
 
                         let storedUser = await userStorageClient.load()
-                        print(
-                            "[LoginProviders] storedUser:",
-                            storedUser as Any
-                        )
+                        print("[LoginProviders] storedUser:", storedUser as Any)
 
-                        let finalUser: User
 
-                        if provider == .apple, let stored = storedUser,
-                            stored.ownerId == rawUser.ownerId
-                        {
-                            print(
-                                "[LoginProviders] use storedUser (same ownerId)"
-                            )
-                            finalUser = stored
+                        let baseUser: User
+                        if provider == .apple,
+                           let stored = storedUser,
+                           stored.ownerId == rawUser.ownerId {
+                            print("[LoginProviders] use storedUser (same ownerId) as base")
+                            baseUser = stored
                         } else {
-                            print("[LoginProviders] use rawUser")
-                            finalUser = rawUser
+                            print("[LoginProviders] use rawUser as base")
+                            baseUser = rawUser
                         }
 
-                        print("[LoginProviders] finalUser:", finalUser)
+                        let finalUser: User
+                        if provider == .apple {
+                            if let remote = try await firebaseClient.fetchUserProfile(baseUser.ownerId) {
+                                print("[LoginProviders] fetched remote user profile:", remote)
+                                var merged = remote
+                                if let localData = baseUser.localProfileImageData {
+                                    merged.localProfileImageData = localData
+                                }
+
+                                finalUser = try await firebaseClient.upsertUserProfile(merged)
+                            } else {
+                                print("[LoginProviders] no remote user profile, create new one")
+                                finalUser = try await firebaseClient.upsertUserProfile(baseUser)
+                            }
+                        } else {
+                            finalUser = baseUser
+                        }
+
+                        print("[LoginProviders] finalUser (after Firebase sync):", finalUser)
 
                         await userStorageClient.save(finalUser)
 
@@ -95,8 +111,8 @@ struct LoginProvidersFeature {
                         print("로그인 실패: \(error)")
                         await send(.delegate(.login(false, nil)))
                     }
-
                 }
+
             case .delegate:
                 return .none
             }
