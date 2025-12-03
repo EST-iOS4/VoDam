@@ -12,6 +12,7 @@ import OSLog
 
 @Reducer
 struct ChattingRoomFeature {
+    @Dependency(\.firebaseClient) var firebaseClient
     
     nonisolated private let logger = Logger(subsystem: "ChattingRoomFeature", category: "Domain")
     
@@ -25,6 +26,8 @@ struct ChattingRoomFeature {
         var ownerId: String
         var roomId:String
         var title:String
+        
+        @Presents var alert: AlertState<Action.Alert>?
         
         // 채팅방 고유ID & API client_id
         init (ownerId: String, roomId: String, title: String){
@@ -42,6 +45,20 @@ struct ChattingRoomFeature {
         case loadMessages([Message])
         case aIResponse(String)
         case setAITyping(Bool)
+        
+        case deleteButtonTapped
+        
+        case alert(PresentationAction<Alert>)
+        case delegate(DelegateAction)
+        
+        enum Alert: Equatable {
+            case confirmExit
+        }
+        
+        enum DelegateAction: Equatable {
+            case didDeleteRoom
+        }
+        
     }
     
     let db = Firestore.firestore()
@@ -247,6 +264,42 @@ struct ChattingRoomFeature {
                 
             case .setAITyping(let isTyping):
                 state.isAITyping = isTyping
+                return .none
+                
+            case .deleteButtonTapped:
+                state.alert = AlertState {
+                    TextState("채팅 나가기")
+                } actions: {
+                    ButtonState(
+                        role: .destructive,
+                        action: .confirmExit
+                    ) {
+                        TextState("예")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("아니오")
+                    }
+                } message: {
+                    TextState("나가겠습니까?")
+                }
+                return .none
+                
+            case .alert(.presented(.confirmExit)):
+                let ownerId = state.ownerId
+                let roomId = state.roomId
+                return .run { [firebaseClient] send in
+                    do {
+                        try await firebaseClient.deleteChatRoom(ownerId, roomId)
+                        await send(.delegate(.didDeleteRoom))
+                    } catch {
+                        logger.error("채팅방 삭제 실패: \(error.localizedDescription)")
+                    }
+                }
+                
+            case .alert:
+                return .none
+                
+            case .delegate:
                 return .none
             }
         }
