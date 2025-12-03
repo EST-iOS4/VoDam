@@ -30,13 +30,13 @@ struct FirebaseClient {
     async throws -> Void
     
     var createChatRoom:
-    @Sendable (_ roomId: String, _ title: String) async throws -> Void
+    @Sendable (_ ownerId: String, _ roomId: String, _ title: String) async throws -> Void
     
     var updateChatRoomPreview:
-    @Sendable (_ roomId: String, _ title: String, _ content: String) async throws -> Void
+    @Sendable (_ ownerId: String, _ roomId: String, _ title: String, _ content: String) async throws -> Void
     
     var listenToChatRooms:
-    @Sendable () -> AsyncStream<[ChattingInfo]>
+    @Sendable (_ ownerId: String) -> AsyncStream<[ChattingInfo]>
 }
 
 extension FirebaseClient: DependencyKey {
@@ -173,7 +173,7 @@ extension FirebaseClient: DependencyKey {
                 print("[FirebaseClient] project 삭제 완료: ownerId=\(ownerId), id=\(projectId)")
             },
             
-            createChatRoom: { roomId, title in
+            createChatRoom: { ownerId, roomId, title in
                 let db = Firestore.firestore()
                 
                 let data: [String: Any] = [
@@ -182,12 +182,14 @@ extension FirebaseClient: DependencyKey {
                 ]
                 
                 try await db
+                    .collection("users")
+                    .document(ownerId)
                     .collection("chatRooms")
                     .document(roomId)
-                    .setData(data, merge: true) // 기존 데이터 유지
+                    .setData(data, merge: true)
             },
             
-            updateChatRoomPreview: { roomId, title, content in
+            updateChatRoomPreview: { ownerId, roomId, title, content in
                 let db = Firestore.firestore()
                 
                 let data: [String: Any] = [
@@ -197,16 +199,20 @@ extension FirebaseClient: DependencyKey {
                 ]
                 
                 try await db
+                    .collection("users")
+                    .document(ownerId)
                     .collection("chatRooms")
                     .document(roomId)
-                    .setData(data, merge: true) // 기존 데이터 유지
+                    .setData(data, merge: true)
             },
             
-            listenToChatRooms: {
+            listenToChatRooms: { ownerId in
                 AsyncStream { continuation in
                     let db = Firestore.firestore()
                     
-                    let listener = db.collection("chatRooms")
+                    let listener = db.collection("users")
+                        .document(ownerId)
+                        .collection("chatRooms")
                         .order(by:"recentEditedDate", descending: true)
                         .addSnapshotListener{ snapshot, error in
                             
@@ -254,9 +260,9 @@ extension FirebaseClient: DependencyKey {
             fetchProjects: { _ in [] },
             updateProject: { _, _ in },
             deleteProject: { _, _ in },
-            createChatRoom: { _, _ in },
-            updateChatRoomPreview: { _, _, _ in },
-            listenToChatRooms: { AsyncStream { continuation in continuation.finish() } }
+            createChatRoom: { _, _, _ in },
+            updateChatRoomPreview: { _, _, _, _ in },
+            listenToChatRooms: { _ in AsyncStream { continuation in continuation.finish() } }
         )
     }
 }
