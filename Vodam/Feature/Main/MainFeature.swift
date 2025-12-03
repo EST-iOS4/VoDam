@@ -8,6 +8,10 @@
 import ComposableArchitecture
 import Foundation
 
+private enum MainOnboardingKey {
+    static let hasSeenProfileIntro = "hasSeenProfileIntro_v1"
+}
+
 @Reducer
 struct MainFeature {
     
@@ -72,14 +76,19 @@ struct MainFeature {
                 
             case .userLoaded(let user):
                 state.currentUser = user
+                
+                let defaults = UserDefaults.standard
+                    let hasSeenIntro = defaults.bool(forKey: MainOnboardingKey.hasSeenProfileIntro)
+
+                    if !hasSeenIntro {
+                        state.profileFlow = ProfileFlowFeature.State()
+                        defaults.set(true, forKey: MainOnboardingKey.hasSeenProfileIntro)
+                    }
+                
                 return .none
                 
             case .profileButtonTapped:
-                if let user = state.currentUser {
-                    state.settings = SettingsFeature.State(user: user)
-                } else {
-                    state.profileFlow = ProfileFlowFeature.State()
-                }
+                state.settings = SettingsFeature.State(user: state.currentUser)
                 return .none
                 
             case .settings(.presented(.delegate(.userUpdated(let user)))):
