@@ -11,72 +11,57 @@ import SwiftUI
 struct ProfileFlowView: View {
     let store: StoreOf<ProfileFlowFeature>
     @Environment(\.colorScheme) var colorScheme
-
+    
     var body: some View {
-        VStack(spacing: 0) {
-//            HStack {
-//                Spacer()
-//                Button {
-//                    store.send(.cancelButtonTapped)
-//                } label: {
-//                    Image(systemName: "xmark")
-//                        .foregroundColor(.gray)
-//                        .frame(width: 30, height: 30)
-//                        .background(Color(.systemGray5))
-//                        .clipShape(Circle())
-//                }
-//                .padding(12)
-//            }
-            Spacer()
-
-            VStack(spacing: 16) {
-                Text(
-                    """
-                       로그인하면 아래 기능을 사용할 수 있어요 👇
-
-                       - 녹음 시간 / 횟수 제한 해제 (3회 -> 무제한)
-                       - PDF / 파일 / YouTube
-                         스크립트 및 요약 결과 Blur 제거 
-                    """
-                )
-                .font(.subheadline)
-                .multilineTextAlignment(.leading)
-                .lineLimit(nil)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 24)
-
-                Button {
-                    store.send(.loginButtonTapped)
-
-                } label: {
-                    Text("로그인")
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.purple)
-                        .cornerRadius(14)
-                }
-                .padding(.horizontal, 24)
-
-                Button {
-                    store.send(.guestButtonTapped)
-
-                }  label: {
-                    Text("비회원으로 사용")
-                        .foregroundStyle(.primary)
-                        .fontWeight(.medium)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.clear)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(Color(.systemGray4), lineWidth: 1.5)
-                        )
-                }
-                .padding(.horizontal, 24)
+        VStack(spacing: 16) {
+            Text(
+                        """
+                           로그인하면 아래 기능을 사용할 수 있어요 👇
+                        
+                           - 녹음 시간 / 횟수 제한 해제 (3회 -> 무제한)
+                           - PDF / 녹음 파일 가져오기
+                           - Ai 채팅
+                        
+                        """
+            )
+            .font(.subheadline)
+            .multilineTextAlignment(.leading)
+            .lineLimit(nil)
+            .fixedSize(horizontal: false, vertical: true)
+            
+            Button {
+                store.send(.loginButtonTapped)
+                
+            } label: {
+                Text("로그인")
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.purple)
+                    .cornerRadius(14)
             }
-            Spacer()
+            
+            Button {
+                store.send(.guestButtonTapped)
+                
+            }  label: {
+                Text("비회원으로 사용")
+                    .foregroundStyle(.primary)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.clear)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color(.systemGray4), lineWidth: 1.5)
+                    )
+            }
+            
         }
-        .padding(.bottom, 24)
+        .frame(maxWidth: .infinity,
+               maxHeight: .infinity,
+               alignment: .bottom)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 10)
     }
 }
