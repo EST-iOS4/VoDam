@@ -5,6 +5,7 @@
 //  Created by 강지원 on 11/19/25.
 //
 
+import AVFoundation
 import ComposableArchitecture
 import Speech
 import SwiftUI
@@ -23,6 +24,8 @@ struct FileButtonFeature {
         var title: String = "파일 가져오기"
         var selectedFileURL: URL?
         var isImporterPresented: Bool = false
+        
+        @Presents var alert: AlertState<Action.Alert>?
         
         // STT 상태
         var isTranscribing: Bool = false
@@ -48,11 +51,18 @@ struct FileButtonFeature {
         case fileSaveFailed(String)
         case syncCompleted(String)
         
+        case loginRequiredTapped
+        case alert(PresentationAction<Alert>)
+        
         case delegate(Delegate)
         
         enum Delegate: Equatable {
             case projectSaved(String)
             case syncCompleted(String)
+        }
+        
+        enum Alert: Equatable {
+            case loginRequired
         }
     }
     
@@ -218,6 +228,21 @@ struct FileButtonFeature {
                 state.errorMessage = error
                 return .none
                 
+            case .loginRequiredTapped:
+                state.alert = AlertState {
+                    TextState("로그인이 필요합니다.")
+                } actions: {
+                    ButtonState(role: .cancel) {
+                        TextState("확인")
+                    }
+                } message: {
+                    TextState("로그인 후 이용할 수 있습니다.")
+                }
+                return .none
+                
+            case .alert:
+                return .none
+                
             case .delegate:
                 return .none
             }
@@ -257,5 +282,3 @@ struct FileButtonFeature {
         return CMTimeGetSeconds(duration)
     }
 }
-
-import AVFoundation
