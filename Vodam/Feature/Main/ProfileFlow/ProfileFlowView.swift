@@ -15,14 +15,14 @@ struct ProfileFlowView: View {
     var body: some View {
         VStack(spacing: 16) {
             Text(
-                        """
-                           로그인하면 아래 기능을 사용할 수 있어요 👇
-                        
-                           - 녹음 시간 / 횟수 제한 해제 (3회 -> 무제한)
-                           - PDF / 녹음 파일 가져오기
-                           - Ai 채팅
-                        
-                        """
+                """
+                   로그인하면 아래 기능을 사용할 수 있어요 👇
+                
+                   - 녹음 시간 / 횟수 제한 해제 (3회 -> 무제한)
+                   - PDF / 녹음 파일 가져오기
+                   - Ai 채팅
+                
+                """
             )
             .font(.subheadline)
             .multilineTextAlignment(.leading)
@@ -31,7 +31,6 @@ struct ProfileFlowView: View {
             
             Button {
                 store.send(.loginButtonTapped)
-                
             } label: {
                 Text("로그인")
                     .foregroundStyle(.white)
@@ -43,8 +42,7 @@ struct ProfileFlowView: View {
             
             Button {
                 store.send(.guestButtonTapped)
-                
-            }  label: {
+            } label: {
                 Text("비회원으로 사용")
                     .foregroundStyle(.primary)
                     .fontWeight(.medium)
@@ -56,12 +54,10 @@ struct ProfileFlowView: View {
                             .stroke(Color(.systemGray4), lineWidth: 1.5)
                     )
             }
-            
         }
-        .frame(maxWidth: .infinity,
-               maxHeight: .infinity,
-               alignment: .bottom)
+        .padding(.top, 40)
         .padding(.horizontal, 24)
         .padding(.bottom, 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
