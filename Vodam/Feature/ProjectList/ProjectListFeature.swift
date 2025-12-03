@@ -415,7 +415,7 @@ struct ProjectListFeature {
                         await updateProgress(0.05, "1단계 요약 시작...")
                         
                         var partialSummaries: [String] = []
-                        let batchSize = 10
+                        let batchSize = 8
                         let totalBatches = (chunks.count + batchSize - 1) / batchSize
                         
                         for batchIndex in 0..<totalBatches {
@@ -423,17 +423,17 @@ struct ProjectListFeature {
                             let endIdx = min(startIdx + batchSize, chunks.count)
                             let batchChunks = Array(chunks[startIdx..<endIdx])
                             
-                            let batchSummaries = try await withThrowingTaskGroup(of: (Int, String).self) { group in
+                            let batchSummaries: [String] = await withTaskGroup(of: (Int, String?).self) { group in
                                 for (localIndex, chunk) in batchChunks.enumerated() {
                                     let globalIndex = startIdx + localIndex
                                     
                                     group.addTask {
                                         let q = AlanClient.Question(
-                                                """
-                                                다음을 1-2문장으로 핵심만 요약:
-                                                
-                                                \(chunk)
-                                                """
+                                            """
+                                            다음을 1-2문장으로 핵심만 요약:
+                                            
+                                            \(chunk)
+                                            """
                                         )
                                         
                                         var lastError: Error?
@@ -450,15 +450,23 @@ struct ProjectListFeature {
                                                 }
                                             }
                                         }
-                                        throw lastError ?? AlanClient.Error.networkError(NSError(domain: "Unknown", code: -1))
+                                        
+                                        print("[AISummary] 청크 \(globalIndex + 1) 최종 실패: \(String(describing: lastError))")
+                                        return (globalIndex, nil)
                                     }
                                 }
                                 
                                 var results: [(Int, String)] = []
-                                for try await result in group {
-                                    results.append(result)
+
+                                for await (index, text) in group {
+                                    if let text {
+                                        results.append((index, text))
+                                    }
                                 }
-                                return results.sorted(by: { $0.0 < $1.0 }).map { $0.1 }
+
+                                return results
+                                    .sorted { $0.0 < $1.0 }
+                                    .map { $0.1 }
                             }
                             
                             partialSummaries.append(contentsOf: batchSummaries)
@@ -501,7 +509,7 @@ struct ProjectListFeature {
                                     """
                                     다음 요약들을 2-3문장으로 통합:
                                     
-                                    \(combinedGroup)
+                                    \(limitedGroup)
                                     """
                             )
                             
