@@ -99,5 +99,8 @@ struct PDFButtonView: View {
             store.send(.savePDF(url, context, ownerId))
         }
         .alert($store.scope(state: \.alert, action: \.alert))
+        .onDisappear {
+            store.send(.clearAlert)
+        }
     }
 }
