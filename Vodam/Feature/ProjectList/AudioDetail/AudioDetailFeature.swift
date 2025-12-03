@@ -413,7 +413,15 @@ struct AudioDetailFeature {
                 let clampedProgress = min(max(progress, 0), 1)
                 state.selectedTab = .script
                 state.progress = clampedProgress
-                return .send(.seek(clampedProgress))
+                
+                if !state.isPlaying {
+                    return .merge(
+                        .send(.seek(clampedProgress)),
+                        .send(.playButtonTapped)
+                    )
+                } else {
+                    return .send(.seek(clampedProgress))
+                }
                 
             case .script, .aiSummary, .binding, .destination, .delegate:
                 return .none
