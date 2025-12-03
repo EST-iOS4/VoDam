@@ -14,19 +14,19 @@ struct ProfileFlowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                Button {
-                    store.send(.cancelButtonTapped)
-                } label: {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.gray)
-                        .frame(width: 30, height: 30)
-                        .background(Color(.systemGray5))
-                        .clipShape(Circle())
-                }
-                .padding(12)
-            }
+//            HStack {
+//                Spacer()
+//                Button {
+//                    store.send(.cancelButtonTapped)
+//                } label: {
+//                    Image(systemName: "xmark")
+//                        .foregroundColor(.gray)
+//                        .frame(width: 30, height: 30)
+//                        .background(Color(.systemGray5))
+//                        .clipShape(Circle())
+//                }
+//                .padding(12)
+//            }
             Spacer()
 
             VStack(spacing: 16) {
