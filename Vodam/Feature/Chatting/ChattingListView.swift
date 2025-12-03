@@ -45,6 +45,8 @@ struct ChattingListView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.secondary.opacity(0.6), lineWidth: 1)
                         )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
