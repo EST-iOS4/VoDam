@@ -57,27 +57,35 @@ struct AudioDetailFeature {
             self.selectedTab = .script
             self.isFavorite = project.isFavorite
             
-            var transcriptText = project.transcript ?? "아직 받아온 스크립트가 없습니다."
-            
-            if project.category == .pdf, transcriptText.isEmpty {
-                if let filePath = project.filePath,
-                   FileManager.default.fileExists(atPath: filePath) {
-                    print("PDF텍스트 추출")
-                    
-                    let pdfURL = URL(fileURLWithPath: filePath)
-                    if let extractedText = PDFTextExtractor.extractText(from: pdfURL) {
-                        transcriptText = extractedText
-                        print("[AudioDetail] PDF 텍스트 추출 완료: \(extractedText.count)자")
-                    } else {
-                        transcriptText = "PDF에서 텍스트를 추출할 수 없습니다."
-                        print("[AudioDetail] PDF 텍스트 추출 실패")
-                    }
-                }
-            }
+            var transcriptText = project.transcript ?? ""
             
             if transcriptText.isEmpty {
-                transcriptText = "아직 받아온 스크립트가 없습니다."
-            }
+                    if project.category == .pdf {
+                        transcriptText = "PDF에서 추출한 스크립트가 없습니다."
+                    } else {
+                        transcriptText = "아직 받아온 스크립트가 없습니다."
+                    }
+                }
+            
+//            if project.category == .pdf, transcriptText.isEmpty {
+//                if let filePath = project.filePath,
+//                   FileManager.default.fileExists(atPath: filePath) {
+//                    print("PDF텍스트 추출")
+//                    
+//                    let pdfURL = URL(fileURLWithPath: filePath)
+//                    if let extractedText = PDFTextExtractor.extractText(from: pdfURL) {
+//                        transcriptText = extractedText
+//                        print("[AudioDetail] PDF 텍스트 추출 완료: \(extractedText.count)자")
+//                    } else {
+//                        transcriptText = "PDF에서 텍스트를 추출할 수 없습니다."
+//                        print("[AudioDetail] PDF 텍스트 추출 실패")
+//                    }
+//                }
+//            }
+//            
+//            if transcriptText.isEmpty {
+//                transcriptText = "아직 받아온 스크립트가 없습니다."
+//            }
             
             self.script = ScriptFeature.State(text: transcriptText)
             
@@ -104,8 +112,8 @@ struct AudioDetailFeature {
         case delegate(DelegateAction)
         
         case onAppear
-//        case onDisappear
-//        case viewWillDisappear
+        //        case onDisappear
+        //        case viewWillDisappear
         case playButtonTapped
         case backwardButtonTapped
         case forwardButtonTapped
@@ -347,12 +355,17 @@ struct AudioDetailFeature {
                 let project = state.project
                 let roomId = project.id.uuidString
                 let title = project.name
-                    
+                
+                guard let ownerId = state.currentUser?.ownerId else {
+                    print("[AudioDetail] chatButtonTapped: currentUser.ownerId 없음 - 채팅방 생성 안 함")
+                    return .none
+                }
+                
                 state.destination = .chattingRoom(
-                    ChattingRoomFeature.State(roomId: roomId, title: title)
+                    ChattingRoomFeature.State(ownerId: ownerId, roomId: roomId, title: title)
                 )
                 return .run{ _ in
-                    try? await firebaseClient.createChatRoom(roomId, title)
+                    try? await firebaseClient.createChatRoom(ownerId, roomId, title)
                 }
                 
             case .searchButtonTapped:
@@ -421,19 +434,19 @@ struct AudioDetailFeature {
                 )
                 return .none
                 
-//            case .onDisappear:
-//                print("[AudioDetail] onDisappear - 플레이어 정리하지 않음 (뒤로가기)")
-//                return .none
+                //            case .onDisappear:
+                //                print("[AudioDetail] onDisappear - 플레이어 정리하지 않음 (뒤로가기)")
+                //                return .none
                 
-//            case .viewWillDisappear:
-//                print("[AudioDetail] viewWillDisappear - 재생 일시정지")
-//                
-//                if state.isPlaying, let player = state.player {
-//                    player.pause()
-//                    state.isPlaying = false
-//                    print("[AudioDetail] 재생 일시정지 완료")
-//                }
-//                return .none
+                //            case .viewWillDisappear:
+                //                print("[AudioDetail] viewWillDisappear - 재생 일시정지")
+                //
+                //                if state.isPlaying, let player = state.player {
+                //                    player.pause()
+                //                    state.isPlaying = false
+                //                    print("[AudioDetail] 재생 일시정지 완료")
+                //                }
+                //                return .none
                 
             case .deleteProjectConfirmed:
                 guard let context = state.pendingDeletionContext else {
