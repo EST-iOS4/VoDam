@@ -9,7 +9,7 @@
 import FirebaseFirestore
 import Foundation
 
-struct Message: Identifiable, Codable,Equatable {
+struct Message: Identifiable, Codable, Equatable, Sendable {
     var id: String
     var content: String
     var isFromUser: Bool
@@ -48,16 +48,14 @@ struct Message: Identifiable, Codable,Equatable {
         
         content = try container.decode(String.self, forKey: .content)
         
-        // Bool 또는 Int 처리
         if let boolValue = try? container.decode(Bool.self, forKey: .isFromUser) {
             isFromUser = boolValue
         } else if let intValue = try? container.decode(Int.self, forKey: .isFromUser) {
-            isFromUser = intValue != 0 //1이면 true
+            isFromUser = intValue != 0
         } else {
             isFromUser = false
         }
         
-        // Timestamp 처리
         if let firestoreTimestamp = try? container.decode(Timestamp.self, forKey: .timestamp) {
             timestamp = firestoreTimestamp.dateValue()
         } else if let date = try? container.decode(Date.self, forKey: .timestamp) {
@@ -65,5 +63,38 @@ struct Message: Identifiable, Codable,Equatable {
         } else {
             timestamp = Date()
         }
+    }
+    
+    init?(document: QueryDocumentSnapshot) {
+        let data = document.data()
+        
+        guard let content = data["content"] as? String else {
+            return nil
+        }
+        
+        let isFromUser: Bool
+        if let boolValue = data["isFromUser"] as? Bool {
+            isFromUser = boolValue
+        } else if let intValue = data["isFromUser"] as? Int {
+            isFromUser = intValue != 0
+        } else {
+            isFromUser = false
+        }
+        
+        let timestamp: Date
+        if let firestoreTimestamp = data["timestamp"] as? Timestamp {
+            timestamp = firestoreTimestamp.dateValue()
+        } else if let date = data["timestamp"] as? Date {
+            timestamp = date
+        } else {
+            timestamp = Date()
+        }
+        
+        self.init(
+            id: document.documentID,
+            content: content,
+            isFromUser: isFromUser,
+            timestamp: timestamp
+        )
     }
 }
