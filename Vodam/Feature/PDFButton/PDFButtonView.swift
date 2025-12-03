@@ -13,15 +13,17 @@ import SwiftData
 
 struct PDFButtonView: View {
     let store: StoreOf<PDFButtonFeature>
-
+    
     @Environment(\.modelContext) var context
     let ownerId: String?
-
+    
+    @State private var isLoginAlertPresented = false
+    
     init(store: StoreOf<PDFButtonFeature>, ownerId: String? = nil) {
         self.store = store
         self.ownerId = ownerId
     }
-
+    
     var body: some View {
         WithViewStore(self.store, observe: { $0 }) { viewStore in
             ZStack {
@@ -29,10 +31,10 @@ struct PDFButtonView: View {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color.white)
                     .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
-
+                
                 // 내부 UI
                 HStack(spacing: 20) {
-
+                    
                     // 아이콘 (FileButtonView와 동일한 구조로 수정)
                     Image(systemName: "doc.richtext.fill")
                         .foregroundColor(.white)
@@ -48,23 +50,23 @@ struct PDFButtonView: View {
                             x: 0,
                             y: 2
                         )
-
+                    
                     // 텍스트
                     VStack(alignment: .leading, spacing: 4) {
                         Text(viewStore.title)
                             .font(.headline)
                             .foregroundColor(.black)
-
+                        
                         if viewStore.isProcessing {
                             Text("텍스트 추출 중...")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                         }
-
+                        
                     }
-
+                    
                     Spacer()
-
+                    
                     if viewStore.isProcessing {
                         ProgressView()
                     }
@@ -74,7 +76,11 @@ struct PDFButtonView: View {
             .frame(height: 80)
             .padding(.horizontal, 20)
             .onTapGesture {
-                viewStore.send(.tapped)
+                if ownerId == nil {
+                    isLoginAlertPresented = true
+                } else {
+                    viewStore.send(.tapped)
+                }
             }
             .fileImporter(
                 isPresented: viewStore.binding(
@@ -91,7 +97,7 @@ struct PDFButtonView: View {
                     } else {
                         viewStore.send(.pdfImported(.failure(.failed)))
                     }
-
+                    
                 case .failure:
                     viewStore.send(.pdfImported(.failure(.failed)))
                 }
@@ -100,6 +106,11 @@ struct PDFButtonView: View {
                 guard let url = newValue else { return }
                 // Feature의 savePDF 액션 호출
                 viewStore.send(.savePDF(url, context, ownerId))
+            }
+            .alert("로그인이 필요합니다.", isPresented: $isLoginAlertPresented) {
+                Button("확인", role: .cancel) { }
+            } message: {
+                Text("로그인 후 이용할 수 있습니다.")
             }
         }
     }
