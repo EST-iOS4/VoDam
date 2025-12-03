@@ -40,6 +40,7 @@ struct FileButtonView: View {
                 
                 let transcript = store.transcript.isEmpty ? nil : store.transcript
                 store.send(.saveFile(url, transcript, context, ownerId))
+                
             }
         }
         // Feature 쪽 AlertState 사용
@@ -49,13 +50,17 @@ struct FileButtonView: View {
         }
     }
     
-    // MARK: - Button Content
+    @ViewBuilder
     private var buttonContent: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color.white)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
                 .shadow(
-                    color: .black.opacity(0.2),
+                    color: Color.primary.opacity(0.5),
                     radius: 6,
                     x: 0,
                     y: 4
@@ -111,7 +116,7 @@ struct FileButtonView: View {
                 RoundedRectangle(cornerRadius: 24).fill(Color.blue)
             )
             .shadow(
-                color: .black.opacity(0.15),
+                color: Color.primary.opacity(0.15),
                 radius: 3,
                 x: 0,
                 y: 2
@@ -122,12 +127,17 @@ struct FileButtonView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(store.title)
                 .font(.headline)
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
             
             if store.isTranscribing {
-                Text("변환 중...")
-                    .font(.caption)
-                    .foregroundColor(.gray)
+                HStack(spacing: 8) {
+                    ProgressView(value: store.progress)
+                        .frame(width: 100)
+                    
+                    Text("\(Int(store.progress * 100))%")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
     }

@@ -26,8 +26,12 @@ struct RecordingView: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color.white)
-                .shadow(color: .black.opacity(0.2), radius: 6, x: 0, y: 4)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: Color.primary.opacity(0.5), radius: 6, x: 0, y: 4)
             
             VStack(spacing: 24) {
                 
@@ -40,12 +44,12 @@ struct RecordingView: View {
                 
                 Text(store.status.localizedText)
                     .font(.headline)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
                 
                 Text(formatTime(store.elapsedSeconds))
                     .font(.system(size: 32, weight: .medium))
                     .monospacedDigit()
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
             }
             .padding(.vertical, 40)
         }
@@ -79,18 +83,18 @@ struct RecordingView: View {
         case .ready:
             Button(action: onStart) {
                 Image(systemName: "mic.fill")
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(.systemBackground))
                     .frame(width: 56, height: 56)
-                    .background(Circle().fill(Color.black))
+                    .background(Circle().fill(Color.primary))
             }
             
         case .recording:
             HStack(spacing: 32) {
                 Button(action: onPause) {
                     Image(systemName: "pause.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(.systemBackground))
                         .frame(width: 56, height: 56)
-                        .background(Circle().fill(Color.black))
+                        .background(Circle().fill(Color.primary))
                 }
                 Button(action: onStop) {
                     Image(systemName: "stop.fill")
@@ -104,9 +108,9 @@ struct RecordingView: View {
             HStack(spacing: 32) {
                 Button(action: onStart) {
                     Image(systemName: "play.fill")
-                        .foregroundColor(.white)
+                        .foregroundColor(Color(.systemBackground))
                         .frame(width: 56, height: 56)
-                        .background(Circle().fill(Color.black))
+                        .background(Circle().fill(Color.primary))
                 }
                 Button(action: onStop) {
                     Image(systemName: "stop.fill")
@@ -118,7 +122,7 @@ struct RecordingView: View {
             
         case .finishing:
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .black))
+                .progressViewStyle(CircularProgressViewStyle(tint: .primary))
                 .frame(width: 56, height: 56)
         }
     }
