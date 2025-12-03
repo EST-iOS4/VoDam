@@ -403,6 +403,11 @@ struct AudioDetailFeature {
                 state.destination = nil
                 return .send(.delegate(.needsRefresh))
                 
+            case .destination(.presented(.chattingRoom(.delegate(.didDeleteRoom)))):
+                // navigationDestination에 걸린 chattingRoom state를 nil로 → 뒤로 가기
+                state.destination = nil
+                return .none
+                
             case .script(.delegate(.seekToProgress(let progress))):
                 guard state.project.category != .pdf else { return .none }
                 let clampedProgress = min(max(progress, 0), 1)
