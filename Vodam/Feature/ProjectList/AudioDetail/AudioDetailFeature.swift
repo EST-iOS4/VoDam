@@ -154,9 +154,9 @@ struct AudioDetailFeature {
                 
                 print("[AudioDetail] 로컬 파일 없음 - Firebase에서 다운로드 시도")
                 
-                guard let remotePath = state.project.remoteAudioPath ?? state.project.filePath,
+                guard let remotePath = state.project.remoteAudioPath,
                       !remotePath.isEmpty else {
-                    print("[AudioDetail] remotePath 없음 - 재생 불가")
+                    print("[AudioDetail] remoteAudioPath 없음 - 원격 다운로드 생략")
                     return .none
                 }
                 
