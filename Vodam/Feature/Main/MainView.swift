@@ -59,9 +59,10 @@ struct MainView: View {
     }
     
     // MARK: - Content View
+    // MARK: - Content View
     @ViewBuilder
     private var contentView: some View {
-        VStack {
+        VStack(spacing: 16) {
             RecordingView(
                 store: store.scope(
                     state: \.recording,
@@ -88,6 +89,7 @@ struct MainView: View {
             
             Spacer()
         }
+        .padding(.top, 16)
     }
     
     // MARK: - Profile Button

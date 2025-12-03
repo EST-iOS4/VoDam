@@ -44,9 +44,13 @@ struct FileButtonView: View {
     private func buttonContent(_ viewStore: ViewStoreOf<FileButtonFeature>) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24)
-                .fill(Color.white)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
                 .shadow(
-                    color: .black.opacity(0.2),
+                    color: Color.primary.opacity(0.5),
                     radius: 6,
                     x: 0,
                     y: 4
@@ -102,7 +106,7 @@ struct FileButtonView: View {
                 RoundedRectangle(cornerRadius: 24).fill(Color.blue)
             )
             .shadow(
-                color: .black.opacity(0.15),
+                color: Color.primary.opacity(0.15),
                 radius: 3,
                 x: 0,
                 y: 2
@@ -114,7 +118,7 @@ struct FileButtonView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(viewStore.title)
                 .font(.headline)
-                .foregroundColor(.black)
+                .foregroundColor(.primary)
             
             if viewStore.isTranscribing {
                 HStack(spacing: 8) {
@@ -123,7 +127,7 @@ struct FileButtonView: View {
                     
                     Text("\(Int(viewStore.progress * 100))%")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
                 }
             }
         }
