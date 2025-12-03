@@ -13,6 +13,8 @@ struct RecordingView: View {
     
     let ownerId: String?
     
+    @State private var isGuestLimitAlertPresented = false
+    
     init(
         store: StoreOf<RecordingFeature>,
         ownerId: String?
@@ -31,7 +33,7 @@ struct RecordingView: View {
                 
                 controls(
                     status: store.status,
-                    onStart: { store.send(.startTapped) },
+                    onStart: { handleStartTapped() },
                     onPause: { store.send(.pauseTapped) },
                     onStop: { store.send(.stopTapped) }
                 )
@@ -54,6 +56,14 @@ struct RecordingView: View {
             if let url = newValue, store.status == .finishing {
                 store.send(.saveRecording(url, store.lastRecordedLength, ownerId, modelContext))
             }
+        }
+        .alert(
+            "게스트는 녹음을 최대 3개까지 저장할 수 있습니다.",
+            isPresented: $isGuestLimitAlertPresented
+        ) {
+            Button("확인", role: .cancel) { }
+        } message: {
+            Text("기존 녹음을 삭제하거나 로그인 후 이용해주세요.")
         }
     }
     
@@ -119,5 +129,29 @@ struct RecordingView: View {
         let m = (seconds % 3600) / 60
         let s = seconds % 60
         return String(format: "%02d:%02d:%02d", h, m, s)
+    }
+    
+    private func handleStartTapped() {
+        if ownerId != nil {
+            store.send(.startTapped)
+            return
+        }
+
+        do {
+            let descriptor = FetchDescriptor<ProjectModel>()
+            let allProjects = try modelContext.fetch(descriptor)
+
+            let guestAudioProjects = allProjects.filter { project in
+                project.ownerId == nil && project.category == .audio
+            }
+
+            if guestAudioProjects.count >= 3 {
+                isGuestLimitAlertPresented = true
+                return
+            }
+        } catch {
+            print("[RecordingView] SwiftData fetch 실패: \(error)")
+        }
+        store.send(.startTapped)
     }
 }
