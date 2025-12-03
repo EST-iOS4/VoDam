@@ -402,7 +402,7 @@ struct ProjectListFeature {
                             )
                         }
                         
-                        let chunks = await splitTranscript(transcript, maxChunkLength: 800)
+                        let chunks = await splitTranscript(transcript, maxChunkLength: 8000)
                         
                         guard !chunks.isEmpty else {
                             print("[AISummary] 요약할 텍스트가 없습니다.")
@@ -488,7 +488,7 @@ struct ProjectListFeature {
                         for (groupIndex, group) in summaryGroups.enumerated() {
                             let combinedGroup = group.joined(separator: " ")
                             
-                            let maxGroupLength = 500
+                            let maxGroupLength = 1000
                             let limitedGroup: String
                             if combinedGroup.count > maxGroupLength {
                                 let endIdx = combinedGroup.index(combinedGroup.startIndex, offsetBy: maxGroupLength)
@@ -540,7 +540,7 @@ struct ProjectListFeature {
                         
                         let finalInput = intermediateSummaries.joined(separator: " ")
                         
-                        let maxFinalLength = 800
+                        let maxFinalLength = 1000
                         let truncatedInput: String
                         if finalInput.count > maxFinalLength {
                             let endIndex = finalInput.index(finalInput.startIndex, offsetBy: maxFinalLength)
