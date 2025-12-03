@@ -10,12 +10,11 @@ import Foundation
 import ComposableArchitecture
 import OSLog
 
-@MainActor
 @Reducer
 struct ChattingRoomFeature {
     @Dependency(\.firebaseClient) var firebaseClient
     
-    nonisolated private let logger = Logger(subsystem: "ChattingRoomFeature", category: "Domain")
+    private let logger = Logger(subsystem: "ChattingRoomFeature", category: "Domain")
     
     // MARK: - State
     @ObservableState
