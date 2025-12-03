@@ -402,7 +402,7 @@ struct ProjectListFeature {
                             )
                         }
                         
-                        let chunks = await splitTranscript(transcript, maxChunkLength: 8000)
+                        let chunks = await splitTranscript(transcript, maxChunkLength: 2000)
                         
                         guard !chunks.isEmpty else {
                             print("[AISummary] 요약할 텍스트가 없습니다.")
