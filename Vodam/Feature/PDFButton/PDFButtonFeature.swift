@@ -11,11 +11,11 @@ import SwiftData
 
 @Reducer
 struct PDFButtonFeature {
-
+    
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
     @Dependency(\.fileCloudClient) var fileCloudClient
-
+    
     @ObservableState
     struct State: Equatable {
         var title: String = "PDF 가져오기"
@@ -23,12 +23,14 @@ struct PDFButtonFeature {
         var isImporterPresented: Bool = false
         var isProcessing: Bool = false
         var savedProjectId: String?
+        
+        @Presents var alert: AlertState<Action.Alert>?
     }
-
+    
     enum PDFImportError: Error, Equatable {
         case failed
     }
-
+    
     enum Action: Equatable {
         case tapped
         case importerPresented(Bool)
@@ -43,28 +45,37 @@ struct PDFButtonFeature {
         
         case delegate(Delegate)
         
+        case loginRequiredTapped
+        case alert(PresentationAction<Alert>)
+        
+        case clearAlert
+        
         enum Delegate: Equatable {
             case projectSaved(String)
             case syncCompleted(String)
         }
+        
+        enum Alert: Equatable {
+            case loginRequired
+        }
     }
-
+    
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-
+                
             case .tapped:
                 state.isImporterPresented = true
                 return .none
-
+                
             case let .importerPresented(isPresented):
                 state.isImporterPresented = isPresented
                 return .none
-
+                
             case .processingStarted:
                 state.isProcessing = true
                 return .none
-
+                
             case .processingFinished:
                 state.isProcessing = false
                 state.selectedPDFURL = nil
@@ -113,7 +124,7 @@ struct PDFButtonFeature {
                         }
                         print("PDF 로컬 저장 완료: \(payload.id)")
                         
-                    
+                        
                         await send(.pdfSaved(payload.id))
                         
                         // 4. 로그인 유저라면 클라우드 동기화
@@ -184,6 +195,25 @@ struct PDFButtonFeature {
             case .pdfSaveFailed(let error):
                 print("PDF 저장 실패: \(error)")
                 state.isProcessing = false
+                return .none
+                
+            case .loginRequiredTapped:
+                state.alert = AlertState {
+                    TextState("로그인이 필요합니다.")
+                } actions: {
+                    ButtonState(role: .cancel) {
+                        TextState("확인")
+                    }
+                } message: {
+                    TextState("로그인 후 이용할 수 있습니다.")
+                }
+                return .none
+                
+            case .clearAlert:
+                state.alert = nil
+                return .none
+                
+            case .alert:
                 return .none
                 
             case .delegate:
