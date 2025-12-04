@@ -100,15 +100,7 @@ struct ProjectTitleEditFeature {
                                 syncStatus: updatedProject.syncStatus
                             )
                             try await firebaseClient.updateProject(ownerId, payload)
-                            
-                            let roomId = updatedProject.id.uuidString
-                            try? await firebaseClient.createChatRoom(
-                                ownerId,
-                                roomId,
-                                updatedProject.name
-                            )
                         }
-                        
                         await send(.saveResponse(.success(updatedProject)))
                     } catch {
                         await send(.saveResponse(.failure(error)))
