@@ -136,7 +136,7 @@ struct FirebaseSyncHelper {
                 let currentLocalPath = remoteProject.filePath
                 
                 do {
-                    let newLocalPath = try await fileCloudClient.downloadFileIfNeeded(
+                    _ = try await fileCloudClient.downloadFileIfNeeded(
                         ownerId,
                         remoteProject.id,
                         remotePath,
