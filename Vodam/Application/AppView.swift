@@ -15,9 +15,18 @@ struct AppView: View {
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
     @Dependency(\.firebaseClient) private var firebaseClient
     @Dependency(\.fileCloudClient) private var fileCloudClient
-
+    
     var body: some View {
-        TabView(selection: $store.startTab.sending(\.startTab)) {
+        TabView(
+            selection: Binding(
+                get: { store.startTab },
+                set: { newTab in
+                    withAnimation(.none) {
+                        _ = store.send(.startTab(newTab))
+                    }
+                }
+            )
+        ) {
             NavigationStack {
                 MainView(
                     store: store.scope(state: \.main, action: \.main)
@@ -27,7 +36,7 @@ struct AppView: View {
                 Label("메인화면", systemImage: "house.fill")
             }
             .tag(AppFeature.State.Tab.main)
-
+            
             NavigationStack {
                 ProjectListView(
                     store: store.scope(state: \.list, action: \.list)
@@ -37,7 +46,7 @@ struct AppView: View {
                 Label("저장된 프로젝트", systemImage: "folder.fill")
             }
             .tag(AppFeature.State.Tab.list)
-
+            
             NavigationStack {
                 ChattingListView(
                     store: store.scope(state: \.chat, action: \.chat)
@@ -53,6 +62,10 @@ struct AppView: View {
             
             if newTab == .main {
                 cleanupAudioSession()
+            }
+            
+            withAnimation(.none) {
+                _ = store.send(.tabDidChange(newTab))
             }
         }
         .onChange(of: store.user) { oldValue, newValue in
