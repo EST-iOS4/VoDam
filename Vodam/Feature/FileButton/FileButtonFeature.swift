@@ -42,7 +42,7 @@ struct FileButtonFeature {
         case startSTT(URL)
         case sttResponse(Result<String, STTError>)
         
-        case saveFile(URL, String?, String?)  // url, transcript, ownerId
+        case saveFile(URL, String?, String?)
         case fileSaved(String)
         case fileSaveFailed(String)
         case syncCompleted(String)
@@ -267,9 +267,14 @@ struct FileButtonFeature {
         }
     }
     
-    private func getAudioDuration(url: URL) -> Double? {
+    private func getAudioDuration(url: URL) async -> Double? {
         let asset = AVURLAsset(url: url)
-        let duration = asset.duration
-        return CMTimeGetSeconds(duration)
+        do {
+            let duration = try await asset.load(.duration)
+            return CMTimeGetSeconds(duration)
+        } catch {
+            print("Duration 로드 실패: \(error)")
+            return nil
+        }
     }
 }
