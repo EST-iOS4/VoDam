@@ -257,7 +257,7 @@ struct ProjectListFeature {
                             await send(.aiSummaryProgressUpdated(projectId: projectId, progress: value, message: message))
                         }
                         
-                        let chunks = splitTranscript(transcript, maxChunkLength: 800)
+                        let chunks = Self.splitTranscript(transcript, maxChunkLength: 800)
                         guard !chunks.isEmpty else {
                             await send(.aiSummaryFailed(projectId: projectId))
                             return
@@ -381,7 +381,7 @@ struct ProjectListFeature {
                 
             case let .aiSummaryResponse(projectId, summary):
                 state.aiSummaryProgress[projectId] = nil
-                if var destination = state.destination, case var .audioDetail(detail) = destination, detail.aiSummary.projectId == projectId {
+                if case var .audioDetail(detail) = state.destination, detail.aiSummary.projectId == projectId {
                     detail.aiSummary.summary = summary
                     detail.aiSummary.isLoading = false
                     state.destination = .audioDetail(detail)
@@ -393,7 +393,7 @@ struct ProjectListFeature {
                 
             case let .aiSummaryFailed(projectId):
                 state.aiSummaryProgress[projectId] = nil
-                if var destination = state.destination, case var .audioDetail(detail) = destination, detail.aiSummary.projectId == projectId {
+                if case var .audioDetail(detail) = state.destination, detail.aiSummary.projectId == projectId {
                     detail.aiSummary.isLoading = false
                     detail.aiSummary.summary = "요약 생성에 실패했습니다."
                     state.destination = .audioDetail(detail)
@@ -408,7 +408,6 @@ struct ProjectListFeature {
     }
 }
 
-// MARK: - Navigation Destination
 extension ProjectListFeature {
     @Reducer
     struct Destination {
@@ -425,7 +424,6 @@ extension ProjectListFeature {
     }
 }
 
-// MARK: - Helpers
 extension ProjectListFeature {
     static func cleanupOrphanedStorageFiles(ownerId: String, remoteProjects: [ProjectPayload], fileCloudClient: FileCloudClient) async {
         do {
@@ -441,16 +439,16 @@ extension ProjectListFeature {
             print("[ProjectList] Storage 고아 파일 정리 실패: \(error)")
         }
     }
-}
-
-fileprivate func splitTranscript(_ text: String, maxChunkLength: Int) -> [String] {
-    guard !text.isEmpty else { return [] }
-    var result: [String] = []
-    var startIndex = text.startIndex
-    while startIndex < text.endIndex {
-        let endIndex = text.index(startIndex, offsetBy: maxChunkLength, limitedBy: text.endIndex) ?? text.endIndex
-        result.append(String(text[startIndex..<endIndex]))
-        startIndex = endIndex
+    
+    nonisolated static func splitTranscript(_ text: String, maxChunkLength: Int) -> [String] {
+        guard !text.isEmpty else { return [] }
+        var result: [String] = []
+        var startIndex = text.startIndex
+        while startIndex < text.endIndex {
+            let endIndex = text.index(startIndex, offsetBy: maxChunkLength, limitedBy: text.endIndex) ?? text.endIndex
+            result.append(String(text[startIndex..<endIndex]))
+            startIndex = endIndex
+        }
+        return result
     }
-    return result
 }
