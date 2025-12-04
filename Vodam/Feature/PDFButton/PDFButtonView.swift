@@ -66,7 +66,6 @@ struct PDFButtonView: View {
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                 )
-                .shadow(color: Color.primary.opacity(0.5), radius: 6, x: 0, y: 4)
             
             HStack(spacing: 20) {
                 Image(systemName: "doc.richtext.fill")
@@ -76,12 +75,6 @@ struct PDFButtonView: View {
                     .background(
                         RoundedRectangle(cornerRadius: 24)
                             .fill(Color.red)
-                    )
-                    .shadow(
-                        color: .black.opacity(0.15),
-                        radius: 3,
-                        x: 0,
-                        y: 2
                     )
                 
                 VStack(alignment: .leading, spacing: 4) {
