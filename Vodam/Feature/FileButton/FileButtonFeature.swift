@@ -240,6 +240,7 @@ struct FileButtonFeature {
                 return .none
             }
         }
+        .ifLet(\.$alert, action: \.alert)
     }
     
     private func copyFileToDocuments(from url: URL) -> String? {
