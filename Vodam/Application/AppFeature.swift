@@ -20,9 +20,9 @@ struct AppFeature {
         var main = MainFeature.State()
         var list = ProjectListFeature.State()
         var chat = ChattingListFeature.State(
-                chattingList: []
-                )
-                
+            chattingList: []
+        )
+        
         enum Tab: Equatable {
             case main
             case list
@@ -31,9 +31,12 @@ struct AppFeature {
     }
     
     enum Action {
+        case binding(BindingAction<State>)
         case onAppear
         
         case setUser(User?)
+        case tabDidChange(State.Tab)
+        
         
         case startTab(State.Tab)
         case main(MainFeature.Action)
@@ -72,27 +75,28 @@ struct AppFeature {
                 return .none
                 
             case .startTab(let tab):
-                    state.startTab = tab
-
-                    if tab == .chat {
-                        if case .some(.audioDetail(var audioState)) = state.list.destination {
-                            audioState.destination = nil
-                            state.list.destination = .audioDetail(audioState)
-                        }
+                state.startTab = tab
+                return .none
+                
+            case .tabDidChange(let tab):
+                switch tab {
+                case .chat:
+                    if case .some(.audioDetail(var audioState)) = state.list.destination {
+                        audioState.destination = nil
+                        state.list.destination = .audioDetail(audioState)
                     }
-
-                    if tab == .list {
-                        state.chat.path = .init()
+                    
+                case .list:
+                    state.chat.path = .init()
+                    
+                case .main:
+                    state.chat.path = .init()
+                    if case .some(.audioDetail(var audioState)) = state.list.destination {
+                        audioState.destination = nil
+                        state.list.destination = .audioDetail(audioState)
                     }
-
-                    if tab == .main {
-                        state.chat.path = .init()
-                        if case .some(.audioDetail(var audioState)) = state.list.destination {
-                            audioState.destination = nil
-                            state.list.destination = .audioDetail(audioState)
-                        }
-                    }
-                    return .none
+                }
+                return .none
                 
             case .main(.userLoaded(let user)):
                 state.user = user
@@ -122,7 +126,7 @@ struct AppFeature {
                 state.main.currentUser = nil
                 state.list.currentUser = nil
                 state.chat.currentUser = nil
-                state.chat.chattingList = [] 
+                state.chat.chattingList = []
                 return .send(.list(.userChanged(nil)))
                 
             case .main(.delegate(.projectSaved)):
@@ -132,6 +136,9 @@ struct AppFeature {
             case .main(.delegate(.syncCompleted(let projectId))):
                 print("동기화 완료 [\(projectId)] - ProjectList 새로고침")
                 return .send(.list(.refreshProjects))
+                
+            case .binding:
+                return .none
                 
             case .main:
                 return .none
