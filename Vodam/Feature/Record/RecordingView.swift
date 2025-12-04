@@ -146,7 +146,7 @@ struct RecordingView: View {
                 let guestAudioProjects = allProjects.filter { $0.category == .audio }
                 
                 if guestAudioProjects.count >= 3 {
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         isGuestLimitAlertPresented = true
                     }
                     return
@@ -155,7 +155,7 @@ struct RecordingView: View {
                 print("[RecordingView] 프로젝트 조회 실패: \(error)")
             }
             
-            await MainActor.run {
+           _ = await MainActor.run {
                 store.send(.startTapped)
             }
         }
