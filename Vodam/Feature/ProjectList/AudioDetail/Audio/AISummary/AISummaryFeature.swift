@@ -6,7 +6,6 @@
 //
 
 import ComposableArchitecture
-import SwiftData
 
 @Reducer
 struct AISummaryFeature {
@@ -35,7 +34,7 @@ struct AISummaryFeature {
     }
     
     enum Action {
-        case summarizeButtonTapped(ModelContext)
+        case summarizeButtonTapped
         case summaryResponse(String)
         case summaryFailed(Error)
         case summarySavedToFirebase
@@ -47,8 +46,7 @@ struct AISummaryFeature {
     var body: some Reducer<State, Action> {
         Reduce { state, action in
             switch action {
-            case .summarizeButtonTapped(let context):
-                
+            case .summarizeButtonTapped:
                 guard !state.isLoading else {
                     return .none
                 }

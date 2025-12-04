@@ -11,7 +11,6 @@ import SwiftData
 
 struct AISummaryView: View {
     let store: StoreOf<AISummaryFeature>
-    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         Group {
@@ -57,7 +56,7 @@ struct AISummaryView: View {
                 .foregroundColor(.secondary)
             
             Button(action: {
-                store.send(.summarizeButtonTapped(modelContext))
+                store.send(.summarizeButtonTapped)
             }) {
                 HStack {
                     Image(systemName: "sparkles")
@@ -95,7 +94,7 @@ struct AISummaryView: View {
                     Spacer()
                     
                     Button(action: {
-                        store.send(.summarizeButtonTapped(modelContext))
+                        store.send(.summarizeButtonTapped)
                     }) {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.clockwise")
