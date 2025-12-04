@@ -63,9 +63,9 @@ struct AudioDetailView: View {
         .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
             ProjectTitleEditView(store: $0)
         }
-        .onDisappear {
-            store.send(.clearAlert)
-        }
+//        .onDisappear {
+//            store.send(.clearAlert)
+//        }
     }
     
     @ViewBuilder
