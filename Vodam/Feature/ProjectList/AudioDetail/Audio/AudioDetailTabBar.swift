@@ -20,7 +20,7 @@ struct AudioDetailTabBar: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(selectedTab == tab ? Color.blue : Color.clear)
+                        .background(selectedTab == tab ? AppColor.mainColor : Color.clear)
                         .foregroundColor(selectedTab == tab ? .white : .primary)
                 }
             }

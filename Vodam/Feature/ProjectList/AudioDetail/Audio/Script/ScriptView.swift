@@ -40,6 +40,10 @@ struct ScriptView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
                 }
+                .background(Color(UIColor.secondarySystemBackground))
+                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
             }
             .onChange(of: store.currentResultIndex) { _, newIndex in
                 withAnimation(.smooth) {
@@ -47,7 +51,7 @@ struct ScriptView: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
+        .background(Color(UIColor.systemBackground))
     }
     
     @ViewBuilder
@@ -261,7 +265,7 @@ struct LargeScriptTextView: UIViewRepresentable {
         textView.showsVerticalScrollIndicator = true
         textView.showsHorizontalScrollIndicator = false
         textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-        textView.backgroundColor = .clear
+        textView.backgroundColor = UIColor.secondarySystemBackground
         textView.alwaysBounceVertical = true
         return textView
     }
