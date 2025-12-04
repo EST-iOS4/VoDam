@@ -65,6 +65,11 @@ struct AudioDetailFeature {
                 }
             }
             
+            if project.category == .pdf,
+               transcriptText.contains("(전체 텍스트는 Storage에 저장됨)") {
+                transcriptText = "전체 스크립트를 불러오는 중..."
+            }
+            
             self.script = ScriptFeature.State(text: transcriptText)
             
             self.aiSummary = AISummaryFeature.State(
@@ -106,6 +111,9 @@ struct AudioDetailFeature {
         case _setupPlayerWithURL(URL)
         case _playerReady(AVPlayer, Double)
         
+        case _downloadTranscriptIfNeeded
+        case _transcriptDownloaded(String)
+        
         case clearAlert
         
         enum DelegateAction {
@@ -129,6 +137,14 @@ struct AudioDetailFeature {
             switch action {
             case .onAppear:
                 print("[AudioDetail] onAppear 진입 - project: \(state.project.name)")
+                
+                if state.project.category == .pdf {
+                    if let transcript = state.project.transcript,
+                       transcript.contains("(전체 텍스트는 Storage에 저장됨)") {
+                        return .send(._downloadTranscriptIfNeeded)
+                    }
+                    return .none
+                }
                 
                 if state.project.category == .pdf {
                     return .none
@@ -167,6 +183,68 @@ struct AudioDetailFeature {
                     } catch {
                         print("[AudioDetail] Firebase 다운로드 실패: \(error)")
                     }
+                }
+                
+            case ._downloadTranscriptIfNeeded:
+                guard let ownerId = state.currentUser?.ownerId else {
+                    return .none
+                }
+                
+                let projectId = state.project.id.uuidString
+                
+                return .run { [fileCloudClient] send in
+                    do {
+                        let transcriptRemotePath = "users/\(ownerId)/files/\(projectId)_transcript.txt"
+                        
+                        guard let documentsDir = FileManager.default.urls(
+                            for: .documentDirectory,
+                            in: .userDomainMask
+                        ).first else { return }
+                        
+                        let localTranscriptPath = documentsDir
+                            .appendingPathComponent("\(projectId)_transcript.txt")
+                            .path
+                        
+                        if FileManager.default.fileExists(atPath: localTranscriptPath) {
+                            let fullText = try String(contentsOfFile: localTranscriptPath, encoding: .utf8)
+                            await send(._transcriptDownloaded(fullText))
+                            return
+                        }
+                        
+                        let downloadedPath = try await fileCloudClient.downloadFileIfNeeded(
+                            ownerId,
+                            "\(projectId)_transcript",
+                            transcriptRemotePath,
+                            localTranscriptPath
+                        )
+                        
+                        let fullText = try String(contentsOfFile: downloadedPath, encoding: .utf8)
+                        await send(._transcriptDownloaded(fullText))
+                        
+                    } catch {
+                        print("[AudioDetail] Transcript 다운로드 실패: \(error)")
+                    }
+                }
+                
+            case ._transcriptDownloaded(let fullText):
+                print("[AudioDetail] Transcript 다운로드 완료: \(fullText.count)자")
+                print("[AudioDetail] 현재 script.text 길이: \(state.script.text.count)자")
+                
+                state.script.text = fullText
+                state.aiSummary.transcript = fullText
+                state.project.transcript = fullText
+                
+                let projectId = state.project.id.uuidString
+                
+                return .run { [projectLocalDataClient] _ in
+                    try? await projectLocalDataClient.update(
+                        projectId,
+                        nil,
+                        nil,
+                        fullText,
+                        nil,
+                        nil
+                    )
                 }
                 
             case ._setupPlayerWithURL(let url):
@@ -241,7 +319,6 @@ struct AudioDetailFeature {
                 
                 return .run { [projectLocalDataClient, firebaseClient] send in
                     do {
-                        // ✅ async/await으로 호출
                         try await projectLocalDataClient.update(
                             project.id.uuidString,
                             nil,
@@ -436,6 +513,8 @@ struct AudioDetailFeature {
                 let projectIdString = state.project.id.uuidString
                 let ownerId = state.currentUser?.ownerId
                 let localFilePath = state.project.filePath
+                let remoteAudioPath = state.project.remoteAudioPath
+                let isPDF = state.project.category == .pdf
                 
                 if let player = state.player {
                     player.pause()
@@ -462,18 +541,56 @@ struct AudioDetailFeature {
                                 }
                             }
                             
+                            if isPDF {
+                                if let documentsDir = FileManager.default.urls(
+                                    for: .documentDirectory,
+                                    in: .userDomainMask
+                                ).first {
+                                    let transcriptPath = documentsDir
+                                        .appendingPathComponent("\(projectIdString)_transcript.txt")
+                                        .path
+                                    
+                                    if FileManager.default.fileExists(atPath: transcriptPath) {
+                                        do {
+                                            try FileManager.default.removeItem(atPath: transcriptPath)
+                                            print("로컬 transcript 파일 삭제 완료: \(transcriptPath)")
+                                        } catch {
+                                            print("로컬 transcript 파일 삭제 실패 (계속 진행): \(error)")
+                                        }
+                                    }
+                                }
+                            }
+                            
                             if let ownerId {
                                 do {
                                     try await firebaseClient.deleteProject(
                                         ownerId,
                                         projectIdString
                                     )
+                                    if let remoteAudioPath, !remoteAudioPath.isEmpty {
+                                        do {
+                                            try await fileCloudClient.deleteFile(remoteAudioPath)
+                                            print("Storage 파일 삭제 완료: \(remoteAudioPath)")
+                                        } catch {
+                                            print("Storage 파일 삭제 실패 (계속 진행): \(error)")
+                                        }
+                                    }
+                                    
+                                    if isPDF {
+                                        let transcriptRemotePath = "users/\(ownerId)/files/\(projectIdString)_transcript.txt"
+                                        do {
+                                            try await fileCloudClient.deleteFile(transcriptRemotePath)
+                                            print("Storage transcript 파일 삭제 완료: \(transcriptRemotePath)")
+                                        } catch {
+                                            print("Storage transcript 파일 삭제 실패 (계속 진행): \(error)")
+                                        }
+                                    }
+                                    
                                     try await firebaseClient.deleteChatRoom(ownerId, projectIdString)
                                 } catch {
                                     print("Firebase 삭제 실패 (계속 진행): \(error)")
                                 }
                             }
-                            
                             await send(.delegate(.needsRefresh))
                             await send(.delegate(.didDeleteProject))
                         } catch {
@@ -483,134 +600,134 @@ struct AudioDetailFeature {
                 )
             }
         }
-        .ifLet(\.$destination, action: \.destination) {
-            Destination()
-        }
-    }
-    
-    private func setupPlayerEffect(fileURL: URL) -> Effect<Action> {
-        .run { send in
-            guard FileManager.default.fileExists(atPath: fileURL.path) else {
-                return
-            }
-            
-            do {
-                let session = AVAudioSession.sharedInstance()
-                let currentCategory = session.category
-                
-                if currentCategory != .playback {
-                    try session.setCategory(.playback, mode: .default, options: [])
-                    try session.setActive(true, options: [.notifyOthersOnDeactivation])
+                .ifLet(\.$destination, action: \.destination) {
+                    Destination()
                 }
-            } catch {
-                print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
             }
             
-            let asset = AVURLAsset(url: fileURL)
-            do {
-                let duration = try await asset.load(.duration)
-                let seconds = CMTimeGetSeconds(duration)
-                
-                if seconds <= 0.1 || seconds.isNaN || seconds.isInfinite {
-                    return
+            private func setupPlayerEffect(fileURL: URL) -> Effect<Action> {
+                .run { send in
+                    guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                        return
+                    }
+                    
+                    do {
+                        let session = AVAudioSession.sharedInstance()
+                        let currentCategory = session.category
+                        
+                        if currentCategory != .playback {
+                            try session.setCategory(.playback, mode: .default, options: [])
+                            try session.setActive(true, options: [.notifyOthersOnDeactivation])
+                        }
+                    } catch {
+                        print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
+                    }
+                    
+                    let asset = AVURLAsset(url: fileURL)
+                    do {
+                        let duration = try await asset.load(.duration)
+                        let seconds = CMTimeGetSeconds(duration)
+                        
+                        if seconds <= 0.1 || seconds.isNaN || seconds.isInfinite {
+                            return
+                        }
+                    } catch {
+                        return
+                    }
+                    
+                    let player = AVPlayer(url: fileURL)
+                    
+                    guard player.currentItem != nil else {
+                        return
+                    }
+                    
+                    let totalSeconds: Double
+                    do {
+                        let duration = try await asset.load(.duration)
+                        totalSeconds = CMTimeGetSeconds(duration)
+                    } catch {
+                        return
+                    }
+                    
+                    await send(._playerReady(player, totalSeconds))
                 }
-            } catch {
-                return
             }
             
-            let player = AVPlayer(url: fileURL)
-            
-            guard player.currentItem != nil else {
-                return
+            private func startPlayerObservation(player: AVPlayer, totalSeconds: Double) -> Effect<Action> {
+                .run { send in
+                    guard let item = player.currentItem else { return }
+                    
+                    await withThrowingTaskGroup(of: Void.self) { group in
+                        group.addTask {
+                            for await _ in NotificationCenter.default.notifications(
+                                named: .AVPlayerItemDidPlayToEndTime,
+                                object: item
+                            ) {
+                                await send(.playerFinishedPlaying, animation: .default)
+                            }
+                        }
+                        
+                        group.addTask {
+                            while !Task.isCancelled {
+                                try? await Task.sleep(nanoseconds: 100_000_000)
+                                
+                                let current = CMTimeGetSeconds(player.currentTime())
+                                if !current.isNaN && !current.isInfinite {
+                                    let progress = totalSeconds > 0 ? current / totalSeconds : 0
+                                    await send(.updateProgress(progress))
+                                }
+                            }
+                        }
+                    }
+                }
+                .cancellable(id: "player_observer", cancelInFlight: true)
             }
-            
-            let totalSeconds: Double
-            do {
-                let duration = try await asset.load(.duration)
-                totalSeconds = CMTimeGetSeconds(duration)
-            } catch {
-                return
-            }
-            
-            await send(._playerReady(player, totalSeconds))
         }
-    }
-    
-    private func startPlayerObservation(player: AVPlayer, totalSeconds: Double) -> Effect<Action> {
-        .run { send in
-            guard let item = player.currentItem else { return }
-            
-            await withThrowingTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    for await _ in NotificationCenter.default.notifications(
-                        named: .AVPlayerItemDidPlayToEndTime,
-                        object: item
-                    ) {
-                        await send(.playerFinishedPlaying, animation: .default)
+        
+        extension AudioDetailFeature {
+            enum Tab: String, CaseIterable, Equatable {
+                case aiSummary = "AI 요약"
+                case script = "스크립트"
+            }
+        }
+        
+        extension AudioDetailFeature {
+            @Reducer
+            struct Destination {
+                @ObservableState
+                enum State: Equatable {
+                    case alert(AlertState<Action.Alert>)
+                    case chattingRoom(ChattingRoomFeature.State)
+                    case editTitle(ProjectTitleEditFeature.State)
+                }
+                
+                enum Action {
+                    case alert(Alert)
+                    case chattingRoom(ChattingRoomFeature.Action)
+                    case editTitle(ProjectTitleEditFeature.Action)
+                    
+                    enum Alert {
+                        case confirmDelete
                     }
                 }
                 
-                group.addTask {
-                    while !Task.isCancelled {
-                        try? await Task.sleep(nanoseconds: 100_000_000)
-                        
-                        let current = CMTimeGetSeconds(player.currentTime())
-                        if !current.isNaN && !current.isInfinite {
-                            let progress = totalSeconds > 0 ? current / totalSeconds : 0
-                            await send(.updateProgress(progress))
+                var body: some Reducer<State, Action> {
+                    Scope(state: \.chattingRoom, action: \.chattingRoom) {
+                        ChattingRoomFeature()
+                    }
+                    Scope(state: \.editTitle, action: \.editTitle) {
+                        ProjectTitleEditFeature()
+                    }
+                    Reduce { state, action in
+                        switch action {
+                        case .alert:
+                            return .none
+                        case .chattingRoom:
+                            return .none
+                        case .editTitle:
+                            return .none
                         }
                     }
                 }
             }
         }
-        .cancellable(id: "player_observer", cancelInFlight: true)
-    }
-}
-
-extension AudioDetailFeature {
-    enum Tab: String, CaseIterable, Equatable {
-        case aiSummary = "AI 요약"
-        case script = "스크립트"
-    }
-}
-
-extension AudioDetailFeature {
-    @Reducer
-    struct Destination {
-        @ObservableState
-        enum State: Equatable {
-            case alert(AlertState<Action.Alert>)
-            case chattingRoom(ChattingRoomFeature.State)
-            case editTitle(ProjectTitleEditFeature.State)
-        }
-        
-        enum Action {
-            case alert(Alert)
-            case chattingRoom(ChattingRoomFeature.Action)
-            case editTitle(ProjectTitleEditFeature.Action)
-            
-            enum Alert {
-                case confirmDelete
-            }
-        }
-        
-        var body: some Reducer<State, Action> {
-            Scope(state: \.chattingRoom, action: \.chattingRoom) {
-                ChattingRoomFeature()
-            }
-            Scope(state: \.editTitle, action: \.editTitle) {
-                ProjectTitleEditFeature()
-            }
-            Reduce { state, action in
-                switch action {
-                case .alert:
-                    return .none
-                case .chattingRoom:
-                    return .none
-                case .editTitle:
-                    return .none
-                }
-            }
-        }
-    }
-}

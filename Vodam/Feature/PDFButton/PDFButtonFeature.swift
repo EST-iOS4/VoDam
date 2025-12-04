@@ -155,19 +155,41 @@ struct PDFButtonFeature {
                             ownerId
                         )
                         print("📄 PDF 로컬 저장 완료: \(payload.id)")
+                        
+                        let transcriptPath = await saveTranscriptToFile(transcript, projectId: payload.id)
 
                         await send(.pdfSaved(payload.id))
                         
-                        // Firebase 동기화
                         if let ownerId {
                             let localURL = URL(fileURLWithPath: storedPath)
                             
+                            // PDF 파일 업로드
                             let remotePath = try await fileCloudClient.uploadFile(
                                 ownerId,
                                 payload.id,
                                 localURL
                             )
                             print("☁️ PDF Storage 업로드 완료: \(remotePath)")
+                            
+                            var remoteTranscriptPath: String? = nil
+                            let transcriptSize = transcript?.utf8.count ?? 0
+                            
+                            let maxFirestoreSize = 900_000
+                            
+                            let finalTranscript: String?
+                            if transcriptSize > maxFirestoreSize, let transcriptPath {
+                                let transcriptURL = URL(fileURLWithPath: transcriptPath)
+                                remoteTranscriptPath = try await fileCloudClient.uploadFile(
+                                    ownerId,
+                                    "\(payload.id)_transcript",
+                                    transcriptURL
+                                )
+                                
+                                finalTranscript = String(transcript?.prefix(1000) ?? "") + "... (전체 텍스트는 Storage에 저장됨)"
+                                print("☁️ Transcript Storage 업로드 완료: \(remoteTranscriptPath ?? "")")
+                            } else {
+                                finalTranscript = transcript
+                            }
                             
                             let syncedPayload = ProjectPayload(
                                 id: payload.id,
@@ -177,7 +199,7 @@ struct PDFButtonFeature {
                                 isFavorite: payload.isFavorite,
                                 filePath: payload.filePath,
                                 fileLength: payload.fileLength,
-                                transcript: payload.transcript,
+                                transcript: finalTranscript,
                                 ownerId: ownerId,
                                 syncStatus: .synced,
                                 remoteAudioPath: remotePath
@@ -246,6 +268,7 @@ struct PDFButtonFeature {
                 return .none
             }
         }
+        .ifLet(\.$alert, action: \.alert)
     }
     
     private func copyPDFToDocuments(from url: URL) -> String? {
@@ -269,6 +292,24 @@ struct PDFButtonFeature {
             return destinationURL.path
         } catch {
             print("PDF 복사 실패: \(error)")
+            return nil
+        }
+    }
+    
+    /// transcript를 로컬 파일로 저장
+    private func saveTranscriptToFile(_ transcript: String?, projectId: String) -> String? {
+        guard let transcript, !transcript.isEmpty else { return nil }
+        
+        let fileManager = FileManager.default
+        guard let documentsDir = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        
+        let transcriptURL = documentsDir.appendingPathComponent("\(projectId)_transcript.txt")
+        
+        do {
+            try transcript.write(to: transcriptURL, atomically: true, encoding: .utf8)
+            return transcriptURL.path
+        } catch {
+            print("Transcript 저장 실패: \(error)")
             return nil
         }
     }
