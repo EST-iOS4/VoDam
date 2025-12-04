@@ -15,7 +15,6 @@ struct PDFButtonFeature {
     @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     @Dependency(\.firebaseClient) var firebaseClient
     @Dependency(\.fileCloudClient) var fileCloudClient
-
     @Dependency(\.pdfOCRClient) var pdfOCRClient
 
     @ObservableState
@@ -28,8 +27,8 @@ struct PDFButtonFeature {
         
         @Presents var alert: AlertState<Action.Alert>?
 
-        var progress: Double = 0  // 추가
-        var errorMessage: String?  // 추가
+        var progress: Double = 0
+        var errorMessage: String?
     }
     
     enum PDFImportError: Error, Equatable {
@@ -43,13 +42,12 @@ struct PDFButtonFeature {
         case processingStarted
         case processingFinished
         
-        // OCR 추가
-        case startOCR(URL, ModelContext, String?)
+        case startOCR(URL, String?)
         case ocrProgressUpdated(Double)
-        case ocrCompleted(URL, String?, ModelContext, String?)  // url, text, context, ownerId
+        case ocrCompleted(URL, String?, String?)
         case ocrFailed(String)
         
-        case savePDF(URL, String?, ModelContext, String?)  // transcript 파라미터 추가
+        case savePDF(URL, String?, String?)
         case pdfSaved(String)
         case pdfSaveFailed(String)
         case syncCompleted(String)
@@ -105,8 +103,7 @@ struct PDFButtonFeature {
                 }
                 return .none
                 
-            // MARK: - OCR
-            case .startOCR(let url, let context, let ownerId):
+            case .startOCR(let url, let ownerId):
                 state.isProcessing = true
                 state.progress = 0
                 print("📄 PDF OCR 시작: \(url.lastPathComponent)")
@@ -118,7 +115,7 @@ struct PDFButtonFeature {
                     
                     switch result {
                     case .success(let text):
-                        await send(.ocrCompleted(url, text, context, ownerId))
+                        await send(.ocrCompleted(url, text, ownerId))
                     case .failure(let error):
                         await send(.ocrFailed(error.localizedDescription))
                     }
@@ -128,9 +125,9 @@ struct PDFButtonFeature {
                 state.progress = progress
                 return .none
                 
-            case .ocrCompleted(let url, let text, let context, let ownerId):
+            case .ocrCompleted(let url, let text, let ownerId):
                 print("📄 OCR 완료: \(text?.count ?? 0)자")
-                return .send(.savePDF(url, text, context, ownerId))
+                return .send(.savePDF(url, text, ownerId))
                 
             case .ocrFailed(let error):
                 print("❌ OCR 실패: \(error)")
@@ -139,8 +136,7 @@ struct PDFButtonFeature {
                 state.errorMessage = "OCR 실패: \(error)"
                 return .none
                 
-            // MARK: - 저장
-            case .savePDF(let url, let transcript, let context, let ownerId):
+            case .savePDF(let url, let transcript, let ownerId):
                 return .run { [projectLocalDataClient, firebaseClient, fileCloudClient] send in
                     do {
                         guard let storedPath = await copyPDFToDocuments(from: url) else {
@@ -150,21 +146,19 @@ struct PDFButtonFeature {
                         
                         let fileName = url.deletingPathExtension().lastPathComponent
                         
-                        let payload = try await MainActor.run {
-                            try projectLocalDataClient.save(
-                                context,
-                                fileName,
-                                .pdf,
-                                storedPath,
-                                nil,
-                                transcript,  // OCR 결과 사용
-                                ownerId
-                            )
-                        }
+                        let payload = try await projectLocalDataClient.save(
+                            fileName,
+                            .pdf,
+                            storedPath,
+                            nil,
+                            transcript,
+                            ownerId
+                        )
                         print("📄 PDF 로컬 저장 완료: \(payload.id)")
 
                         await send(.pdfSaved(payload.id))
                         
+                        // Firebase 동기화
                         if let ownerId {
                             let localURL = URL(fileURLWithPath: storedPath)
                             
@@ -175,7 +169,7 @@ struct PDFButtonFeature {
                             )
                             print("☁️ PDF Storage 업로드 완료: \(remotePath)")
                             
-                            let syncedPayload = await ProjectPayload(
+                            let syncedPayload = ProjectPayload(
                                 id: payload.id,
                                 name: payload.name,
                                 creationDate: payload.creationDate,
@@ -192,15 +186,12 @@ struct PDFButtonFeature {
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
                             print("☁️ Firebase DB 업로드 완료")
                             
-                            try await MainActor.run {
-                                try projectLocalDataClient.updateSyncStatus(
-                                    context,
-                                    [payload.id],
-                                    .synced,
-                                    ownerId,
-                                    remotePath
-                                )
-                            }
+                            try await projectLocalDataClient.updateSyncStatus(
+                                [payload.id],
+                                .synced,
+                                ownerId,
+                                remotePath
+                            )
                             print("☁️ 동기화 상태 업데이트 완료")
                             
                             await send(.syncCompleted(payload.id))

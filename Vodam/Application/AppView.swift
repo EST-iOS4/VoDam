@@ -7,13 +7,11 @@
 
 import ComposableArchitecture
 import SwiftUI
-import SwiftData
 import AVFoundation
 
 struct AppView: View {
     @Bindable var store: StoreOf<AppFeature>
     
-    @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
     @Dependency(\.firebaseClient) private var firebaseClient
     @Dependency(\.fileCloudClient) private var fileCloudClient
@@ -58,20 +56,29 @@ struct AppView: View {
             }
         }
         .onChange(of: store.user) { oldValue, newValue in
-            if oldValue?.ownerId != newValue?.ownerId {
-                FirebaseSyncHelper.handleUserChange(
-                    oldValue: oldValue,
-                    newValue: newValue,
-                    modelContext: modelContext,
-                    projectLocalDataClient: projectLocalDataClient,
-                    firebaseClient: firebaseClient,
-                    fileCloudClient: fileCloudClient,
-                    onComplete: {
-                        store.send(.list(.refreshProjects))
-                    }
-                )
+            if let oldOwnerId = oldValue?.ownerId,
+               let newOwnerId = newValue?.ownerId,
+               oldOwnerId != newOwnerId {
+                handleUserChange(oldValue: oldValue, newValue: newValue)
+            } else if oldValue == nil && newValue != nil {
+                handleUserChange(oldValue: oldValue, newValue: newValue)
+            } else if oldValue != nil && newValue == nil {
+                print("[AppView] 로그아웃 감지")
             }
         }
+    }
+    
+    private func handleUserChange(oldValue: User?, newValue: User?) {
+        FirebaseSyncHelper.handleUserChange(
+            oldValue: oldValue,
+            newValue: newValue,
+            projectLocalDataClient: projectLocalDataClient,
+            firebaseClient: firebaseClient,
+            fileCloudClient: fileCloudClient,
+            onComplete: {
+                store.send(.list(.refreshProjects))
+            }
+        )
     }
     
     private func cleanupAudioSession() {

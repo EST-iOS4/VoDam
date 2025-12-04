@@ -7,49 +7,46 @@
 
 import ComposableArchitecture
 import SwiftUI
-import SwiftData
 
 struct ProjectListView: View {
-    @Environment(\.modelContext) private var modelContext
     @Bindable var store: StoreOf<ProjectListFeature>
     
     var body: some View {
-            VStack {
-                categoryPicker
-                
-                if store.isLoading {
-                    loadingView
-                } else if store.projectState.isEmpty {
-                    emptyView
-                } else {
-                    projectsList
-                }
+        VStack {
+            categoryPicker
+            
+            if store.isLoading {
+                loadingView
+            } else if store.projectState.isEmpty {
+                emptyView
+            } else {
+                projectsList
             }
-            .navigationTitle("저장된 프로젝트")
-            .searchable(text: $store.searchText, prompt: "프로젝트를 검색하세요.")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    sortMenu
-                }
+        }
+        .navigationTitle("저장된 프로젝트")
+        .searchable(text: $store.searchText, prompt: "프로젝트를 검색하세요.")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                sortMenu
             }
-            .task {
-                if !store.hasLoadedOnce {
-                    print("[ProjectListView] 최초 로드 시작")
-                    store.send(.loadProjects(modelContext))
-                }
+        }
+        .task {
+            if !store.hasLoadedOnce {
+                print("[ProjectListView] 최초 로드 시작")
+                store.send(.loadProjects)
             }
-            .onChange(of: store.refreshTrigger) { oldValue, newValue in
-                if newValue != nil && oldValue != newValue {
-                    print("[ProjectListView] Refresh triggered: \(newValue?.uuidString ?? "nil")")
-                    store.send(.loadProjects(modelContext))
-                }
+        }
+        .onChange(of: store.refreshTrigger) { oldValue, newValue in
+            if newValue != nil && oldValue != newValue {
+                print("[ProjectListView] Refresh triggered")
+                store.send(.loadProjects)
             }
-            // ✅ navigationDestination을 item 기반으로 변경
-            .navigationDestination(
-                item: $store.scope(state: \.destination?.audioDetail, action: \.destination.audioDetail)
-            ) { detailStore in
-                AudioDetailView(store: detailStore)
-            }
+        }
+        .navigationDestination(
+            item: $store.scope(state: \.destination?.audioDetail, action: \.destination.audioDetail)
+        ) { detailStore in
+            AudioDetailView(store: detailStore)
+        }
     }
     
     private var categoryPicker: some View {
@@ -90,11 +87,11 @@ struct ProjectListView: View {
             ProjectRow(
                 project: project,
                 onTap: { store.send(.projectTapped(id: project.id)) },
-                onFavoriteTap: { store.send(.favoriteButtonTapped(id: project.id, modelContext)) }
+                onFavoriteTap: { store.send(.favoriteButtonTapped(id: project.id)) }
             )
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 Button(role: .destructive) {
-                    store.send(.deleteProject(id: project.id, modelContext))
+                    store.send(.deleteProject(id: project.id))
                 } label: {
                     Label("삭제", systemImage: "trash")
                 }
@@ -105,7 +102,7 @@ struct ProjectListView: View {
         .refreshable {
             print("[ProjectListView] Pull-to-refresh 트리거")
             await withCheckedContinuation { continuation in
-                store.send(.loadProjects(modelContext))
+                store.send(.loadProjects)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     continuation.resume()
                 }
