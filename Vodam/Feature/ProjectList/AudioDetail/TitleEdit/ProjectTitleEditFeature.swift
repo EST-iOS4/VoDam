@@ -44,6 +44,7 @@ struct ProjectTitleEditFeature {
         case saveResponse(Result<Project, Error>)
         case alert(PresentationAction<Alert>)
         case delegate(DelegateAction)
+        case clearButtonTapped
         
         enum Alert: Equatable {}
         enum DelegateAction: Equatable {
@@ -124,6 +125,10 @@ struct ProjectTitleEditFeature {
                 return .none
                 
             case .delegate:
+                return .none
+                
+            case .clearButtonTapped:
+                state.editedName = ""
                 return .none
             }
         }
