@@ -53,12 +53,6 @@ struct FileButtonView: View {
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                 )
-                .shadow(
-                    color: Color.primary.opacity(0.5),
-                    radius: 6,
-                    x: 0,
-                    y: 4
-                )
             
             HStack(spacing: 20) {
                 iconView
