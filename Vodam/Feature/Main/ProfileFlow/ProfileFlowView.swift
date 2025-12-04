@@ -58,6 +58,6 @@ struct ProfileFlowView: View {
         .padding(.top, 40)
         .padding(.horizontal, 24)
         .padding(.bottom, 10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 }
