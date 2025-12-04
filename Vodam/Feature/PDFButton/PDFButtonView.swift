@@ -9,10 +9,8 @@ import ComposableArchitecture
 import SwiftUI
 import UniformTypeIdentifiers
 import PDFKit
-import SwiftData
 
 struct PDFButtonView: View {
-    @Environment(\.modelContext) private var context
     @Bindable var store: StoreOf<PDFButtonFeature>
     let ownerId: String?
     
@@ -35,7 +33,7 @@ struct PDFButtonView: View {
         
         .onChange(of: store.selectedPDFURL) { _, newValue in
             guard let url = newValue else { return }
-            store.send(.startOCR(url, context, ownerId))
+            store.send(.startOCR(url, ownerId))
         }
         .fileImporter(
             isPresented: $store.isImporterPresented.sending(\.importerPresented),
@@ -54,18 +52,14 @@ struct PDFButtonView: View {
                 store.send(.pdfImported(.failure(.failed)))
             }
         }
-        //            .onChange(of: store.selectedPDFURL) { _, newValue in
-        //                guard let url = newValue else { return }
-        //                store.send(.savePDF(url, context, ownerId))
-        //            }
         .alert($store.scope(state: \.alert, action: \.alert))
         .onDisappear {
             store.send(.clearAlert)
         }
     }
+    
     private var buttonContent: some View {
         ZStack {
-            // 카드 배경
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color(.secondarySystemBackground))
                 .overlay(
@@ -74,10 +68,7 @@ struct PDFButtonView: View {
                 )
                 .shadow(color: Color.primary.opacity(0.5), radius: 6, x: 0, y: 4)
             
-            // 내부 UI
             HStack(spacing: 20) {
-                
-                // 아이콘
                 Image(systemName: "doc.richtext.fill")
                     .foregroundColor(.white)
                     .font(.system(size: 24))
@@ -123,8 +114,6 @@ struct PDFButtonView: View {
                 store.send(.tapped)
             }
         }
-        
     }
 }
-
 

@@ -4,14 +4,13 @@
 //
 
 import ComposableArchitecture
-import SwiftData
 import SwiftUI
 
 struct RecordingView: View {
-    @Environment(\.modelContext) var modelContext
     let store: StoreOf<RecordingFeature>
-    
     let ownerId: String?
+    
+    @Dependency(\.projectLocalDataClient) var projectLocalDataClient
     
     @State private var isGuestLimitAlertPresented = false
     
@@ -58,7 +57,7 @@ struct RecordingView: View {
         
         .onChange(of: store.fileURL) { _, newValue in
             if let url = newValue, store.status == .finishing {
-                store.send(.saveRecording(url, store.lastRecordedLength, ownerId, modelContext))
+                store.send(.saveRecording(url, store.lastRecordedLength, ownerId))
             }
         }
         .alert(
@@ -141,21 +140,24 @@ struct RecordingView: View {
             return
         }
 
-        do {
-            let descriptor = FetchDescriptor<ProjectModel>()
-            let allProjects = try modelContext.fetch(descriptor)
-
-            let guestAudioProjects = allProjects.filter { project in
-                project.ownerId == nil && project.category == .audio
+        Task {
+            do {
+                let allProjects = try await projectLocalDataClient.fetchAll(nil)
+                let guestAudioProjects = allProjects.filter { $0.category == .audio }
+                
+                if guestAudioProjects.count >= 3 {
+                    await MainActor.run {
+                        isGuestLimitAlertPresented = true
+                    }
+                    return
+                }
+            } catch {
+                print("[RecordingView] 프로젝트 조회 실패: \(error)")
             }
-
-            if guestAudioProjects.count >= 3 {
-                isGuestLimitAlertPresented = true
-                return
+            
+            await MainActor.run {
+                store.send(.startTapped)
             }
-        } catch {
-            print("[RecordingView] SwiftData fetch 실패: \(error)")
         }
-        store.send(.startTapped)
     }
 }

@@ -12,7 +12,6 @@ import SwiftUI
 struct AudioDetailView: View {
     @Bindable var store: StoreOf<AudioDetailFeature>
     @FocusState private var isSearchFieldFocused: Bool
-    @Environment(\.modelContext) private var context
     
     private var isPDF: Bool {
         store.project.category == .pdf
@@ -118,7 +117,7 @@ struct AudioDetailView: View {
                     }
                     
                     Button(role: .destructive) {
-                        store.send(.deleteProjectButtonTapped(context))
+                        store.send(.deleteProjectButtonTapped)
                     } label: {
                         Label("삭제", systemImage: "xmark")
                     }
@@ -258,7 +257,7 @@ struct AudioDetailView: View {
                     .font(.title)
             }
             
-            Button(action: { store.send(.favoriteButtonTapped(context)) }) {
+            Button(action: { store.send(.favoriteButtonTapped) }) {
                 Image(systemName: store.isFavorite ? "star.fill" : "star")
                     .font(.title)
                     .foregroundColor(.yellow)
@@ -278,7 +277,7 @@ struct AudioDetailView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
             
-            Button(action: { store.send(.favoriteButtonTapped(context)) }) {
+            Button(action: { store.send(.favoriteButtonTapped) }) {
                 HStack {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
                         .font(.title2)

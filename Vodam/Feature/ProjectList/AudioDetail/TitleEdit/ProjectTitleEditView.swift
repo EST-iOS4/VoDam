@@ -11,7 +11,6 @@ import SwiftUI
 
 struct ProjectTitleEditView: View {
     @Bindable var store: StoreOf<ProjectTitleEditFeature>
-    @Environment(\.modelContext) private var context
     
     var body: some View {
         Form {
@@ -26,7 +25,7 @@ struct ProjectTitleEditView: View {
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 Button("확인") {
-                    store.send(.confirmButtonTapped(context))
+                    store.send(.confirmButtonTapped)
                 }
                 .disabled(!store.canConfirm || store.isSaving)
             }

@@ -10,7 +10,6 @@ import ComposableArchitecture
 import Speech
 import SwiftUI
 import SwiftData
-import AVFoundation
 
 @Reducer
 struct FileButtonFeature {
@@ -43,7 +42,7 @@ struct FileButtonFeature {
         case startSTT(URL)
         case sttResponse(Result<String, STTError>)
         
-        case saveFile(URL, String?, ModelContext, String?)
+        case saveFile(URL, String?, String?)  // url, transcript, ownerId
         case fileSaved(String)
         case fileSaveFailed(String)
         case syncCompleted(String)
@@ -108,10 +107,10 @@ struct FileButtonFeature {
                     }
                     await send(.sttResponse(result))
                 }
+                
             case .sttProgressUpdated(let progress):
                 state.progress = progress
                 return .none
-                
                 
             case .sttResponse(let result):
                 state.isTranscribing = false
@@ -129,7 +128,7 @@ struct FileButtonFeature {
                 }
                 return .none
                 
-            case .saveFile(let url, let transcript, let context, let ownerId):
+            case .saveFile(let url, let transcript, let ownerId):
                 return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
                     do {
                         guard let storedPath = await copyFileToDocuments(from: url) else {
@@ -144,21 +143,19 @@ struct FileButtonFeature {
                             fileLength = Int(duration)
                         }
                         
-                        let payload = try await MainActor.run {
-                            try projectLocalDataClient.save(
-                                context,
-                                fileName,
-                                .file,
-                                storedPath,
-                                fileLength,
-                                transcript,
-                                ownerId
-                            )
-                        }
+                        let payload = try await projectLocalDataClient.save(
+                            fileName,
+                            .file,
+                            storedPath,
+                            fileLength,
+                            transcript,
+                            ownerId
+                        )
                         print("📁 파일 로컬 저장 완료: \(payload.id)")
                         
                         await send(.fileSaved(payload.id))
                         
+                        // Firebase 동기화
                         if let ownerId {
                             let localURL = URL(fileURLWithPath: storedPath)
                             
@@ -168,7 +165,7 @@ struct FileButtonFeature {
                                 localURL
                             )
                             
-                            let syncedPayload = await ProjectPayload(
+                            let syncedPayload = ProjectPayload(
                                 id: payload.id,
                                 name: payload.name,
                                 creationDate: payload.creationDate,
@@ -184,15 +181,12 @@ struct FileButtonFeature {
                             
                             try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
                             
-                            try await MainActor.run {
-                                try projectLocalDataClient.updateSyncStatus(
-                                    context,
-                                    [payload.id],
-                                    .synced,
-                                    ownerId,
-                                    remotePath
-                                )
-                            }
+                            try await projectLocalDataClient.updateSyncStatus(
+                                [payload.id],
+                                .synced,
+                                ownerId,
+                                remotePath
+                            )
                             print("☁️ 클라우드 동기화 완료")
                             await send(.syncCompleted(payload.id))
                         }

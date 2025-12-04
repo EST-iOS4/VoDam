@@ -9,6 +9,9 @@ import FirebaseCore
 @main
 struct VodamApp: App {
     
+    let modelContainer: ModelContainer
+    let store: StoreOf<AppFeature>
+    
     init() {
         FirebaseApp.configure()
         
@@ -23,27 +26,35 @@ struct VodamApp: App {
             )
         }
         KakaoSDK.initSDK(appKey: token)
+        
+        do {
+            modelContainer = try ModelContainer(for: ProjectModel.self)
+        } catch {
+            fatalError("ModelContainer 생성 실패: \(error)")
+        }
+        
+        SwiftDataClient.configure(container: modelContainer)
+        
+        store = Store(initialState: AppFeature.State()) {
+            AppFeature()
+        }
+        
+        print("SwiftDataClient 싱글톤 초기화 완료")
+        print("ProjectLocalDataClient 초기화 완료")
     }
     
     var body: some Scene {
         WindowGroup {
-            AppView(
-                store: Store(
-                    initialState: AppFeature.State(),
-                    reducer: {
-                        AppFeature()
+            AppView(store: store)
+                .environment(\.font, AppFont.pretendardRegular(size: 16))
+                .onOpenURL { url in
+                    if AuthApi.isKakaoTalkLoginUrl(url) {
+                        _ = AuthController.handleOpenUrl(url: url)
+                        return
                     }
-                )
-            )
-            .environment(\.font, AppFont.pretendardRegular(size: 16))
-            .onOpenURL { url in
-                if AuthApi.isKakaoTalkLoginUrl(url) {
-                    _ = AuthController.handleOpenUrl(url: url)
-                    return
+                    _ = GIDSignIn.sharedInstance.handle(url)
                 }
-                _ = GIDSignIn.sharedInstance.handle(url)
-            }
         }
-        .modelContainer(for: ProjectModel.self)
+        .modelContainer(modelContainer)
     }
 }
