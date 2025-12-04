@@ -15,7 +15,7 @@ struct Message: Identifiable, Codable, Equatable, Sendable {
     
     var uniqueId: String { id }
     
-    init(
+    nonisolated init(
         id: String = UUID().uuidString,
         content: String,
         isFromUser: Bool,

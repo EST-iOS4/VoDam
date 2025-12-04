@@ -59,18 +59,25 @@ private func exportChunk(from asset: AVURLAsset, timeRange: CMTimeRange, index: 
         return .failure(.failed("오디오 내보내기 세션 생성 실패"))
     }
     
-    exportSession.outputURL = outputURL
-    exportSession.outputFileType = .m4a
     exportSession.timeRange = timeRange
     
-    await exportSession.export()
-    
-    guard exportSession.status == .completed else {
-        let errorMsg = exportSession.error?.localizedDescription ?? "알 수 없는 오류"
-        return .failure(.failed("청크 내보내기 실패: \(errorMsg)"))
+    do {
+        if #available(iOS 18.0, *) {
+            try await exportSession.export(to: outputURL, as: .m4a)
+        } else {
+            exportSession.outputURL = outputURL
+            exportSession.outputFileType = .m4a
+            await exportSession.export()
+            
+            guard exportSession.status == .completed else {
+                let errorMsg = exportSession.error?.localizedDescription ?? "알 수 없는 오류"
+                return .failure(.failed("청크 내보내기 실패: \(errorMsg)"))
+            }
+        }
+        return .success(outputURL)
+    } catch {
+        return .failure(.failed("청크 내보내기 실패: \(error.localizedDescription)"))
     }
-    
-    return .success(outputURL)
 }
 
 private func transcribeSingleChunk(url: URL, recognizer: SFSpeechRecognizer) async -> Result<String, FileButtonFeature.STTError> {
