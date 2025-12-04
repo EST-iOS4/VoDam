@@ -7,7 +7,6 @@
 
 import ComposableArchitecture
 import PhotosUI
-import SwiftData
 import SwiftUI
 
 struct SettingView: View {
@@ -15,9 +14,7 @@ struct SettingView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var showDeleteConfirmation = false
 
-    @Environment(\.modelContext) private var modelContext
     @Dependency(\.projectLocalDataClient) private var projectLocalDataClient
-    @Dependency(\.fileCloudClient) private var fileCloudClient
 
     private var user: User? {
         store.user
@@ -55,26 +52,23 @@ struct SettingView: View {
             )
         }
         .task(id: store.pendingDeleteOwnerId) {
-            // pendingDeleteOwnerId가 설정되면 로컬 데이터 삭제
             if let ownerId = store.pendingDeleteOwnerId {
                 await deleteLocalData(ownerId: ownerId)
             }
         }
         .task(id: store.pendingLogoutOwnerId) {
-            // pendingLogoutOwnerId가 설정되면 로컬 데이터 삭제 (로그아웃)
             if let ownerId = store.pendingLogoutOwnerId {
                 await deleteLocalDataForLogout(ownerId: ownerId)
             }
         }
     }
 
-    // MARK: - 로컬 데이터 삭제 (회원 탈퇴)
     private func deleteLocalData(ownerId: String) async {
         do {
             print("탈퇴 처리 - 로컬 데이터 삭제 시작: \(ownerId)")
             
             // 로컬 SwiftData만 삭제 (Firebase는 Feature에서 이미 삭제)
-            try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
+            try await projectLocalDataClient.deleteAllForOwner(ownerId)
             
             store.send(.localDataDeleted(ownerId))
             print("로컬 데이터 삭제 완료: \(ownerId)")
@@ -86,18 +80,20 @@ struct SettingView: View {
 
     // MARK: - 로그아웃 시 로컬 데이터 삭제
     private func deleteLocalDataForLogout(ownerId: String) async {
-//        do {
-//            print("로그아웃 - 로컬 데이터 삭제 시작: \(ownerId)")
-//            
-//            // 로컬 SwiftData만 삭제 (Firebase Storage는 유지)
-//            try projectLocalDataClient.deleteAllForOwner(modelContext, ownerId)
-//            
-//            print("로그아웃 - 로컬 데이터 삭제 완료: \(ownerId)")
-//            
-//        } catch {
-//            print("로그아웃 - 로컬 데이터 삭제 실패: \(error)")
-//        }
-        print("로그아웃 - 로컬 데이터 유지 (ownerId: \(ownerId)")
+        // 로그아웃 시에는 로컬 데이터를 유지
+        // 다음 로그인 시 Firebase와 동기화됨
+        print("로그아웃 - 로컬 데이터 유지 (ownerId: \(ownerId))")
+        
+        // 필요하다면 주석을 해제하여 로그아웃 시 로컬 데이터도 삭제할 수 있음
+        /*
+        do {
+            print("로그아웃 - 로컬 데이터 삭제 시작: \(ownerId)")
+            try await projectLocalDataClient.deleteAllForOwner(ownerId)
+            print("로그아웃 - 로컬 데이터 삭제 완료: \(ownerId)")
+        } catch {
+            print("로그아웃 - 로컬 데이터 삭제 실패: \(error)")
+        }
+        */
     }
 
     @ViewBuilder
@@ -221,4 +217,3 @@ private func providerText(_ provider: AuthProvider) -> String {
     case .kakao: return "Kakao"
     }
 }
-

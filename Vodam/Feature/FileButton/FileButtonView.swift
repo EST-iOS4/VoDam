@@ -6,12 +6,10 @@
 //
 
 import ComposableArchitecture
-import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct FileButtonView: View {
-    @Environment(\.modelContext) private var context
     @Bindable var store: StoreOf<FileButtonFeature>
     let ownerId: String?
     
@@ -30,20 +28,16 @@ struct FileButtonView: View {
                     .padding(.horizontal, 20)
             }
         }
-        // STT 완료 후 저장 처리
         .onChange(of: store.isTranscribing) { wasTranscribing, isTranscribing in
-            // STT가 완료되었고 (false), 선택된 파일이 있고, 에러가 없을 때
             if !isTranscribing,
                wasTranscribing,
                let url = store.selectedFileURL,
                store.errorMessage == nil {
                 
                 let transcript = store.transcript.isEmpty ? nil : store.transcript
-                store.send(.saveFile(url, transcript, context, ownerId))
-                
+                store.send(.saveFile(url, transcript, ownerId))
             }
         }
-        // Feature 쪽 AlertState 사용
         .alert($store.scope(state: \.alert, action: \.alert))
         .onDisappear {
             store.send(.clearAlert)
