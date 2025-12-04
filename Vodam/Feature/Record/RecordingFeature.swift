@@ -63,7 +63,7 @@ struct RecordingFeature {
         case liveTranscriptUpdated(String)
         case recordingFileSaved(URL)
         
-        case saveRecording(URL, Int, String?, ModelContext)
+        case saveRecording(URL, Int, String?)
         case recordingSaved(String)
         case recordingSaveFailed(String)
         case syncCompleted(String)
@@ -171,7 +171,6 @@ struct RecordingFeature {
                     }
                 )
                 
-                // MARK: - Tick
             case .tick:
                 if state.status == .recording {
                     state.elapsedSeconds += 1
@@ -186,8 +185,7 @@ struct RecordingFeature {
                 state.fileURL = url
                 return .none
                 
-                // MARK: - Save
-            case .saveRecording(let tempUrl, let length, let ownerId, let context):
+            case .saveRecording(let tempUrl, let length, let ownerId):
                 let transcript: String? = state.liveTranscript.isEmpty ? nil : state.liveTranscript
                 
                 return .run { [projectLocalDataClient, fileCloudClient, firebaseClient] send in
@@ -231,21 +229,19 @@ struct RecordingFeature {
                         dateFormatter.dateFormat = "yyyy.MM.dd HH:mm"
                         let fileName = "녹음 \(dateFormatter.string(from: Date()))"
                         
-                        let payload = try await MainActor.run {
-                            try projectLocalDataClient.save(
-                                context,
-                                fileName,
-                                .audio,
-                                storedPath,
-                                length,
-                                transcript,
-                                ownerId
-                            )
-                        }
+                        let payload = try await projectLocalDataClient.save(
+                            fileName,
+                            .audio,
+                            storedPath,
+                            length,
+                            transcript,
+                            ownerId
+                        )
                         print("✅ 로컬 저장 완료: \(payload.id)")
                         
                         await send(.recordingSaved(payload.id))
                         
+                        // Firebase 동기화
                         if let ownerId {
                             do {
                                 let localURL = URL(fileURLWithPath: storedPath)
@@ -271,9 +267,12 @@ struct RecordingFeature {
                                 
                                 try await firebaseClient.uploadProjects(ownerId, [syncedPayload])
                                 
-                                try await MainActor.run {
-                                    try projectLocalDataClient.updateSyncStatus(context, [payload.id], .synced, ownerId, remotePath)
-                                }
+                                try await projectLocalDataClient.updateSyncStatus(
+                                    [payload.id],
+                                    .synced,
+                                    ownerId,
+                                    remotePath
+                                )
                                 
                                 await send(.syncCompleted(payload.id))
                             } catch {

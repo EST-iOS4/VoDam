@@ -7,7 +7,6 @@
 
 import ComposableArchitecture
 import Foundation
-import SwiftData
 
 @Reducer
 struct ProjectTitleEditFeature {
@@ -41,7 +40,7 @@ struct ProjectTitleEditFeature {
     
     enum Action: BindableAction {
         case binding(BindingAction<State>)
-        case confirmButtonTapped(ModelContext)
+        case confirmButtonTapped
         case saveResponse(Result<Project, Error>)
         case alert(PresentationAction<Alert>)
         case delegate(DelegateAction)
@@ -60,7 +59,7 @@ struct ProjectTitleEditFeature {
             case .binding:
                 return .none
                 
-            case .confirmButtonTapped(let context):
+            case .confirmButtonTapped:
                 let newName = state.trimmedName
                 guard !newName.isEmpty else {
                     state.alert = AlertState {
@@ -75,23 +74,20 @@ struct ProjectTitleEditFeature {
                 
                 return .run { [projectLocalDataClient, firebaseClient] send in
                     do {
-                        try await MainActor.run {
-                            try projectLocalDataClient.update(
-                                context,
-                                project.id.uuidString,
-                                newName,
-                                nil,
-                                nil,
-                                nil,
-                                nil
-                            )
-                        }
+                        try await projectLocalDataClient.update(
+                            project.id.uuidString,
+                            newName,
+                            nil,
+                            nil,
+                            nil,
+                            nil
+                        )
                         
                         var updatedProject = project
                         updatedProject.name = newName
                         
                         if let ownerId {
-                            let payload = await ProjectPayload(
+                            let payload = ProjectPayload(
                                 id: updatedProject.id.uuidString,
                                 name: updatedProject.name,
                                 creationDate: updatedProject.creationDate,
@@ -112,6 +108,7 @@ struct ProjectTitleEditFeature {
                                 updatedProject.name
                             )
                         }
+                        
                         await send(.saveResponse(.success(updatedProject)))
                     } catch {
                         await send(.saveResponse(.failure(error)))
@@ -138,5 +135,6 @@ struct ProjectTitleEditFeature {
                 return .none
             }
         }
+        .ifLet(\.$alert, action: \.alert)
     }
 }
