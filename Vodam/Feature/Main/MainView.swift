@@ -42,7 +42,7 @@ struct MainView: View {
             .sheet(isPresented: $isProfileFlowPresented) {
                 if let profileStore = store.scope(state: \.profileFlow, action: \.profileFlow.presented) {
                     ProfileFlowView(store: profileStore)
-                        .presentationDetents([.fraction(0.5)])
+                        .presentationDetents([.fraction(0.4)])
                         .presentationDragIndicator(.visible)
                 }
             }
