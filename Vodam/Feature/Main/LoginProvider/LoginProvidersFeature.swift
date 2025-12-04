@@ -14,7 +14,7 @@ struct LoginProvidersFeature {
     struct State: Equatable {
     }
 
-    enum Provider: Equatable {
+    nonisolated enum Provider: Equatable, Sendable {
         case apple
         case google
         case kakao
