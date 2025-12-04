@@ -116,7 +116,7 @@ struct AudioDetailFeature {
         case _downloadTranscriptIfNeeded
         case _transcriptDownloaded(String)
         
-        case clearAlert
+//        case clearAlert
         
         enum DelegateAction {
             case needsRefresh
@@ -419,11 +419,11 @@ struct AudioDetailFeature {
                     try? await firebaseClient.createChatRoom(ownerId, roomId, title)
                 }
                 
-            case .clearAlert:
-                if case .alert = state.destination {
-                    state.destination = nil
-                }
-                return .none
+//            case .clearAlert:
+//                if case .alert = state.destination {
+//                    state.destination = nil
+//                }
+//                return .none
                 
             case .searchButtonTapped:
                 state.isSearching = true
