@@ -86,10 +86,10 @@ struct AISummaryView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Image(systemName: "sparkles")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.yellow)
                     Text("AI 요약 완료")
                         .font(.headline)
-                        .foregroundColor(.blue)
+                        .foregroundColor(AppColor.mainColor)
                     
                     Spacer()
                     
@@ -101,12 +101,15 @@ struct AISummaryView: View {
                             Text("다시 요약")
                         }
                         .font(.caption)
-                        .foregroundColor(.blue)
+                        .foregroundColor(.secondary)
                     }
                 }
                 .padding(.bottom, 8)
                 
                 MarkdownTextView(summary, font: .body, linSpacing: 6)
+                    .padding()
+                    .background(Color(UIColor.systemGray6))
+                    .cornerRadius(12)
             }
             .padding()
         }

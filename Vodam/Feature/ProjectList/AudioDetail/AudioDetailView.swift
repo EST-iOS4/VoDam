@@ -280,9 +280,9 @@ struct AudioDetailView: View {
             Button(action: { store.send(.favoriteButtonTapped) }) {
                 HStack {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
-                        .font(.title2)
                         .foregroundColor(.yellow)
-                    Text(store.isFavorite ? "즐겨찾기에서 제거" : "즐겨찾기에 추가")
+                    Text(store.isFavorite ? "즐겨찾기에서 제거" : "즐겨찾기에 추가")   .font(AppFont.pretendardSemiBold(size: 17))
+                        .foregroundColor(.secondary)
                 }
             }
             .padding(.bottom, 20)
