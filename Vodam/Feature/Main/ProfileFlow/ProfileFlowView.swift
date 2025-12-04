@@ -21,7 +21,6 @@ struct ProfileFlowView: View {
                    - 녹음 시간 / 횟수 제한 해제 (3회 -> 무제한)
                    - PDF / 녹음 파일 가져오기
                    - Ai 채팅
-                
                 """
             )
             .font(.subheadline)
@@ -57,7 +56,7 @@ struct ProfileFlowView: View {
         }
         .padding(.top, 40)
         .padding(.horizontal, 24)
-        .padding(.bottom, 10)
+        .padding(.bottom, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 }
