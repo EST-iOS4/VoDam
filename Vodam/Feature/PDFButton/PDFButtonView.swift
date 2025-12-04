@@ -91,7 +91,10 @@ struct PDFButtonView: View {
                     
                     if store.isProcessing {
                         HStack(spacing: 8) {
-                            Text("OCR 변환 중... \(Int(store.progress * 100))%")
+                            ProgressView(value: store.progress)
+                                .frame(width: 100)
+                            
+                            Text("\(Int(store.progress * 100))%")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -108,9 +111,9 @@ struct PDFButtonView: View {
         .frame(height: 80)
         .padding(.horizontal, 20)
         .onTapGesture {
-            store.send(.tapped)
             if ownerId == nil {
                 store.send(.loginRequiredTapped)
+            } else {
                 store.send(.tapped)
             }
         }
