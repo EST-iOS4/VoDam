@@ -46,6 +46,8 @@ struct AudioDetailFeature {
         
         var isPlayerReady = false
         
+        var totalSeconds: Double = 0
+        
         var isSearching = false
         var searchText = ""
         
@@ -253,6 +255,8 @@ struct AudioDetailFeature {
             case ._playerReady(let player, let totalSeconds):
                 state.player = player
                 state.isPlayerReady = true
+                // FIXED: Store totalSeconds in state for later use
+                state.totalSeconds = totalSeconds
                 if !totalSeconds.isNaN && !totalSeconds.isInfinite {
                     state.totalTime = formatTime(totalSeconds)
                 }
@@ -274,8 +278,8 @@ struct AudioDetailFeature {
                     player.play()
                     player.rate = state.playbackRate
                     
-                    if let item = player.currentItem {
-                        let totalSeconds = CMTimeGetSeconds(item.asset.duration)
+                    if player.currentItem != nil {
+                        let totalSeconds = state.totalSeconds
                         return startPlayerObservation(player: player, totalSeconds: totalSeconds)
                     }
                 } else {
@@ -354,10 +358,10 @@ struct AudioDetailFeature {
             case .updateProgress(let progress):
                 state.progress = progress
                 
-                guard let player = state.player, let item = player.currentItem
+                guard state.player != nil, state.player?.currentItem != nil
                 else { return .none }
-                let duration = item.asset.duration
-                let currentTimeSeconds = CMTimeGetSeconds(duration) * progress
+                let totalSeconds = state.totalSeconds
+                let currentTimeSeconds = totalSeconds * progress
                 if !currentTimeSeconds.isNaN && !currentTimeSeconds.isInfinite {
                     state.currentTime = formatTime(currentTimeSeconds)
                 }
@@ -372,10 +376,10 @@ struct AudioDetailFeature {
                 
             case .seek(let progress):
                 guard let player = state.player,
-                      let item = player.currentItem else { return .none }
+                      player.currentItem != nil else { return .none }
                 let clampedProgress = min(max(progress, 0), 1)
-                let duration = item.asset.duration
-                let targetTime = CMTimeGetSeconds(duration) * clampedProgress
+                let totalSeconds = state.totalSeconds
+                let targetTime = totalSeconds * clampedProgress
                 player.seek(to: CMTime(seconds: targetTime, preferredTimescale: 1))
                 
                 if !targetTime.isNaN && !targetTime.isInfinite {
@@ -526,7 +530,7 @@ struct AudioDetailFeature {
                 
                 return .merge(
                     .cancel(id: "player_observer"),
-                    .run { [projectLocalDataClient, firebaseClient] send in
+                    .run { [projectLocalDataClient, firebaseClient, fileCloudClient] send in
                         do {
                             try await projectLocalDataClient.delete(projectIdString)
                             
@@ -600,134 +604,134 @@ struct AudioDetailFeature {
                 )
             }
         }
-                .ifLet(\.$destination, action: \.destination) {
-                    Destination()
-                }
+        .ifLet(\.$destination, action: \.destination) {
+            Destination()
+        }
+    }
+    
+    private func setupPlayerEffect(fileURL: URL) -> Effect<Action> {
+        .run { send in
+            guard FileManager.default.fileExists(atPath: fileURL.path) else {
+                return
             }
             
-            private func setupPlayerEffect(fileURL: URL) -> Effect<Action> {
-                .run { send in
-                    guard FileManager.default.fileExists(atPath: fileURL.path) else {
-                        return
-                    }
-                    
-                    do {
-                        let session = AVAudioSession.sharedInstance()
-                        let currentCategory = session.category
-                        
-                        if currentCategory != .playback {
-                            try session.setCategory(.playback, mode: .default, options: [])
-                            try session.setActive(true, options: [.notifyOthersOnDeactivation])
-                        }
-                    } catch {
-                        print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
-                    }
-                    
-                    let asset = AVURLAsset(url: fileURL)
-                    do {
-                        let duration = try await asset.load(.duration)
-                        let seconds = CMTimeGetSeconds(duration)
-                        
-                        if seconds <= 0.1 || seconds.isNaN || seconds.isInfinite {
-                            return
-                        }
-                    } catch {
-                        return
-                    }
-                    
-                    let player = AVPlayer(url: fileURL)
-                    
-                    guard player.currentItem != nil else {
-                        return
-                    }
-                    
-                    let totalSeconds: Double
-                    do {
-                        let duration = try await asset.load(.duration)
-                        totalSeconds = CMTimeGetSeconds(duration)
-                    } catch {
-                        return
-                    }
-                    
-                    await send(._playerReady(player, totalSeconds))
-                }
-            }
-            
-            private func startPlayerObservation(player: AVPlayer, totalSeconds: Double) -> Effect<Action> {
-                .run { send in
-                    guard let item = player.currentItem else { return }
-                    
-                    await withThrowingTaskGroup(of: Void.self) { group in
-                        group.addTask {
-                            for await _ in NotificationCenter.default.notifications(
-                                named: .AVPlayerItemDidPlayToEndTime,
-                                object: item
-                            ) {
-                                await send(.playerFinishedPlaying, animation: .default)
-                            }
-                        }
-                        
-                        group.addTask {
-                            while !Task.isCancelled {
-                                try? await Task.sleep(nanoseconds: 100_000_000)
-                                
-                                let current = CMTimeGetSeconds(player.currentTime())
-                                if !current.isNaN && !current.isInfinite {
-                                    let progress = totalSeconds > 0 ? current / totalSeconds : 0
-                                    await send(.updateProgress(progress))
-                                }
-                            }
-                        }
-                    }
-                }
-                .cancellable(id: "player_observer", cancelInFlight: true)
-            }
-        }
-        
-        extension AudioDetailFeature {
-            enum Tab: String, CaseIterable, Equatable {
-                case aiSummary = "AI 요약"
-                case script = "스크립트"
-            }
-        }
-        
-        extension AudioDetailFeature {
-            @Reducer
-            struct Destination {
-                @ObservableState
-                enum State: Equatable {
-                    case alert(AlertState<Action.Alert>)
-                    case chattingRoom(ChattingRoomFeature.State)
-                    case editTitle(ProjectTitleEditFeature.State)
-                }
+            do {
+                let session = AVAudioSession.sharedInstance()
+                let currentCategory = session.category
                 
-                enum Action {
-                    case alert(Alert)
-                    case chattingRoom(ChattingRoomFeature.Action)
-                    case editTitle(ProjectTitleEditFeature.Action)
-                    
-                    enum Alert {
-                        case confirmDelete
+                if currentCategory != .playback {
+                    try session.setCategory(.playback, mode: .default, options: [])
+                    try session.setActive(true, options: [.notifyOthersOnDeactivation])
+                }
+            } catch {
+                print("[AudioDetail] AVAudioSession 설정 실패: \(error)")
+            }
+            
+            let asset = AVURLAsset(url: fileURL)
+            do {
+                let duration = try await asset.load(.duration)
+                let seconds = CMTimeGetSeconds(duration)
+                
+                if seconds <= 0.1 || seconds.isNaN || seconds.isInfinite {
+                    return
+                }
+            } catch {
+                return
+            }
+            
+            let player = AVPlayer(url: fileURL)
+            
+            guard player.currentItem != nil else {
+                return
+            }
+            
+            let totalSeconds: Double
+            do {
+                let duration = try await asset.load(.duration)
+                totalSeconds = CMTimeGetSeconds(duration)
+            } catch {
+                return
+            }
+            
+            await send(._playerReady(player, totalSeconds))
+        }
+    }
+    
+    private func startPlayerObservation(player: AVPlayer, totalSeconds: Double) -> Effect<Action> {
+        .run { send in
+            guard let item = player.currentItem else { return }
+            
+            await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    for await _ in NotificationCenter.default.notifications(
+                        named: .AVPlayerItemDidPlayToEndTime,
+                        object: item
+                    ) {
+                        await send(.playerFinishedPlaying, animation: .default)
                     }
                 }
                 
-                var body: some Reducer<State, Action> {
-                    Scope(state: \.chattingRoom, action: \.chattingRoom) {
-                        ChattingRoomFeature()
-                    }
-                    Scope(state: \.editTitle, action: \.editTitle) {
-                        ProjectTitleEditFeature()
-                    }
-                    Reduce { state, action in
-                        switch action {
-                        case .alert:
-                            return .none
-                        case .chattingRoom:
-                            return .none
-                        case .editTitle:
-                            return .none
+                group.addTask {
+                    while !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 100_000_000)
+                        
+                        let current = CMTimeGetSeconds(player.currentTime())
+                        if !current.isNaN && !current.isInfinite {
+                            let progress = totalSeconds > 0 ? current / totalSeconds : 0
+                            await send(.updateProgress(progress))
                         }
                     }
                 }
             }
         }
+        .cancellable(id: "player_observer", cancelInFlight: true)
+    }
+}
+
+extension AudioDetailFeature {
+    enum Tab: String, CaseIterable, Equatable {
+        case aiSummary = "AI 요약"
+        case script = "스크립트"
+    }
+}
+
+extension AudioDetailFeature {
+    @Reducer
+    struct Destination {
+        @ObservableState
+        enum State: Equatable {
+            case alert(AlertState<Action.Alert>)
+            case chattingRoom(ChattingRoomFeature.State)
+            case editTitle(ProjectTitleEditFeature.State)
+        }
+        
+        enum Action {
+            case alert(Alert)
+            case chattingRoom(ChattingRoomFeature.Action)
+            case editTitle(ProjectTitleEditFeature.Action)
+            
+            enum Alert {
+                case confirmDelete
+            }
+        }
+        
+        var body: some Reducer<State, Action> {
+            Scope(state: \.chattingRoom, action: \.chattingRoom) {
+                ChattingRoomFeature()
+            }
+            Scope(state: \.editTitle, action: \.editTitle) {
+                ProjectTitleEditFeature()
+            }
+            Reduce { state, action in
+                switch action {
+                case .alert:
+                    return .none
+                case .chattingRoom:
+                    return .none
+                case .editTitle:
+                    return .none
+                }
+            }
+        }
+    }
+}
