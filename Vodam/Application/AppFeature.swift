@@ -72,7 +72,6 @@ struct AppFeature {
                 return .none
                 
             case .startTab(let tab):
-                let previous = state.startTab
                     state.startTab = tab
 
                     if tab == .chat {
