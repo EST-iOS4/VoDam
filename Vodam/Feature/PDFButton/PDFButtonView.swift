@@ -101,9 +101,9 @@ struct PDFButtonView: View {
         .frame(height: 80)
         .padding(.horizontal, 20)
         .onTapGesture {
-            store.send(.tapped)
             if ownerId == nil {
                 store.send(.loginRequiredTapped)
+            } else {
                 store.send(.tapped)
             }
         }

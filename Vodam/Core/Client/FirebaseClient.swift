@@ -31,6 +31,9 @@ struct FirebaseClient {
     var createChatRoom:
     @Sendable (_ ownerId: String, _ roomId: String, _ title: String) async throws -> Void
     
+    var updateChatRoomNameIfExists:
+    @Sendable (_ ownerId: String, _ roomId: String, _ newName: String) async throws -> Void
+    
     var updateChatRoomPreview:
     @Sendable (_ ownerId: String, _ roomId: String, _ title: String, _ content: String) async throws -> Void
     
@@ -300,6 +303,20 @@ extension FirebaseClient: DependencyKey {
                     .setData(data, merge: true)
             },
             
+            updateChatRoomNameIfExists: { ownerId, roomId, newName in
+                let db = Firestore.firestore()
+                let chatRoomRef = db.collection("users").document(ownerId).collection("chatRooms").document(roomId)
+
+                let document = try await chatRoomRef.getDocument()
+                if document.exists {
+                    let data: [String: Any] = [
+                        "title": newName,
+                        "recentEditedDate": FieldValue.serverTimestamp()
+                    ]
+                    try await chatRoomRef.updateData(data)
+                }
+            },
+            
             updateChatRoomPreview: { ownerId, roomId, title, content in
                 let db = Firestore.firestore()
                 
@@ -403,6 +420,7 @@ extension FirebaseClient: DependencyKey {
             updateProject: { _, _ in },
             deleteProject: { _, _ in },
             createChatRoom: { _, _, _ in },
+            updateChatRoomNameIfExists: { _, _, _ in },
             updateChatRoomPreview: { _, _, _, _ in },
             listenToChatRooms: { _ in AsyncStream { continuation in continuation.finish() } },
             deleteChatRoom: { _, _ in }
@@ -486,8 +504,7 @@ extension ProjectPayload {
             summary: summary,
             ownerId: data["ownerId"] as? String,
             syncStatus: syncStatus,
-            remoteAudioPath: remoteAudioPath 
+            remoteAudioPath: remoteAudioPath
         )
     }
 }
-

@@ -44,6 +44,7 @@ struct ProjectTitleEditFeature {
         case saveResponse(Result<Project, Error>)
         case alert(PresentationAction<Alert>)
         case delegate(DelegateAction)
+        case clearButtonTapped
         
         enum Alert: Equatable {}
         enum DelegateAction: Equatable {
@@ -102,13 +103,12 @@ struct ProjectTitleEditFeature {
                             try await firebaseClient.updateProject(ownerId, payload)
                             
                             let roomId = updatedProject.id.uuidString
-                            try? await firebaseClient.createChatRoom(
+                            try? await firebaseClient.updateChatRoomNameIfExists(
                                 ownerId,
                                 roomId,
                                 updatedProject.name
                             )
                         }
-                        
                         await send(.saveResponse(.success(updatedProject)))
                     } catch {
                         await send(.saveResponse(.failure(error)))
@@ -132,6 +132,10 @@ struct ProjectTitleEditFeature {
                 return .none
                 
             case .delegate:
+                return .none
+                
+            case .clearButtonTapped:
+                state.editedName = ""
                 return .none
             }
         }

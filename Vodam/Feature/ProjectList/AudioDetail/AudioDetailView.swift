@@ -17,55 +17,104 @@ struct AudioDetailView: View {
         store.project.category == .pdf
     }
     
+    private var showFloatingButton: Bool {
+        store.isSearching && !store.searchText.isEmpty && store.script.totalResults > 0
+    }
+    
     var body: some View {
-        VStack {
-            if store.isSearching {
-                searchBarView
-                    .transition(.push(from: .trailing))
-            }
-            
-            AudioDetailTabBar(
-                selectedTab: Binding(
-                    get: { store.selectedTab },
-                    set: { store.selectedTab = $0 }
-                )
-            )
-            
-            tabContent
-            
-            Spacer()
-            
-            bottomContent
-        }
-        .animation(.smooth(duration: 0.35), value: store.isSearching)
-        .navigationTitle(store.isSearching ? "" : store.project.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { toolbarContent }
-        .navigationBarBackButtonHidden(store.isSearching)
-        .onChange(of: store.isSearching) { _, isSearching in
-            if isSearching {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    isSearchFieldFocused = true
+        mainContent
+            .animation(.smooth(duration: 0.35), value: store.isSearching)
+            .animation(.smooth(duration: 0.25), value: showFloatingButton)
+            .navigationTitle(store.isSearching ? "" : store.project.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { toolbarContent }
+            .navigationBarBackButtonHidden(store.isSearching)
+            .onChange(of: store.isSearching) { _, isSearching in
+                if isSearching {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        isSearchFieldFocused = true
+                    }
                 }
             }
+            .onAppear {
+                store.send(.onAppear)
+            }
+            .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+            .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
+                ChattingRoomView(store: $0)
+            }
+            .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
+                ProjectTitleEditView(store: $0)
+            }
+    }
+    
+    @ViewBuilder
+    private var mainContent: some View {
+        ZStack {
+            VStack {
+                if store.isSearching {
+                    searchBarView
+                        .transition(.push(from: .trailing))
+                }
+                
+                AudioDetailTabBar(
+                    selectedTab: Binding(
+                        get: { store.selectedTab },
+                        set: { store.selectedTab = $0 }
+                    )
+                )
+                
+                tabContent
+                
+                Spacer()
+                
+                bottomContent
+            }
+            
+            if showFloatingButton {
+                searchResultsFloatingButton
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
         }
-        .onAppear {
-            store.send(.onAppear)
+    }
+    
+    // MARK: - 검색 결과 플로팅 버튼
+    
+    @ViewBuilder
+    private var searchResultsFloatingButton: some View {
+        VStack(spacing: 0) {
+            Button(action: { store.send(.script(.previousResult)) }) {
+                Image(systemName: "chevron.up")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 40)
+            }
+            
+            Divider()
+                .frame(width: 30)
+            
+            Text("\(store.script.currentResultNumber)/\(store.script.totalResults)")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 44, height: 32)
+            
+            Divider()
+                .frame(width: 30)
+            
+            Button(action: { store.send(.script(.nextResult)) }) {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .frame(width: 44, height: 40)
+            }
         }
-        
-        //        .onDisappear {
-        //            store.send(.viewWillDisappear)
-        //        }
-        .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
-        .navigationDestination(item: $store.scope(state: \.destination?.chattingRoom, action: \.destination.chattingRoom)) {
-            ChattingRoomView(store: $0)
-        }
-        .navigationDestination(item: $store.scope(state: \.destination?.editTitle, action: \.destination.editTitle)) {
-            ProjectTitleEditView(store: $0)
-        }
-//        .onDisappear {
-//            store.send(.clearAlert)
-//        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground).opacity(0.7))
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+        .padding(.trailing, 16)
+        .padding(.bottom, isPDF ? 150 : 200)
     }
     
     @ViewBuilder
@@ -171,7 +220,7 @@ struct AudioDetailView: View {
             }
             
             if !store.searchText.isEmpty {
-                searchResultsNavigation
+                searchFieldTrailingContent
             }
         }
         .padding(.horizontal, 12)
@@ -181,7 +230,7 @@ struct AudioDetailView: View {
     }
     
     @ViewBuilder
-    private var searchResultsNavigation: some View {
+    private var searchFieldTrailingContent: some View {
         HStack(spacing: 4) {
             if store.script.totalResults > 0 {
                 Text("\(store.script.currentResultNumber)/\(store.script.totalResults)")
