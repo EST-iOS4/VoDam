@@ -10,7 +10,7 @@ import SwiftUI
 
 struct ChattingListView: View {
     @Bindable var store: StoreOf<ChattingListFeature>
-
+    
     var body: some View {
         NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
             if store.chattingList.isEmpty{
@@ -19,18 +19,23 @@ struct ChattingListView: View {
                         store.send(.onAppear)
                     }
             } else{
-                List(store.chattingList) { chattingInfo in
-                    Button {
-                        store.send(.chattingTapped(chattingInfo))
-                    } label: {
-                        ChattingItemView(chattingInfo: chattingInfo)
-                            .listRowSeparator(.hidden)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.primary, lineWidth: 1)
-                            )
+                List {
+                    ForEach(store.chattingList) { chattingInfo in
+                        Button {
+                            store.send(.chattingTapped(chattingInfo))
+                        } label: {
+                            ChattingItemView(chattingInfo: chattingInfo)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.primary, lineWidth: 1)
+                                )
+                        }
+                        .listRowSeparator(.hidden)
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .onDelete { indexSet in
+                        store.send(.delete(indexSet))
+                    }
                 }
                 .listStyle(.plain)
                 .padding(.horizontal, 10)
