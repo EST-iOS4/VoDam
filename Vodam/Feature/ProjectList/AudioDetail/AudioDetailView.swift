@@ -293,7 +293,7 @@ struct AudioDetailView: View {
             
             Button(action: { store.send(.backwardButtonTapped) }) {
                 Image(systemName: "gobackward.10")
-                    .font( AppFont.pretendardRegular(size: 28) )
+                    .font(AppFont.pretendardRegular(size: 28))
             }
             
             Button(action: { store.send(.playButtonTapped) }) {
@@ -303,12 +303,12 @@ struct AudioDetailView: View {
             
             Button(action: { store.send(.forwardButtonTapped) }) {
                 Image(systemName: "goforward.10")
-                    .font( AppFont.pretendardRegular(size: 28) )
+                    .font(AppFont.pretendardRegular(size: 28))
             }
             
             Button(action: { store.send(.favoriteButtonTapped) }) {
                 Image(systemName: store.isFavorite ? "star.fill" : "star")
-                    .font( AppFont.pretendardRegular(size: 28) )
+                    .font(AppFont.pretendardRegular(size: 28))
                     .foregroundColor(.yellow)
             }
         }

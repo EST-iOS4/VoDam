@@ -34,7 +34,7 @@ struct AISummaryView: View {
                 .foregroundColor(.secondary)
             
             Text("\(Int(store.progress * 100))%")
-                .font( AppFont.pretendardBold(size: 22) )
+                .font(AppFont.pretendardBold(size: 22))
                 .foregroundColor(.blue)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
