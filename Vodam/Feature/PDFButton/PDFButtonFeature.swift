@@ -127,7 +127,8 @@ struct PDFButtonFeature {
                 
             case .ocrCompleted(let url, let text, let ownerId):
                 print("📄 OCR 완료: \(text?.count ?? 0)자")
-                return .send(.savePDF(url, text, ownerId))
+                let normalizedText = normalizeScript(text)
+                return .send(.savePDF(url, normalizedText, ownerId))
                 
             case .ocrFailed(let error):
                 print("❌ OCR 실패: \(error)")
@@ -269,6 +270,18 @@ struct PDFButtonFeature {
             }
         }
         .ifLet(\.$alert, action: \.alert)
+    }
+    
+    // MARK: - 스크립트 정규화
+    
+    private func normalizeScript(_ text: String?) -> String? {
+        guard let text = text, !text.isEmpty else { return nil }
+        
+        return text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")  // 공백으로 연결하여 자연스러운 문장으로
     }
     
     private func copyPDFToDocuments(from url: URL) -> String? {
