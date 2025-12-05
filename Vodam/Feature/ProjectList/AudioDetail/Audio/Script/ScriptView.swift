@@ -11,247 +11,33 @@ import UIKit
 
 struct ScriptView: View {
     let store: StoreOf<ScriptFeature>
-    private let preRollProgressOffset: Double = 0.01
-    private let preRollSkipCharacterThreshold: Int = 5
-    
-    private let largeTextThreshold = 3000
     
     var body: some View {
-        if store.text.count > largeTextThreshold {
-            LargeScriptTextView(
-                text: store.text,
-                searchResults: store.searchResults,
-                currentResultIndex: store.currentResultIndex
-            )
-        } else {
-            smallTextBody
-        }
-    }
-    
-    private var smallTextBody: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    highlightedText
-                        .font(.body)
-                        .lineSpacing(6)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
+        ScriptTextView(
+            text: store.text,
+            searchResults: store.searchResults,
+            currentResultIndex: store.currentResultIndex,
+            isPlaceholder: store.isPlaceholder,
+            onTap: { progress in
+                store.send(.delegate(.seekToProgress(progress)))
             }
-            .onChange(of: store.currentResultIndex) { _, newIndex in
-                withAnimation(.smooth) {
-                    proxy.scrollTo("result_\(newIndex)", anchor: .center)
-                }
-            }
-        }
+        )
         .background(Color(.systemBackground))
     }
-    
-    @ViewBuilder
-    private var highlightedText: some View {
-        if store.isPlaceholder {
-            Text(store.text)
-                .foregroundColor(.secondary)
-        } else {
-            let components = splitComponentsByWhitespace(
-                buildHighlightComponents(
-                    text: store.text,
-                    results: store.searchResults,
-                    currentIndex: store.currentResultIndex
-                )
-            )
-            
-            FlowLayout(
-                components: components,
-                isInteractionEnabled: true
-            ) { component in
-                handleTap(on: component)
-            }
-        }
-    }
-    
-    private func buildHighlightComponents(
-        text: String,
-        results: [Range<String.Index>],
-        currentIndex: Int
-    ) -> [HighlightComponent] {
-        var components: [HighlightComponent] = []
-        var lastEndIndex = text.startIndex
-        var currentOffset = 0
-        
-        for (index, range) in results.enumerated() {
-            if lastEndIndex < range.lowerBound {
-                let normalText = String(text[lastEndIndex..<range.lowerBound])
-                components.append(HighlightComponent(
-                    text: normalText,
-                    type: .normal,
-                    id: "normal_\(index)",
-                    offset: currentOffset
-                ))
-                currentOffset += normalText.count
-            }
-            
-            let highlightedText = String(text[range])
-            let isCurrent = index == currentIndex
-            components.append(HighlightComponent(
-                text: highlightedText,
-                type: isCurrent ? .current : .highlighted,
-                id: "result_\(index)",
-                offset: currentOffset
-            ))
-            currentOffset += highlightedText.count
-            
-            lastEndIndex = range.upperBound
-        }
-        
-        if lastEndIndex < text.endIndex {
-            let remainingText = String(text[lastEndIndex..<text.endIndex])
-            components.append(HighlightComponent(
-                text: remainingText,
-                type: .normal,
-                id: "remaining",
-                offset: currentOffset
-            ))
-        }
-        
-        return components
-    }
-    
-    private func splitComponentsByWhitespace(_ components: [HighlightComponent]) -> [HighlightComponent] {
-        var result: [HighlightComponent] = []
-        
-        for component in components {
-            let text = component.text
-            var localStart = text.startIndex
-            var localOffset = 0
-            var partIndex = 0
-            
-            func appendPart(from start: String.Index, to end: String.Index) {
-                guard start < end else { return }
-                let substring = String(text[start..<end])
-                let offset = component.offset + localOffset
-                result.append(
-                    HighlightComponent(
-                        text: substring,
-                        type: component.type,
-                        id: "\(component.id)_\(partIndex)",
-                        offset: offset
-                    )
-                )
-                partIndex += 1
-                localOffset += substring.count
-            }
-            
-            for index in text.indices {
-                if text[index].isWhitespace || text[index].isNewline {
-                    appendPart(from: localStart, to: index)
-                    
-                    let nextIndex = text.index(after: index)
-                    let whitespace = String(text[index..<nextIndex])
-                    let offset = component.offset + localOffset
-                    result.append(
-                        HighlightComponent(
-                            text: whitespace,
-                            type: component.type,
-                            id: "\(component.id)_space_\(partIndex)",
-                            offset: offset
-                        )
-                    )
-                    partIndex += 1
-                    localOffset += whitespace.count
-                    localStart = nextIndex
-                }
-            }
-            
-            appendPart(from: localStart, to: text.endIndex)
-        }
-        
-        return result
-    }
-    
-    private func handleTap(on component: HighlightComponent) {
-        guard !store.isPlaceholder else { return }
-        
-        let totalLength = max(store.text.count, 1)
-        
-        let midpoint = component.offset + (component.text.count / 2)
-        
-        let baseProgress = min(max(Double(midpoint) / Double(totalLength), 0), 1)
-        let isNearStart = component.offset < preRollSkipCharacterThreshold
-        let progress = isNearStart
-        ? baseProgress
-        : max(baseProgress - preRollProgressOffset, 0)
-        
-        store.send(.delegate(.seekToProgress(progress)))
-    }
 }
 
-private struct HighlightComponent: Identifiable {
-    let text: String
-    let type: HighlightType
-    let id: String
-    let offset: Int
-    
-    enum HighlightType {
-        case normal
-        case highlighted
-        case current
-    }
-}
+// MARK: - UIKit TextView
 
-private struct FlowLayout: View {
-    let components: [HighlightComponent]
-    let isInteractionEnabled: Bool
-    let onTap: (HighlightComponent) -> Void
-    
-    var body: some View {
-        Text(attributedString)
-            .environment(\.openURL, OpenURLAction { url in
-                guard isInteractionEnabled,
-                      url.scheme == "seek",
-                      let targetId = url.host,
-                      let component = components.first(where: { $0.id == targetId })
-                else { return .systemAction }
-                
-                onTap(component)
-                return .handled
-            })
-    }
-    
-    private var attributedString: AttributedString {
-        var result = AttributedString()
-        
-        for component in components {
-            var attributed = AttributedString(component.text)
-            
-            switch component.type {
-            case .normal:
-                attributed.foregroundColor = .primary
-            case .highlighted:
-                attributed.foregroundColor = .black
-                attributed.backgroundColor = .yellow
-            case .current:
-                attributed.foregroundColor = .black
-                attributed.backgroundColor = .orange
-            }
-            
-            if isInteractionEnabled {
-                attributed.link = URL(string: "seek://\(component.id)")
-            }
-            result += attributed
-        }
-        
-        return result
-    }
-}
-
-struct LargeScriptTextView: UIViewRepresentable {
+struct ScriptTextView: UIViewRepresentable {
     let text: String
     let searchResults: [Range<String.Index>]
     let currentResultIndex: Int
+    let isPlaceholder: Bool
+    let onTap: (Double) -> Void
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onTap: onTap, text: text)
+    }
     
     func makeUIView(context: Context) -> UITextView {
         let textView = UITextView()
@@ -260,18 +46,54 @@ struct LargeScriptTextView: UIViewRepresentable {
         textView.isScrollEnabled = true
         textView.showsVerticalScrollIndicator = true
         textView.showsHorizontalScrollIndicator = false
-        textView.textContainerInset = UIEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        textView.textContainerInset = UIEdgeInsets(top: 16, left: 20, bottom: 16, right: 20)
         textView.backgroundColor = .clear
         textView.alwaysBounceVertical = true
+        
+        // 탭 제스처 추가
+        let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
+        tapGesture.delegate = context.coordinator
+        textView.addGestureRecognizer(tapGesture)
+        
+        context.coordinator.textView = textView
+        
         return textView
     }
     
     func updateUIView(_ uiView: UITextView, context: Context) {
+        // Coordinator 업데이트
+        context.coordinator.text = text
+        
+        // 텍스트 또는 검색 결과가 변경되었는지 확인
+        let textChanged = context.coordinator.lastText != text
+        let searchResultsChanged = context.coordinator.lastSearchResultsCount != searchResults.count
+        let indexChanged = context.coordinator.lastResultIndex != currentResultIndex
+        
+        // AttributedString 생성 및 적용
+        if textChanged || searchResultsChanged || indexChanged {
+            let attributedString = createAttributedString()
+            uiView.attributedText = attributedString
+            context.coordinator.lastText = text
+            context.coordinator.lastSearchResultsCount = searchResults.count
+        }
+        
+        // currentResultIndex가 변경된 경우에만 스크롤
+        if indexChanged && !searchResults.isEmpty {
+            context.coordinator.lastResultIndex = currentResultIndex
+            scrollToCurrentResult(uiView, context: context)
+        }
+    }
+    
+    private func createAttributedString() -> NSAttributedString {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.lineSpacing = 6
+        
         let attributedString = NSMutableAttributedString(
             string: text,
             attributes: [
                 .font: UIFont.preferredFont(forTextStyle: .body),
-                .foregroundColor: UIColor.label
+                .foregroundColor: isPlaceholder ? UIColor.secondaryLabel : UIColor.label,
+                .paragraphStyle: paragraphStyle
             ]
         )
         
@@ -294,16 +116,106 @@ struct LargeScriptTextView: UIViewRepresentable {
             }
         }
         
-        uiView.attributedText = attributedString
+        return attributedString
+    }
+    
+    private func scrollToCurrentResult(_ textView: UITextView, context: Context) {
+        guard !searchResults.isEmpty, currentResultIndex >= 0, currentResultIndex < searchResults.count else { return }
         
-        // 현재 결과로 스크롤
-        if !searchResults.isEmpty, currentResultIndex < searchResults.count {
-            let currentRange = searchResults[currentResultIndex]
-            let nsRange = NSRange(currentRange, in: text)
-            
-            DispatchQueue.main.async {
-                uiView.scrollRangeToVisible(nsRange)
+        let currentRange = searchResults[currentResultIndex]
+        let nsRange = NSRange(currentRange, in: text)
+        
+        // 레이아웃 완료 후 스크롤 실행
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // 해당 범위의 rect 계산
+            guard let start = textView.position(from: textView.beginningOfDocument, offset: nsRange.location),
+                  let end = textView.position(from: start, offset: nsRange.length),
+                  let textRange = textView.textRange(from: start, to: end) else {
+                print("❌ 스크롤 실패: 텍스트 범위를 찾을 수 없음")
+                return
             }
+            
+            let rect = textView.firstRect(for: textRange)
+            
+            // rect가 유효한지 확인
+            guard !rect.isNull && !rect.isInfinite && rect.origin.y >= 0 else {
+                print("❌ 스크롤 실패: 유효하지 않은 rect - \(rect)")
+                return
+            }
+            
+            // 상단 여백 (검색창 + 탭바 높이 고려)
+            let topInset: CGFloat = 120
+            // 하단 여백 (PDF 정보 섹션 또는 오디오 플레이어 높이 고려)
+            let bottomInset: CGFloat = 250
+            
+            let visibleHeight = textView.bounds.height - topInset - bottomInset
+            
+            // 하이라이트가 보이는 영역의 중앙에 오도록 계산
+            let targetY = rect.origin.y - topInset - (visibleHeight / 2) + (rect.height / 2)
+            let maxY = max(0, textView.contentSize.height - textView.bounds.height)
+            let clampedY = max(0, min(targetY, maxY))
+            
+            print("✅ 스크롤: index=\(self.currentResultIndex), rect.y=\(rect.origin.y), targetY=\(clampedY)")
+            
+            textView.setContentOffset(CGPoint(x: 0, y: clampedY), animated: true)
+        }
+    }
+    
+    // MARK: - Coordinator
+    
+    class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        weak var textView: UITextView?
+        var text: String
+        let onTap: (Double) -> Void
+        
+        // 변경 감지용
+        var lastResultIndex: Int = -1
+        var lastText: String = ""
+        var lastSearchResultsCount: Int = 0
+        
+        private let preRollProgressOffset: Double = 0.01
+        private let preRollSkipCharacterThreshold: Int = 5
+        
+        init(onTap: @escaping (Double) -> Void, text: String) {
+            self.onTap = onTap
+            self.text = text
+        }
+        
+        @objc func handleTap(_ gesture: UITapGestureRecognizer) {
+            guard let textView = textView else { return }
+            
+            let location = gesture.location(in: textView)
+            
+            // 텍스트 영역 내인지 확인
+            let textContainerOffset = CGPoint(
+                x: location.x - textView.textContainerInset.left,
+                y: location.y - textView.textContainerInset.top
+            )
+            
+            let layoutManager = textView.layoutManager
+            let textContainer = textView.textContainer
+            
+            // 탭한 위치의 문자 인덱스
+            let characterIndex = layoutManager.characterIndex(
+                for: textContainerOffset,
+                in: textContainer,
+                fractionOfDistanceBetweenInsertionPoints: nil
+            )
+            
+            guard characterIndex < text.count else { return }
+            
+            // 진행률 계산
+            let totalLength = max(text.count, 1)
+            let baseProgress = min(max(Double(characterIndex) / Double(totalLength), 0), 1)
+            let isNearStart = characterIndex < preRollSkipCharacterThreshold
+            let progress = isNearStart ? baseProgress : max(baseProgress - preRollProgressOffset, 0)
+            
+            onTap(progress)
+        }
+        
+        // 텍스트 선택과 탭 제스처 공존을 위해
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return true
         }
     }
 }
