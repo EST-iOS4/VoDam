@@ -98,7 +98,7 @@ struct FileButtonView: View {
     private var iconView: some View {
         Image(systemName: "folder.fill")
             .foregroundColor(.white)
-            .font(.system(size: 24))
+            .font(AppFont.pretendardRegular(size: 24))
             .frame(width: 56, height: 56)
             .background(
                 RoundedRectangle(cornerRadius: 24).fill(Color.blue)
@@ -114,7 +114,7 @@ struct FileButtonView: View {
     private var textContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(store.title)
-                .font(.headline)
+                .font(AppFont.pretendardSemiBold(size: 17))
                 .foregroundColor(.primary)
             
             if store.isTranscribing {
@@ -123,7 +123,7 @@ struct FileButtonView: View {
                         .frame(width: 100)
                     
                     Text("\(Int(store.progress * 100))%")
-                        .font(.caption)
+                        .font(AppFont.pretendardRegular(size: 12))
                         .foregroundColor(.secondary)
                 }
             }

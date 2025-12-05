@@ -39,4 +39,15 @@ struct MarkdownTextView: View {
                 .lineSpacing(linSpacing)
         }
     }
+    
+    private func makeAttributedString() -> AttributedString? {
+            guard var attributed = try? AttributedString(markdown: text) else {
+                return nil
+            }
+            
+            let pretendardFont = UIFont(name: "Pretendard-Regular", size: 16) ?? .systemFont(ofSize: 16)
+            attributed[attributed.startIndex..<attributed.endIndex].font = pretendardFont
+            
+            return attributed
+        }
 }

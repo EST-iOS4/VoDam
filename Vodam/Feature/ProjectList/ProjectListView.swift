@@ -75,7 +75,7 @@ struct ProjectListView: View {
             
             if store.currentUser != nil {
                 Text("아래로 당겨서 동기화할 수 있습니다.")
-                    .font(.caption)
+                    .font(AppFont.pretendardRegular(size: 12))
                     .foregroundColor(.secondary)
             }
         }
@@ -170,7 +170,7 @@ struct ProjectRow: View {
     private var syncStatusIcon: some View {
         if project.syncStatus == .synced {
             Image(systemName: "checkmark.circle.fill")
-                .font(.caption2)
+                .font(AppFont.pretendardRegular(size: 11))
                 .foregroundColor(.green)
                 .background(
                     Circle()
@@ -179,7 +179,7 @@ struct ProjectRow: View {
                 )
         } else if project.syncStatus == .localOnly {
             Image(systemName: "iphone")
-                .font(.caption2)
+                .font(AppFont.pretendardRegular(size: 11))
                 .foregroundColor(.gray)
                 .background(
                     Circle()
@@ -192,11 +192,11 @@ struct ProjectRow: View {
     private var projectInfo: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(project.name)
-                .font(.headline)
+                .font(AppFont.pretendardSemiBold(size: 17))
             
             HStack(spacing: 4) {
                 Text(project.creationDate, style: .date)
-                    .font(.subheadline)
+                    .font(AppFont.pretendardRegular(size: 15))
                     .foregroundColor(.secondary)
                 
                 syncStatusText
@@ -208,7 +208,7 @@ struct ProjectRow: View {
     private var syncStatusText: some View {
         if project.syncStatus == .synced {
             Text("동기화됨")
-                .font(.caption)
+                .font(AppFont.pretendardRegular(size: 12))
                 .foregroundColor(.green)
         } else if project.syncStatus == .localOnly {
             Text("로컬만")

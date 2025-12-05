@@ -20,8 +20,7 @@ struct LoginProvidersView: View {
     var body: some View {
         VStack(spacing: 32) {
             Text("Vodam")
-                .font(.title)
-                .fontWeight(.bold)
+                .font(AppFont.pretendardBold(size: 28))
 
             VStack(spacing: 16) {
                 Button {
@@ -32,7 +31,7 @@ struct LoginProvidersView: View {
                             .imageScale(.large)
 
                         Text("Sign in with Apple")
-                            .font(.system(size: 19, weight: .medium))
+                            .font(AppFont.pretendardSemiBold(size: 19))
                     }
                     .frame(height: buttonHeight)
                     .frame(maxWidth: .infinity)
@@ -51,7 +50,7 @@ struct LoginProvidersView: View {
                             .frame(width: 20, height: 20)
 
                         Text("Sign in with Google")
-                            .font(.system(size: 19, weight: .medium))
+                            .font(AppFont.pretendardSemiBold(size: 19))
                             .foregroundColor(.black)
 
                     }
@@ -90,7 +89,7 @@ struct LoginProvidersView: View {
                             .frame(width: 20, height: 20)
 
                         Text("Sign in with Kakao")
-                            .font(.system(size: 19, weight: .medium))
+                            .font(AppFont.pretendardSemiBold(size: 19))
                             .foregroundColor(Color.black.opacity(0.85))
 
                     }
