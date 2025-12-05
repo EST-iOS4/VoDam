@@ -120,7 +120,8 @@ struct FileButtonFeature {
                 case .success(let text):
                     print("📄 STT 결과:")
                     print(text)
-                    state.transcript = text
+                    let normalizedText = normalizeScript(text)
+                    state.transcript = normalizedText ?? ""
                     
                 case .failure(let error):
                     print("❌ STT 실패:", error)
@@ -240,6 +241,19 @@ struct FileButtonFeature {
                 return .none
             }
         }
+        .ifLet(\.$alert, action: \.alert)
+    }
+    
+    // MARK: - 스크립트 정규화
+    
+    private func normalizeScript(_ text: String?) -> String? {
+        guard let text = text, !text.isEmpty else { return nil }
+        
+        return text
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
     }
     
     private func copyFileToDocuments(from url: URL) -> String? {

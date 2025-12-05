@@ -15,9 +15,21 @@ struct ProjectTitleEditView: View {
     var body: some View {
         Form {
             Section("프로젝트 이름") {
-                TextField("새로운 이름", text: $store.editedName)
-                    .textInputAutocapitalization(.never)
-                    .disableAutocorrection(true)
+                HStack {
+                    TextField("새로운 이름", text: $store.editedName)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                    
+                    if !store.editedName.isEmpty {
+                        Button {
+                            store.send(.clearButtonTapped)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.gray)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
         .disabled(store.isSaving)

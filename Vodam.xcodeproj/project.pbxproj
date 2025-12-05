@@ -45,7 +45,6 @@
 				Feature/ProjectList/ProjectListFeatureTests.swift,
 				Feature/Record/RecordingFeatureTests.swift,
 				Resource/Info.plist,
-				Secrets.xcconfig,
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
 		};
