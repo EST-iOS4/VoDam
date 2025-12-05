@@ -30,12 +30,11 @@ struct AISummaryView: View {
                 .padding(.horizontal, 40)
             
             Text(store.progressMessage ?? "AI가 요약 중입니다...")
-                .font(.headline)
+                .font(AppFont.pretendardSemiBold(size: 17))
                 .foregroundColor(.secondary)
             
             Text("\(Int(store.progress * 100))%")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font( AppFont.pretendardBold(size: 22) )
                 .foregroundColor(.blue)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -44,15 +43,14 @@ struct AISummaryView: View {
     private var emptySummaryView: some View {
         VStack(spacing: 20) {
             Image(systemName: "sparkles")
-                .font(.system(size: 60))
+                .font(AppFont.pretendardRegular(size: 60))
                 .foregroundColor(.blue)
             
             Text("AI 요약")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(AppFont.pretendardBold(size: 22))
             
             Text("스크립트를 AI로 요약합니다")
-                .font(.subheadline)
+                .font(AppFont.pretendardRegular(size: 15))
                 .foregroundColor(.secondary)
             
             Button(action: {
@@ -62,7 +60,7 @@ struct AISummaryView: View {
                     Image(systemName: "sparkles")
                     Text("AI 요약하시겠습니까?")
                 }
-                .font(.headline)
+                .font(AppFont.pretendardSemiBold(size: 17))
                 .foregroundColor(.white)
                 .padding(.horizontal, 30)
                 .padding(.vertical, 15)
@@ -88,7 +86,7 @@ struct AISummaryView: View {
                     Image(systemName: "sparkles")
                         .foregroundColor(.yellow)
                     Text("AI 요약 완료")
-                        .font(.headline)
+                        .font(AppFont.pretendardSemiBold(size: 17))
                         .foregroundColor(AppColor.mainColor)
                     
                     Spacer()
@@ -100,13 +98,13 @@ struct AISummaryView: View {
                             Image(systemName: "arrow.clockwise")
                             Text("다시 요약")
                         }
-                        .font(.caption)
+                        .font(AppFont.pretendardRegular(size: 12))
                         .foregroundColor(.secondary)
                     }
                 }
                 .padding(.bottom, 8)
                 
-                MarkdownTextView(summary, font: .body, linSpacing: 6)
+                MarkdownTextView(summary, font: AppFont.pretendardRegular(size: 17), linSpacing: 6)
                     .padding()
                     .background(Color(UIColor.systemGray6))
                     .cornerRadius(12)

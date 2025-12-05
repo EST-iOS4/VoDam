@@ -175,7 +175,7 @@ struct SettingView: View {
                         Text("로그아웃")
                         Spacer()
                         Text(providerText(user.provider))
-                            .font(.subheadline)
+                            .font(AppFont.pretendardRegular(size: 15))
                             .foregroundColor(.gray)
                     }
                 }
@@ -200,7 +200,7 @@ struct SettingView: View {
                         Text("로그인")
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .font(AppFont.pretendardRegular(size: 12))
                             .foregroundColor(.gray)
                     }
                 }

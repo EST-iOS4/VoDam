@@ -33,7 +33,7 @@ struct ScriptView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     highlightedText
-                        .font(.body)
+                        .font(AppFont.pretendardRegular(size: 17))
                         .lineSpacing(6)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
@@ -274,7 +274,7 @@ struct LargeScriptTextView: UIViewRepresentable {
         let attributedString = NSMutableAttributedString(
             string: text,
             attributes: [
-                .font: UIFont.preferredFont(forTextStyle: .body),
+                .font: UIFont(name: "Pretendard-Regular", size: 17) ?? UIFont.systemFont(ofSize: 17),
                 .foregroundColor: UIColor.label
             ]
         )

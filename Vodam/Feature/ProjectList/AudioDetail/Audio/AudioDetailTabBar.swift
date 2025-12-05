@@ -17,7 +17,7 @@ struct AudioDetailTabBar: View {
                     selectedTab = tab
                 }) {
                     Text(tab.rawValue)
-                        .font(.headline)
+                        .font( AppFont.pretendardSemiBold(size: 17))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(selectedTab == tab ? AppColor.mainColor : Color.clear)

@@ -26,7 +26,7 @@ struct PDFButtonView: View {
             if let error = store.errorMessage {
                 Text("에러: \(error)")
                     .foregroundColor(.red)
-                    .font(.caption)
+                    .font(AppFont.pretendardRegular(size: 12))
                     .padding(.horizontal, 20)
             }
         }
@@ -70,7 +70,7 @@ struct PDFButtonView: View {
             HStack(spacing: 20) {
                 Image(systemName: "doc.richtext.fill")
                     .foregroundColor(.white)
-                    .font(.system(size: 24))
+                    .font(AppFont.pretendardRegular(size: 24))
                     .frame(width: 56, height: 56)
                     .background(
                         RoundedRectangle(cornerRadius: 24)
@@ -79,13 +79,13 @@ struct PDFButtonView: View {
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(store.title)
-                        .font(.headline)
+                        .font(AppFont.pretendardSemiBold(size: 17))
                         .foregroundColor(.primary)
                     
                     if store.isProcessing {
                         HStack(spacing: 8) {
                             Text("OCR 변환 중... \(Int(store.progress * 100))%")
-                                .font(.caption)
+                                .font(AppFont.pretendardRegular(size: 12))
                                 .foregroundColor(.secondary)
                         }
                     }

@@ -24,7 +24,7 @@ struct ProfileFlowView: View {
                 
                 """
             )
-            .font(.subheadline)
+            .font(AppFont.pretendardRegular(size: 15))
             .multilineTextAlignment(.leading)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)

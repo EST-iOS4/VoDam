@@ -41,11 +41,11 @@ struct RecordingView: View {
                 )
                 
                 Text(store.status.localizedText)
-                    .font(.headline)
+                    .font(AppFont.pretendardSemiBold(size: 17))
                     .foregroundColor(.primary)
                 
                 Text(formatTime(store.elapsedSeconds))
-                    .font(.system(size: 32, weight: .medium))
+                    .font(AppFont.pretendardSemiBold(size: 32))
                     .monospacedDigit()
                     .foregroundColor(.primary)
             }
