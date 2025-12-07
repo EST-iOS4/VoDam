@@ -74,10 +74,47 @@ PDF 문서도 텍스트로 추출하고, 원하는 내용을 빠르게 검색해
 
 ## 팀원 소개
 
-- algamza246
-- Seo-garden
-- iasdsr1347
-- dlrjswns
-- EunYoungW
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/algmza246">
+        <img src="https://github.com/algmza246.png" width="100" height="100" style="border-radius: 50%;"><br>
+        <b>강지원</b>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Seo-garden">
+        <img src="https://github.com/Seo-garden.png" width="100" height="100" style="border-radius: 50%;"><br>
+        <b>서정원</b>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/iasdsr1347">
+        <img src="https://github.com/iasdsr1347.png" width="100" height="100" style="border-radius: 50%;"><br>
+        <b>송영민</b>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/dlrjswns">
+        <img src="https://github.com/dlrjswns.png" width="100" height="100" style="border-radius: 50%;"><br>
+        <b>이건준</b>
+      </a>
+    </td>
+      <td align="center">
+      <a href="https://github.com/EunYoungW">
+        <img src="https://github.com/EunYoungW.png" width="100" height="100" style="border-radius: 50%;"><br>
+        <b>왕은영</b>
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">iOS Developer</td>
+    <td align="center">iOS Developer</td>
+    <td align="center">iOS Developer</td>
+    <td align="center">iOS Developer</td>
+    <td align="center">iOS Developer</td>
+  </tr>
+</table>
 
 <br/>
+
