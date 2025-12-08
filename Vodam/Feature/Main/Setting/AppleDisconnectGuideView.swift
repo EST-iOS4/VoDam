@@ -15,8 +15,7 @@ struct AppleDisconnectGuideView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Apple 계정과 Vodam 완전 해제")
-                    .font(.title2)
-                    .bold()
+                    .font(AppFont.pretendardBold(size: 22))
 
                 Text(
                     """
@@ -28,7 +27,7 @@ struct AppleDisconnectGuideView: View {
                     6. Vodam으로 돌아와서 과정 완료 버튼 탭합니다.
                     """
                 )
-                .font(.subheadline)
+                .font(AppFont.pretendardRegular(size: 15))
 
                 Spacer()
 

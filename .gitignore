@@ -11,6 +11,7 @@
 
 # Custom Sensitive Configuration Files
 *.xcconfig
+Secrets.xcconfig
 
 # iOS
 GoogleService-Info.plist

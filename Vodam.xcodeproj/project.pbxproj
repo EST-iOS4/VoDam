@@ -45,6 +45,7 @@
 				Feature/ProjectList/ProjectListFeatureTests.swift,
 				Feature/Record/RecordingFeatureTests.swift,
 				Resource/Info.plist,
+				Secrets.xcconfig,
 			);
 			target = 8B4C67C22EBC8481003C67F9 /* Vodam */;
 		};
@@ -175,7 +176,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2610;
-				LastUpgradeCheck = 2610;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					70C1292E2ED5A2BA00D7BB2A = {
 						CreatedOnToolsVersion = 26.1.1;

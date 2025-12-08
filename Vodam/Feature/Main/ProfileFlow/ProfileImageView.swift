@@ -102,7 +102,7 @@ struct ProfileImageView: View {
                     .fill(Color.gray.opacity(0.2))
 
                 Text(user.name.isEmpty ? "A" : String(user.name.prefix(1)))
-                    .font(.system(size: size * 0.4, weight: .bold))
+                    .font(AppFont.pretendardBold(size: size * 0.4))
                     .foregroundColor(.gray)
             }
             .frame(width: size, height: size)
@@ -112,7 +112,7 @@ struct ProfileImageView: View {
                 .frame(width: size, height: size)
                 .overlay(
                     Image(systemName: "person")
-                        .font(.system(size: size * 0.5))
+                        .font(AppFont.pretendardRegular(size: size * 0.5))
                         .foregroundColor(.white)
                 )
         }
@@ -124,7 +124,7 @@ struct ProfileImageView: View {
             .frame(width: size * 0.375, height: size * 0.375)
             .overlay(
                 Image(systemName: "pencil")
-                    .font(.system(size: size * 0.3125))
+                    .font(AppFont.pretendardRegular(size: size * 0.3125))
                     .foregroundColor(.white)
             )
     }

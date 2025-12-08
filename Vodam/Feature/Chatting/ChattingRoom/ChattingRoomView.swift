@@ -78,7 +78,7 @@ struct ChattingRoomView: View {
                         store.send(.sendMessage)
                     } label: {
                         Image(systemName: "arrow.up.circle")
-                            .font(.system(size: 28))
+                            .font(AppFont.pretendardRegular(size: 28))
                             .foregroundColor(
                                 store.messageText.trimmingCharacters(
                                     in: .whitespacesAndNewlines
@@ -131,7 +131,7 @@ struct MessageRow: View {
                         .foregroundColor(.white)
                         .cornerRadius(16)
                     Text(format(message.timestamp))
-                        .font(.system(size: 14))
+                        .font(AppFont.pretendardRegular(size: 14))
                         .foregroundColor(.gray)
                         .padding(.trailing, 6)
                 }
@@ -146,7 +146,7 @@ struct MessageRow: View {
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(16)
                     Text(format(message.timestamp))
-                        .font(.system(size: 14))
+                        .font(AppFont.pretendardRegular(size: 14))
                         .foregroundColor(.gray)
                         .padding(.leading, 6)
                 }

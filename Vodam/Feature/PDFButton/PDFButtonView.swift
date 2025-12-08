@@ -26,7 +26,7 @@ struct PDFButtonView: View {
             if let error = store.errorMessage {
                 Text("에러: \(error)")
                     .foregroundColor(.red)
-                    .font(.caption)
+                    .font(AppFont.pretendardRegular(size: 12))
                     .padding(.horizontal, 20)
             }
         }
@@ -66,36 +66,26 @@ struct PDFButtonView: View {
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                 )
-                .shadow(color: Color.primary.opacity(0.5), radius: 6, x: 0, y: 4)
             
             HStack(spacing: 20) {
                 Image(systemName: "doc.richtext.fill")
                     .foregroundColor(.white)
-                    .font(.system(size: 24))
+                    .font(AppFont.pretendardRegular(size: 24))
                     .frame(width: 56, height: 56)
                     .background(
                         RoundedRectangle(cornerRadius: 24)
                             .fill(Color.red)
                     )
-                    .shadow(
-                        color: .black.opacity(0.15),
-                        radius: 3,
-                        x: 0,
-                        y: 2
-                    )
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(store.title)
-                        .font(.headline)
+                        .font(AppFont.pretendardSemiBold(size: 17))
                         .foregroundColor(.primary)
                     
                     if store.isProcessing {
                         HStack(spacing: 8) {
-                            ProgressView(value: store.progress)
-                                .frame(width: 100)
-                            
-                            Text("\(Int(store.progress * 100))%")
-                                .font(.caption)
+                            Text("OCR 변환 중... \(Int(store.progress * 100))%")
+                                .font(AppFont.pretendardRegular(size: 12))
                                 .foregroundColor(.secondary)
                         }
                     }
