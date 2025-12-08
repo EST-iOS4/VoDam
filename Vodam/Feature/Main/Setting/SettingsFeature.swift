@@ -1,0 +1,352 @@
+//
+//  SettingsFeature.swift
+//  Vodam
+//
+//  Created by 송영민 on 11/17/25.
+//
+
+import ComposableArchitecture
+import Foundation
+import PhotosUI
+import SwiftUI
+import UIKit
+
+@Reducer
+struct SettingsFeature {
+
+    @ObservableState
+    struct State: Equatable {
+        var user: User?
+
+        @Presents var alert: AlertState<Action.Alert>?
+
+        var lastDeletedOwnerId: String? = nil
+        var isShowingAppleDisconnectGuide: Bool = false
+        
+        // 삭제 요청 트리거
+        var pendingDeleteOwnerId: String? = nil
+        // 로그아웃 시 로컬 데이터 삭제 트리거
+        var pendingLogoutOwnerId: String? = nil
+    }
+
+    enum Action: Equatable {
+        case loginButtonTapped
+        case logoutTapped
+        case deleteAccountTapped
+
+        case deleteAccountConfirmed
+        case logoutConfirmed
+        case logoutFinished(Bool)
+        case deleteAccountFinished(Bool)
+        
+        // 로컬 데이터 삭제 완료 알림 (View에서 호출)
+        case localDataDeleted(String) // ownerId
+
+        case appleDisconnectGuideOpenSettingsButtonTapped
+        case appleDisconnectGuideCompletedButtonTapped
+        case appleDisconnectGuideDismissed
+
+        case profileImagePicked(Data)
+        case photoPickerItemChanged(PhotosPickerItem?)
+
+        case alert(PresentationAction<Alert>)
+
+        case delegate(Delegate)
+
+        enum Delegate: Equatable {
+            case userUpdated(User)
+            case loggedOut(Bool)
+            case accountDeleted(Bool)
+            case logoutCompleted
+            case deleteAccountCompleted
+        }
+
+        enum Alert: Equatable {
+            case deleteAccountConfirmed
+            case logoutConfirmed
+        }
+    }
+
+    @Dependency(\.googleAuthClient) var googleAuthClient
+    @Dependency(\.kakaoAuthClient) var kakaoAuthClient
+    @Dependency(\.appleAuthClient) var appleAuthClient
+    @Dependency(\.firebaseClient) var firebaseClient
+
+    var body: some Reducer<State, Action> {
+        Reduce { state, action in
+            switch action {
+
+            case .loginButtonTapped:
+                return .none
+
+            case .logoutTapped:
+                state.alert = AlertState {
+                    TextState("로그아웃")
+                } actions: {
+                    ButtonState(
+                        role: .destructive,
+                        action: .logoutConfirmed
+                    ) {
+                        TextState("로그아웃")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("취소")
+                    }
+                } message: {
+                    TextState("정말 로그아웃 하시겠습니까?")
+                }
+                return .none
+
+            case .logoutConfirmed:
+                guard let user = state.user else {
+                    return .send(.logoutFinished(false))
+                }
+                
+                // 로그아웃 시 로컬 데이터 삭제를 위한 트리거 설정
+                state.pendingLogoutOwnerId = user.ownerId
+
+                switch user.provider {
+                case .kakao:
+                    return .run { send in
+                        do {
+                            try await kakaoAuthClient.logout()
+                            await send(.logoutFinished(true))
+                        } catch {
+                            print("카카오 로그아웃 실패: \(error)")
+                            await send(.logoutFinished(false))
+                        }
+                    }
+
+                case .google:
+                    return .run { [googleAuthClient] send in
+                        await MainActor.run {
+                            googleAuthClient.signOut()
+                        }
+                        await send(.logoutFinished(true))
+                    }
+
+                case .apple:
+                    return .run { [appleAuthClient] send in
+                        do {
+                            try await appleAuthClient.logout()
+                            await send(.logoutFinished(true))
+                        } catch {
+                            print("애플 로그아웃 실패: \(error)")
+                            await send(.logoutFinished(false))
+                        }
+                    }
+                }
+
+            case .logoutFinished(let isSuccess):
+                if isSuccess {
+                    state.user = nil
+                    state.pendingLogoutOwnerId = nil
+                    return .merge(
+                        .send(.delegate(.loggedOut(true))),
+                        .send(.delegate(.logoutCompleted))
+                    )
+                } else {
+                    print("로그아웃 실패")
+                    state.pendingLogoutOwnerId = nil
+                    return .send(.delegate(.loggedOut(false)))
+                }
+
+            case .deleteAccountTapped:
+                state.alert = AlertState {
+                    TextState("회원 탈퇴")
+                } actions: {
+                    ButtonState(
+                        role: .destructive,
+                        action: .deleteAccountConfirmed
+                    ) {
+                        TextState("탈퇴")
+                    }
+                    ButtonState(role: .cancel) {
+                        TextState("취소")
+                    }
+                } message: {
+                    TextState("정말로 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다.")
+                }
+                return .none
+
+            case .deleteAccountConfirmed:
+                guard let user = state.user else {
+                    return .send(.deleteAccountFinished(false))
+                }
+
+                if user.provider == .apple {
+                    state.isShowingAppleDisconnectGuide = true
+                    return .none
+                }
+
+                let ownerId = user.ownerId
+                state.pendingDeleteOwnerId = ownerId
+
+                switch user.provider {
+                case .kakao:
+                    return .run { [firebaseClient, kakaoAuthClient] send in
+                        do {
+                            // Firebase 데이터 삭제 (Firestore + Storage)
+                            try await firebaseClient.deleteAllForUser(ownerId)
+                            print("Firebase 데이터 삭제 완료")
+                            
+                            // 카카오 계정 연결 해제
+                            try await kakaoAuthClient.deleteAccount()
+                            print("카카오 계정 연결 해제 완료")
+                            
+                            await send(.deleteAccountFinished(true))
+                        } catch {
+                            print("카카오 회원 탈퇴 실패: \(error)")
+                            await send(.deleteAccountFinished(false))
+                        }
+                    }
+
+                case .google:
+                    return .run { [firebaseClient, googleAuthClient] send in
+                        do {
+                            // Firebase 데이터 삭제 (Firestore + Storage)
+                            try await firebaseClient.deleteAllForUser(ownerId)
+                            print("Firebase 데이터 삭제 완료")
+                            
+                            // 구글 계정 연결 해제 시도 (실패해도 계속 진행)
+                            do {
+                                try await googleAuthClient.disconnect()
+                                print("구글 계정 연결 해제 완료")
+                            } catch {
+                                print("구글 계정 연결 해제 실패 (계속 진행): \(error)")
+                            }
+                            
+                            await send(.deleteAccountFinished(true))
+                        } catch {
+                            print("Firebase 데이터 삭제 실패: \(error)")
+                            await send(.deleteAccountFinished(false))
+                        }
+                    }
+
+                case .apple:
+                    return .none
+                }
+
+            case .appleDisconnectGuideOpenSettingsButtonTapped:
+                return .run { _ in
+                    if let url = URL(
+                        string: UIApplication.openSettingsURLString
+                    ) {
+                        await MainActor.run {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                }
+
+            case .appleDisconnectGuideCompletedButtonTapped:
+                state.isShowingAppleDisconnectGuide = false
+
+                guard let user = state.user else {
+                    return .send(.deleteAccountFinished(false))
+                }
+                let ownerId = user.ownerId
+                state.pendingDeleteOwnerId = ownerId
+
+                return .run { [firebaseClient] send in
+                    do {
+                        // Firebase 데이터 삭제
+                        try await firebaseClient.deleteAllForUser(ownerId)
+                        print("Firebase 데이터 삭제 완료")
+                        
+                        await send(.deleteAccountFinished(true))
+                    } catch {
+                        print("애플 회원 탈퇴 실패: \(error)")
+                        await send(.deleteAccountFinished(false))
+                    }
+                }
+
+            case .appleDisconnectGuideDismissed:
+                state.isShowingAppleDisconnectGuide = false
+                return .none
+                
+            case let .localDataDeleted(ownerId):
+                print("로컬 데이터 삭제 완료: \(ownerId)")
+                return .none
+
+            case .deleteAccountFinished(let isSuccess):
+                state.pendingDeleteOwnerId = nil
+                if isSuccess {
+                    state.user = nil
+                    state.lastDeletedOwnerId = nil
+                    return .merge(
+                        .send(.delegate(.accountDeleted(true))),
+                        .send(.delegate(.deleteAccountCompleted))
+                    )
+                } else {
+                    print("회원 탈퇴 실패")
+                    state.lastDeletedOwnerId = nil
+                    return .send(.delegate(.accountDeleted(false)))
+                }
+
+            case .photoPickerItemChanged(let item):
+                guard let item, state.user != nil else {
+                    return .none
+                }
+
+                return .run { send in
+                    do {
+                        guard
+                            let data = try await item.loadTransferable(
+                                type: Data.self
+                            )
+                        else {
+                            return
+                        }
+
+                        guard let uiImage = UIImage(data: data) else {
+                            return
+                        }
+
+                        guard
+                            let resizedImage = await uiImage.resized(
+                                toWidth: 200
+                            )
+                        else {
+                            return
+                        }
+
+                        guard
+                            let compressedData = resizedImage.jpegData(
+                                compressionQuality: 0.5
+                            )
+                        else {
+                            return
+                        }
+
+                        await send(.profileImagePicked(compressedData))
+                    } catch {
+                        print("프로필 이미지 변경 실패: \(error)")
+                    }
+                }
+
+            case .profileImagePicked(let data):
+                guard var user = state.user else {
+                    return .none
+                }
+
+                user.localProfileImageData = data
+                state.user = user
+
+                return .send(.delegate(.userUpdated(user)))
+
+            case .delegate:
+                return .none
+
+            case .alert(.presented(.deleteAccountConfirmed)):
+                return .send(.deleteAccountConfirmed)
+
+            case .alert(.presented(.logoutConfirmed)):
+                return .send(.logoutConfirmed)
+
+            case .alert:
+                return .none
+            }
+        }
+        .ifLet(\.$alert, action: \.alert)
+    }
+}
