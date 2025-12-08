@@ -30,7 +30,6 @@ struct RecordingView: View {
                     RoundedRectangle(cornerRadius: 24)
                         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                 )
-                .shadow(color: Color.primary.opacity(0.5), radius: 6, x: 0, y: 4)
             
             VStack(spacing: 24) {
                 
@@ -42,11 +41,11 @@ struct RecordingView: View {
                 )
                 
                 Text(store.status.localizedText)
-                    .font(.headline)
+                    .font(AppFont.pretendardSemiBold(size: 17))
                     .foregroundColor(.primary)
                 
                 Text(formatTime(store.elapsedSeconds))
-                    .font(.system(size: 32, weight: .medium))
+                    .font(AppFont.pretendardSemiBold(size: 32))
                     .monospacedDigit()
                     .foregroundColor(.primary)
             }

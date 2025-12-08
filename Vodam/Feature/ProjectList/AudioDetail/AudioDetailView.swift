@@ -186,7 +186,7 @@ struct AudioDetailView: View {
                 }
             }) {
                 Image(systemName: "chevron.left")
-                    .font(.title3)
+                    .font(AppFont.pretendardRegular(size: 20))
                     .foregroundColor(.primary)
             }
             
@@ -232,9 +232,25 @@ struct AudioDetailView: View {
     @ViewBuilder
     private var searchFieldTrailingContent: some View {
         HStack(spacing: 4) {
-            if store.script.totalResults == 0 {
+            if store.script.totalResults > 0 {
+                Text("\(store.script.currentResultNumber)/\(store.script.totalResults)")
+                    .font(AppFont.pretendardRegular(size: 12))
+                    .foregroundColor(.secondary)
+                
+                Button(action: { store.send(.script(.previousResult)) }) {
+                    Image(systemName: "chevron.up")
+                        .font(AppFont.pretendardRegular(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                
+                Button(action: { store.send(.script(.nextResult)) }) {
+                    Image(systemName: "chevron.down")
+                        .font(AppFont.pretendardRegular(size: 12))
+                        .foregroundColor(.secondary)
+                }
+            } else {
                 Text("결과 없음")
-                    .font(.caption)
+                    .font(AppFont.pretendardRegular(size: 12))
                     .foregroundColor(.secondary)
             }
             
@@ -272,27 +288,27 @@ struct AudioDetailView: View {
                 Button("2.0x", action: { store.send(.setPlaybackRate(2.0)) })
             } label: {
                 Text("\(String(format: "%.1f", store.playbackRate))x")
-                    .font(.headline)
+                    .font(AppFont.pretendardSemiBold(size: 17))
             }
             
             Button(action: { store.send(.backwardButtonTapped) }) {
                 Image(systemName: "gobackward.10")
-                    .font(.title)
+                    .font(AppFont.pretendardRegular(size: 28))
             }
             
             Button(action: { store.send(.playButtonTapped) }) {
                 Image(systemName: store.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.largeTitle)
+                    .font(AppFont.pretendardRegular(size: 34))
             }
             
             Button(action: { store.send(.forwardButtonTapped) }) {
                 Image(systemName: "goforward.10")
-                    .font(.title)
+                    .font(AppFont.pretendardRegular(size: 28))
             }
             
             Button(action: { store.send(.favoriteButtonTapped) }) {
                 Image(systemName: store.isFavorite ? "star.fill" : "star")
-                    .font(.title)
+                    .font(AppFont.pretendardRegular(size: 28))
                     .foregroundColor(.yellow)
             }
         }
@@ -303,19 +319,19 @@ struct AudioDetailView: View {
     private var pdfInfoSection: some View {
         VStack(spacing: 16) {
             Image(systemName: "doc.richtext.fill")
-                .font(.system(size: 60))
+                .font(AppFont.pretendardRegular(size: 60))
                 .foregroundColor(.red)
             
             Text("PDF 문서")
-                .font(.headline)
+                .font(AppFont.pretendardSemiBold(size: 17))
                 .foregroundColor(.secondary)
             
             Button(action: { store.send(.favoriteButtonTapped) }) {
                 HStack {
                     Image(systemName: store.isFavorite ? "star.fill" : "star")
-                        .font(.title2)
                         .foregroundColor(.yellow)
-                    Text(store.isFavorite ? "즐겨찾기에서 제거" : "즐겨찾기에 추가")
+                    Text(store.isFavorite ? "즐겨찾기에서 제거" : "즐겨찾기에 추가")   .font(AppFont.pretendardSemiBold(size: 17))
+                        .foregroundColor(.secondary)
                 }
             }
             .padding(.bottom, 20)
