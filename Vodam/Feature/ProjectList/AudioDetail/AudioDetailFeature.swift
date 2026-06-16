@@ -288,24 +288,14 @@ struct AudioDetailFeature {
                 return .none
                 
             case .backwardButtonTapped:
-                guard let player = state.player else { return .none }
-                let currentTime = player.currentTime()
-                let newTime = CMTimeSubtract(
-                    currentTime,
-                    CMTime(seconds: 10, preferredTimescale: currentTime.timescale)
-                )
-                player.seek(to: newTime)
-                return .none
-                
+                guard state.player != nil, state.totalSeconds > 0 else { return .none }
+                let newProgress = max(0, state.progress - 10 / state.totalSeconds)
+                return .send(.seek(newProgress))
+
             case .forwardButtonTapped:
-                guard let player = state.player else { return .none }
-                let currentTime = player.currentTime()
-                let newTime = CMTimeAdd(
-                    currentTime,
-                    CMTime(seconds: 10, preferredTimescale: currentTime.timescale)
-                )
-                player.seek(to: newTime)
-                return .none
+                guard state.player != nil, state.totalSeconds > 0 else { return .none }
+                let newProgress = min(1, state.progress + 10 / state.totalSeconds)
+                return .send(.seek(newProgress))
                 
             case .setPlaybackRate(let rate):
                 state.playbackRate = rate
